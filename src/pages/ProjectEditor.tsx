@@ -34,7 +34,7 @@ export default function ProjectEditor() {
     })();
   }, [id]);
 
-  const issues = validateStageInput(data);
+  const { errors, warnings } = validateStageInputDetailed(data);
 
   const set = <K extends keyof StageInputData>(k: K, v: StageInputData[K]) =>
     setData((d) => ({ ...d, [k]: v }));
