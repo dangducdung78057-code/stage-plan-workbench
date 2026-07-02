@@ -9,6 +9,7 @@ import {
   validateStageInput, type StageInputData, PROGRAM_TYPES, SCHOOL_STAGES, CONFIRMATION_STATUSES,
 } from "@/lib/stageos";
 import { generateMockPlan } from "@/lib/mockPlan";
+import { getFlag } from "@/lib/featureFlags";
 import { toast } from "sonner";
 import {
   ArrowLeft, Sparkles, FileJson, FileText, CheckCircle2, AlertTriangle,
