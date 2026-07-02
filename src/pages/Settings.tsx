@@ -36,6 +36,9 @@ export default function SettingsPage() {
   const [procProvider, setProcProvider] = useState<ProcurementProviderId>(() => getProviderMode());
   const [procHttpUrl, setProcHttpUrl] = useState<string>(() => getHttpUrl());
   const [procSettings, setProcSettings] = useState<ProcurementSettings>(() => readLocalProcurementSettings());
+  const [webhook, setWebhook] = useState<WebhookSettings>(() => readLocalWebhookSettings());
+  const [webhookSaving, setWebhookSaving] = useState(false);
+  const [webhookTesting, setWebhookTesting] = useState(false);
 
   useEffect(() => {
     (async () => {
