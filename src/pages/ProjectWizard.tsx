@@ -16,7 +16,7 @@ import { generateMockPlan } from "@/lib/mockPlan";
 import { toast } from "sonner";
 import {
   ArrowLeft, ArrowRight, Check, AlertTriangle, Plus, Trash2, Wand2, CheckCircle2, Circle,
-  Save, RotateCcw, FolderOpen, Copy, FilePlus2, Pencil,
+  Save, RotateCcw, FolderOpen, Copy, FilePlus2, Pencil, ChevronDown, ChevronUp,
 } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
