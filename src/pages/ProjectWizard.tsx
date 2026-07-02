@@ -346,32 +346,38 @@ export default function ProjectWizard() {
     if (!title.trim()) { toast.error("请填写项目标题"); return; }
     setSubmitting(true);
     try {
+      const { data: userData } = await supabase.auth.getUser();
+      const uid = userData.user?.id;
+      if (!uid) { toast.error("未登录"); setSubmitting(false); return; }
       const { data: created, error } = await supabase.from("projects").insert({
         title,
         status: "planning",
+        user_id: uid,
         performance_date: data.performanceDate || null,
         performer_count: data.performerCount ?? null,
-      }).select().single();
+      } as any).select().single();
       if (error) throw error;
       const projectId = created.id;
 
-      await supabase.from("stage_inputs").upsert({ project_id: projectId, data: data as any });
+      await supabase.from("stage_inputs").upsert({ project_id: projectId, user_id: uid, data: data as any } as any);
 
       // Generate mock plan snapshot immediately
       const plan = generateMockPlan(data);
       await supabase.from("plan_snapshots").insert({
         project_id: projectId,
+        user_id: uid,
         version: 1,
         mode: "mock",
         costume_plan: plan.costumePlan as any,
         risks: plan.risks as any,
         reverse_schedule: plan.reverseSchedule as any,
         platform_search: plan.platformSearch as any,
-      });
+      } as any);
       await supabase.from("confirmation_records").insert({
         project_id: projectId,
+        user_id: uid,
         status: "draft",
-      });
+      } as any);
 
       // remove the active draft slot once the project is created
       if (activeId) {
