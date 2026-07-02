@@ -40,7 +40,7 @@ export default function Modules() {
               <option value="api">api (预留)</option>
             </select>
           </div>
-          <div className="space-y-1.5 col-span-2">
+          <div className="md:col-span-2 space-y-1.5">
             <Label className="text-xs text-muted-foreground">apiBaseUrl (可选,未来集成真实 StageOS 后端)</Label>
             <Input value={apiBaseUrl} onChange={(e) => setApiBaseUrl(e.target.value)} placeholder="https://api.stageos.example.com" />
           </div>
