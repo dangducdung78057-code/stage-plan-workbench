@@ -630,6 +630,8 @@ export function HealthCheck() {
             system_warn_modules: gateResult.systemWarnModules,
             gate_triggering_warn_modules: gateResult.gateTriggeringWarnModules,
             isolated_experimental_warnings: gateResult.isolatedExperimentalWarnings.map((w) => w.module),
+            freeze_status: frozen.status,
+            freeze_id: frozen.id,
           },
         });
       } catch {
