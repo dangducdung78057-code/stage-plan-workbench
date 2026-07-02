@@ -324,6 +324,33 @@ export type Database = {
           },
         ]
       }
+      system_capabilities: {
+        Row: {
+          enabled: boolean
+          layer: string
+          module: string
+          notes: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          enabled?: boolean
+          layer: string
+          module: string
+          notes?: string | null
+          status: string
+          updated_at?: string
+        }
+        Update: {
+          enabled?: boolean
+          layer?: string
+          module?: string
+          notes?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       webhook_delivery_logs: {
         Row: {
           attempt: number
