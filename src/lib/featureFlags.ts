@@ -13,7 +13,7 @@ const KEY = "stageos.featureFlags.v1";
 
 const DEFAULTS: Record<FeatureFlag, boolean> = {
   markdownDownload: true,
-  pdfExport: true,
+  pdfExport: false,
   pngExport: false,
   storageUpload: false,
   aiProvider: false,
