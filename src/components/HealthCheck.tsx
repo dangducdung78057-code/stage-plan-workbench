@@ -9,7 +9,7 @@ import { renderMarkdown, renderPrintableHtml, renderPdfBlob, renderPngBlob, vali
 import { CheckCircle2, XCircle, Loader2, AlertTriangle, Copy, Download as DownloadIcon, History } from "lucide-react";
 import { toast } from "sonner";
 
-const STABLE_BASELINE = "stageos-v3.0-procurement-provider-readonly";
+const STABLE_BASELINE = "stageos-v3.1-procurement-provider-fallback-pass";
 
 type Status = "pass" | "fail" | "warn" | "skip";
 type Check = { id: string; label: string; status: Status; detail?: string; ms?: number };
