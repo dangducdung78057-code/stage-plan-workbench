@@ -234,20 +234,30 @@ export default function ProjectDetail() {
               {confirmations.length > 0 && (
                 <div>
                   <div className="text-xs text-muted-foreground mb-1">历史记录</div>
-                  <table className="ops-table">
-                    <thead><tr><th>状态</th><th>备注</th><th>时间</th></tr></thead>
-                    <tbody>
-                      {confirmations.map((c) => (
-                        <tr key={c.id}>
-                          <td><StatusBadge status={c.status} /></td>
-                          <td className="text-xs">{c.notes ?? "—"}</td>
-                          <td className="font-mono text-xs text-muted-foreground">
-                            {new Date(c.confirmed_at ?? c.created_at).toLocaleString("zh-CN", { hour12: false })}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                  <div className="hidden md:block">
+                    <table className="ops-table">
+                      <thead><tr><th>状态</th><th>备注</th><th>时间</th></tr></thead>
+                      <tbody>
+                        {confirmations.map((c) => (
+                          <tr key={c.id}>
+                            <td><StatusBadge status={c.status} /></td>
+                            <td className="text-xs">{c.notes ?? "—"}</td>
+                            <td className="font-mono text-xs text-muted-foreground">
+                              {new Date(c.confirmed_at ?? c.created_at).toLocaleString("zh-CN", { hour12: false })}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <MobileCardList>
+                    {confirmations.map((c) => (
+                      <MobileCard key={c.id} title={<StatusBadge status={c.status} />}>
+                        <MobileField label="备注" value={c.notes ?? "—"} stack />
+                        <MobileField label="时间" value={new Date(c.confirmed_at ?? c.created_at).toLocaleString("zh-CN", { hour12: false })} mono />
+                      </MobileCard>
+                    ))}
+                  </MobileCardList>
                 </div>
               )}
             </div>
