@@ -561,12 +561,20 @@ export function HealthCheck() {
     let newRunId: string | null = null;
     if (user?.id) {
       try {
+        const summaryPayload = {
+          ...summaryLocal,
+          gate_level: gateResult.gate,
+          gate_rule: gateResult.rule,
+          gate_reason: gateResult.reason,
+          gate_triggers: gateResult.triggers,
+          capability_counts: snap.counts,
+        };
         const { data: inserted } = await supabase.from("health_check_runs").insert({
           user_id: user.id,
           baseline: STAGEOS_VERSION,
           route: typeof window !== "undefined" ? window.location.pathname : null,
           user_agent: typeof navigator !== "undefined" ? navigator.userAgent : null,
-          summary: summaryLocal as any,
+          summary: summaryPayload as any,
           items: out as any,
           pass_count: summaryLocal.pass ?? 0,
           warn_count: summaryLocal.warn ?? 0,
@@ -587,6 +595,9 @@ export function HealthCheck() {
             warn: summaryLocal.warn ?? 0,
             fail: summaryLocal.fail ?? 0,
             skip: summaryLocal.skip ?? 0,
+            gate_level: gateResult.gate,
+            gate_rule: gateResult.rule,
+            gate_reason: gateResult.reason,
           },
         });
       } catch {
