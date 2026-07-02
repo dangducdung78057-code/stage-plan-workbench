@@ -135,6 +135,7 @@ export function HealthCheck() {
     }
     (checks as any).__pdfDetail = pdfDetail;
 
+    let pdfCapabilitySyncError: string | null = null;
     try {
       const capStatus = pdfDetail.status === "pass" ? "PASS" : pdfDetail.status === "skip" ? "SKIP" : "WARN";
       const capEnabled = pdfDetail.status !== "skip";
@@ -150,12 +151,20 @@ export function HealthCheck() {
       });
       if (error) throw error;
     } catch (e: any) {
-      push({ id: "pdf_capability_sync", label: "PDF capability 同步", status: "fail", detail: e?.message ?? "unknown error" });
+      pdfCapabilitySyncError = e?.message ?? "unknown error";
+      push({ id: "pdf_capability_sync", label: "PDF capability 同步", status: "fail", detail: pdfCapabilitySyncError });
     }
 
     // 1. Capability Snapshot + Release Gate（唯一事实源 · 决策层）
     //    治理宪章：能力清单不仅统计，直接参与 Gate 判定；WARN 参与 Gate 计算。
-    const snap = await loadCapabilitySnapshot();
+    const snap = pdfCapabilitySyncError
+      ? {
+          rows: [],
+          counts: { L0: 0, L1: 0, L2: 0, PASS: 0, WARN: 0, FAIL: 0, SKIP: 0, total: 0, L0_WARN: 0, L1_WARN: 0, L2_WARN: 0, L0_FAIL: 0, L1_FAIL: 0, L2_FAIL: 0, warnUnique: 0 },
+          loadedAt: new Date().toISOString(),
+          error: `PDF capability sync failed: ${pdfCapabilitySyncError}`,
+        } satisfies CapabilitySnapshot
+      : await loadCapabilitySnapshot();
     setSnapshot(snap);
     const gateResult = computeReleaseGate(snap);
     setGate(gateResult);
