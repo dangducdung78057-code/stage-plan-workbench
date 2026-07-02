@@ -1,60 +1,97 @@
+# 采购候选商品 v1 · 本地模拟商品库
 
-## Scope
+只读候选清单，无自动下单、无真实电商 API、无库存/价格承诺。作为独立 flag 分支交付，不改动 AI / mock / 导出 / Storage / Auth 主流程。
 
-Upgrade `src/pages/Exports.tsx` so existing `export_records` rows can be downloaded as real `.md` and `.pdf` files. No changes to project creation, confirmation, mock generation, or the export-record persistence flow. No new tables, no new edge functions.
+## 1. 数据源
 
-## 1. Feature flag
+新文件 `src/lib/procurementCatalog.ts` — 内置 TS 数据（避免 JSON import 兼容问题）。
 
-New file `src/lib/featureFlags.ts` — reads flags from `localStorage` with defaults `false`. Flags: `pdfExport`, `markdownDownload`, `pngExport`, `storageUpload`, `aiProvider`, `payments`, `procurement`.
+结构：
+```ts
+type CatalogEntry = {
+  categoryTags: string[];     // 匹配 plan item 的 category / description 关键词
+  programTypes?: string[];    // 可选：适用节目类型（不填=通用）
+  schoolStages?: string[];    // 可选：适用学段
+  candidates: Candidate[];    // 该分类下预置 3 个以内候选
+};
 
-In `src/pages/Settings.tsx`, add a "分支能力开关 (v2.x)" panel with toggles that write to the same localStorage keys. Only `markdownDownload` and `pdfExport` are wired this turn; the other four are visible but disabled with a "计划中" tag. Main flow stays on baseline when flags are off.
+type Candidate = {
+  platform: "taobao" | "1688" | "pinduoduo" | "jd" | "douyin";
+  title: string;
+  keyword: string;
+  estimatedPrice: number;    // 单价估算
+  matchReason: string;       // 为何匹配（如"合唱白衬衫 + 高中"）
+  riskNote: string;          // 风险提示（如"码数偏小需实测"）
+  url?: string;              // 可选，指向站内搜索页而非商品详情
+};
+```
 
-## 2. Markdown download
+覆盖服装类目：白衬衫、黑西裤、演出连衣裙、民族舞蹈服、爵士服、啦啦操服、白手套、领结、发饰、腰带、演出鞋等约 15-20 条 entry。
 
-- Compose Markdown text from the existing `payload` on the record. If `format === 'markdown'`, use `payload` directly; if `format === 'json'`, parse and pass through the same renderer used below so JSON records also produce a usable `.md`.
-- New helper `src/lib/exportRender.ts` with `renderMarkdown(payload, project)` producing sections: 项目信息 / 匿名学生数据 / 服装方案 / 风险列表 / Plan B / 倒排时间表 / 采购搜索建议 / mock 声明 / 隐私声明摘要. Missing sections render as `_（本快照缺少此字段）_` — never throw.
-- Filename: `stageos-{slug(projectTitle)}-v{version}-{yyyyMMddHHmm}.md`. `slug()` strips whitespace/punct and falls back to `project_id.slice(0,8)`.
-- Download via `Blob([text], { type: 'text/markdown;charset=utf-8' })` + object URL + `a.download` + `URL.revokeObjectURL`.
+## 2. 匹配逻辑
 
-## 3. PDF download (print-window fallback approach)
+`src/lib/procurementMatch.ts` 提供 `matchCandidates(item, ctx)`：
 
-Chinese-safe strategy: skip jsPDF/embedded fonts entirely. Render the Markdown-derived content into a hidden `<iframe>` with a print-friendly HTML template using system Chinese fonts (`-apple-system, "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif`), then call `iframe.contentWindow.print()`. User picks "另存为 PDF" from the browser print dialog. This guarantees horizontal Chinese, no bundled commercial fonts, no font-license risk.
+- 从 `item.category` + `item.description` 提取关键词
+- 结合 `ctx.programType`、`ctx.schoolStage` 加权
+- 从 catalog 中筛选，取 top 3
+- 无匹配 → 返回 fallback：一条"通用平台搜索建议"（platform=taobao, keyword=拼接的 item 描述）
+- 从不抛错
 
-- Helper `src/lib/exportRender.ts` → `renderPrintableHtml(payload, project, { title })`. Returns a full HTML doc with `<title>` matching the target PDF filename so most browsers default the save filename.
-- Trigger: `openPrintWindow(html)` creates a same-origin `<iframe>` appended off-screen, writes HTML, waits for `load`, calls `print()`, removes the iframe after `afterprint`.
-- If `window.print` is unavailable or throws (rare in-app webview), catch and toast: `"PDF 生成失败，请先下载 Markdown。"`
-- No jsPDF dependency added.
+## 3. UI · 内嵌 ProjectDetail
 
-## 4. Ownership + auth guard
+在 `src/pages/ProjectDetail.tsx` 服装方案表格三段（女生/男生/配饰）的每行右侧加"查看候选"按钮：
 
-- `Exports.tsx` already relies on RLS (`export_records` policies scope to `auth.uid()`), so the initial `select *` only returns rows the user owns. Keep it.
-- Before any download, re-check: `supabase.auth.getUser()` — if null, toast "请先登录" and abort.
-- Additionally re-verify project ownership at click time by selecting `projects.user_id where id = row.project_id` and comparing to `user.id`; if mismatch or no row, toast "无权下载此记录" and abort. This defends against a stale row from a client-side tampered state.
-- No `download` action is written to `export_records` (per spec: "不一定新增"). Choose not to insert to keep the record list clean; downloads are ephemeral.
+- 点击展开该行下方一段候选卡片（Accordion / Collapsible）
+- 卡片包含 3 张候选：platform badge、title、matchReason（灰色小字）、riskNote（黄色小字）、estimatedPrice、可选"打开搜索页"按钮
+- 顶部横幅：**"候选商品为模拟/检索建议，非实时库存价格，需人工核验。"**
+- 移动端：候选卡片改为纵向堆叠
 
-## 5. Empty-payload + error UX
+不做人工确认/落库 — v1 纯只读浏览。confirm 状态留给下一版。
 
-- If `!row.payload || row.payload.length === 0`: toast "暂无可下载载荷，请先导出。" and abort.
-- All handlers wrapped in `try/catch` → `toast.error(...)`; never re-throw. RootErrorBoundary stays quiet.
+## 4. Feature flag
 
-## 6. UI changes (Exports.tsx only)
+沿用 `src/lib/featureFlags.ts` 现有 `procurement` flag（当前 disabled 占位）：
 
-Desktop table row action cell — replace single "查看" button with a compact button group: `查看` / `下载 MD` / `下载 PDF`. Flag-gated buttons hide when their flag is off. Buttons visible only when `pdfExport`/`markdownDownload` are enabled in Settings.
+- 默认 `false`
+- Settings 面板将 procurement toggle 从"计划中"改为可开关
+- flag off → ProjectDetail 完全不显示"查看候选"按钮和横幅，主流程零变化
+- flag on → 显示候选功能
 
-Mobile `MobileCard` footer — replace single link with a vertical stack of full-width buttons: `查看载荷` / `下载 Markdown` / `下载 PDF`. Uses `flex flex-col gap-2` so nothing gets truncated at 376px width. Version / time / size fields unchanged.
+## 5. 明确不做（v1 边界）
 
-## 7. Acceptance walkthrough
+- ❌ 不落库（无新表、不改 plan_snapshots、不改 export_records）
+- ❌ 不出现在 Markdown / PDF / PNG 导出中（导出链路完全不动）
+- ❌ 不调用任何外部 API（catalog 全离线）
+- ❌ 不做自动下单、购物车、支付
+- ❌ 不加载真实商品图片（避免版权/CORS）
 
-1. Toggle both flags on in Settings → return to `/exports`.
-2. Click `下载 MD` on a markdown record → `.md` file downloads with all 9 sections; Chinese renders horizontally in any editor.
-3. Click `下载 PDF` → print dialog opens with rendered Chinese content; "另存为 PDF" produces a valid PDF.
-4. Sign out → visiting `/exports` redirects to `/auth` (existing `ProtectedRoute`).
-5. Sign in as account B → account A's rows are not listed (RLS) and even if forged, ownership recheck aborts the download.
-6. Refresh → records persist (unchanged storage).
-7. Project create / confirm / generate / snapshot / export flows untouched.
+## 6. 后续扩展点（不在本次实施）
 
-## Technical notes
+- 真实 provider 适配器接口 `ProcurementProvider`（淘宝/1688/拼多多），通过 apiBaseUrl + 独立 flag 启用
+- `procurement_selections` 表 + RLS，用于持久化人工确认
+- 导出附加"已确认采购决策"章节
 
-- No new npm packages. No new tables. No new edge function.
-- Files touched: `src/pages/Exports.tsx`, `src/pages/Settings.tsx`, new `src/lib/featureFlags.ts`, new `src/lib/exportRender.ts`.
-- `src/lib/stageos.ts` `STAGEOS_VERSION` unchanged — this is an additive branch feature, not a baseline bump.
+## 技术要点
+
+**新文件**
+- `src/lib/procurementCatalog.ts`
+- `src/lib/procurementMatch.ts`
+- `src/components/ProcurementCandidatesRow.tsx`（内嵌 Collapsible 卡片组）
+
+**改动文件**
+- `src/pages/ProjectDetail.tsx` — 在三张 plan 表格行末加按钮 + 折叠区
+- `src/pages/Settings.tsx` — 激活 procurement flag 开关
+
+**不动文件**
+- `src/lib/exportRender.ts` / `src/pages/Exports.tsx` / `src/lib/exportStorage.ts`
+- `supabase/functions/ai-generate-plan/index.ts` / `plan-precheck/index.ts`
+- `src/lib/mockPlan.ts` / `src/hooks/useAuth.tsx`
+- 数据库 schema 无迁移
+
+**验收**
+1. Settings 关闭 procurement → ProjectDetail 无候选入口、横幅、按钮
+2. Settings 打开 procurement → 三张表每行出现"查看候选"，展开显示 ≤3 张卡片，含 platform/title/matchReason/riskNote/estimatedPrice
+3. 横幅文案精确匹配："候选商品为模拟/检索建议，非实时库存价格，需人工核验。"
+4. Markdown / PDF / PNG 导出内容与 v3 完全一致（回归导出链路一次即可）
+5. 无候选匹配的项 → 显示 fallback"通用搜索建议"，不报错、不空白

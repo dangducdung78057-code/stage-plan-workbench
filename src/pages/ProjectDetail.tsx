@@ -17,6 +17,8 @@ import {
 } from "lucide-react";
 import { MobileCard, MobileCardList, MobileField } from "@/components/MobileCard";
 import { renderMarkdown } from "@/lib/exportRender";
+import { ProcurementCandidatesToggle, ProcurementDisclaimer } from "@/components/ProcurementCandidatesRow";
+import type { MatchContext } from "@/lib/procurementMatch";
 
 type Project = { id: string; title: string; status: string; performance_date: string | null; performer_count: number | null; updated_at: string };
 type Snapshot = {
@@ -358,7 +360,7 @@ export default function ProjectDetail() {
               <span className="text-xs">流程:compile-prompt → costume-master-plan → gated-output → confirm → export</span>
             </div>
           )}
-          {latest && <PlanView snapshot={latest} />}
+          {latest && <PlanView snapshot={latest} ctx={{ programType: input?.programType, schoolStage: input?.schoolStage }} procurementOn={flags.procurement} />}
           {snapshots.length > 1 && (
             <div className="panel">
               <div className="panel-header"><h3 className="text-sm font-semibold">历史快照</h3></div>
@@ -508,17 +510,18 @@ function MetaCard({ label, value, mono }: { label: string; value: React.ReactNod
   );
 }
 
-function PlanView({ snapshot }: { snapshot: Snapshot }) {
+function PlanView({ snapshot, ctx, procurementOn }: { snapshot: Snapshot; ctx: MatchContext; procurementOn: boolean }) {
   const plan = snapshot.costume_plan;
   const risks = (snapshot.risks ?? []) as any[];
   const schedule = (snapshot.reverse_schedule ?? []) as any[];
   const search = (snapshot.platform_search ?? []) as any[];
   return (
     <>
+      {procurementOn && <ProcurementDisclaimer />}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <PlanTable title="女生方案 femalePlan" rows={plan.femalePlan} />
-        <PlanTable title="男生方案 malePlan" rows={plan.malePlan} />
-        <PlanTable title="配饰 accessories" rows={plan.accessories} />
+        <PlanTable title="女生方案 femalePlan" rows={plan.femalePlan} ctx={ctx} procurementOn={procurementOn} />
+        <PlanTable title="男生方案 malePlan" rows={plan.malePlan} ctx={ctx} procurementOn={procurementOn} />
+        <PlanTable title="配饰 accessories" rows={plan.accessories} ctx={ctx} procurementOn={procurementOn} />
       </div>
 
       <div className="panel">
@@ -652,7 +655,7 @@ function PlanView({ snapshot }: { snapshot: Snapshot }) {
   );
 }
 
-function PlanTable({ title, rows }: { title: string; rows: any[] }) {
+function PlanTable({ title, rows, ctx, procurementOn }: { title: string; rows: any[]; ctx: MatchContext; procurementOn: boolean }) {
   const list = rows ?? [];
   const subtotal = list.reduce((sum, r) => sum + (Number(r.subtotal) || 0), 0);
   return (
@@ -671,6 +674,7 @@ function PlanTable({ title, rows }: { title: string; rows: any[] }) {
                   <div className="font-medium text-xs">{r.category}</div>
                   <div className="text-xs text-muted-foreground">{r.description}</div>
                   {r.sizing && <div className="text-[10px] text-muted-foreground font-mono">size: {r.sizing}</div>}
+                  {procurementOn && <ProcurementCandidatesToggle item={r} ctx={ctx} />}
                 </td>
                 <td className="text-right font-mono text-xs">{r.qty}</td>
                 <td className="text-right font-mono text-xs">¥{r.unitEstimate}</td>
@@ -695,6 +699,7 @@ function PlanTable({ title, rows }: { title: string; rows: any[] }) {
             <MobileField label="数量" value={r.qty} mono />
             <MobileField label="单价" value={`¥${r.unitEstimate}`} mono />
             <MobileField label="小计" value={`¥${r.subtotal}`} mono />
+            {procurementOn && <div className="col-span-full"><ProcurementCandidatesToggle item={r} ctx={ctx} /></div>}
           </MobileCard>
         ))}
       </MobileCardList>
