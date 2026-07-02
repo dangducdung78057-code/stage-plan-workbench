@@ -454,7 +454,14 @@ export default function ProjectDetail() {
                 <Button variant="outline" size="sm" onClick={() => handleConfirm("needs_revision")} disabled={busy}>
                   <AlertTriangle className="h-4 w-4 mr-1" />需要修订
                 </Button>
-                <Button size="sm" onClick={() => handleConfirm("confirmed")} disabled={busy}>
+                <Button size="sm" onClick={async () => {
+                  if (!project) return;
+                  const { data: siRow } = await supabase
+                    .from("stage_inputs").select("data").eq("project_id", project.id).maybeSingle();
+                  const fresh = (siRow?.data ?? input ?? {}) as StageInputData;
+                  const { errors, warnings } = validateStageInputDetailed(fresh);
+                  setConfirmPreview({ errors, warnings, checkedAt: new Date().toISOString() });
+                }} disabled={busy}>
                   <CheckCircle2 className="h-4 w-4 mr-1" />确认(隐私/用户)
                 </Button>
               </div>
