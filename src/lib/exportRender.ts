@@ -514,41 +514,60 @@ export async function downloadPdf(html: string, filename: string): Promise<void>
 export async function renderPdfBlob(html: string): Promise<Blob> {
   if (typeof window === "undefined") throw new Error("PDF_UNSUPPORTED");
   if (!validatePrintableHtml(html)) throw new Error("PRINTABLE_HTML_INVALID");
-  const mod: any = await import("html2pdf.js");
-  const html2pdf = mod.default ?? mod;
 
-  const host = document.createElement("div");
-  host.style.position = "fixed";
-  host.style.left = "0";
-  host.style.top = "0";
-  host.style.width = "794px";
-  host.style.background = "#ffffff";
-  host.style.pointerEvents = "none";
-  host.style.zIndex = "-1";
-  const bodyMatch = /<body[^>]*>([\s\S]*?)<\/body>/i.exec(html);
-  const styleMatch = /<style[^>]*>([\s\S]*?)<\/style>/i.exec(html);
-  host.innerHTML =
-    (styleMatch ? `<style>${styleMatch[1]}</style>` : "") +
-    (bodyMatch ? bodyMatch[1] : html);
-  document.body.appendChild(host);
-
+  // Reuse the proven PNG rasterization path (known to produce non-blank output).
+  // If that fails or is blank, we abort BEFORE creating a PDF — no blank PDFs.
+  let pngBlob: Blob;
   try {
-    await waitForRenderableHost(host, 100);
-    const blob: Blob = await html2pdf()
-      .from(host)
-      .set({
-        margin: [10, 10, 12, 10],
-        image: { type: "jpeg", quality: 0.95 },
-        html2canvas: { scale: 2, useCORS: true, backgroundColor: "#ffffff", logging: false },
-        jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
-        pagebreak: { mode: ["css", "legacy"] },
-      })
-      .outputPdf("blob");
-    if (!blob || blob.size < MIN_RENDER_BLOB_SIZE) throw new Error("PDF_EMPTY_CONTENT");
-    return blob;
-  } finally {
-    try { host.remove(); } catch { /* noop */ }
+    pngBlob = await renderPngBlob(html, { widthPx: 794, pixelRatio: 2 });
+  } catch (e: any) {
+    throw new Error("PDF_RASTERIZE_FAILED:" + (e?.message || "png stage failed"));
   }
+  if (!pngBlob || pngBlob.size < MIN_RENDER_BLOB_SIZE) {
+    throw new Error("PDF_EMPTY_CONTENT:raster blob too small");
+  }
+  if (!(await pngHasVisibleInk(pngBlob))) {
+    throw new Error("PDF_BLANK_PIXELS:no visible ink");
+  }
+
+  const dataUrl: string = await new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = () => reject(new Error("PDF_READ_FAILED"));
+    reader.readAsDataURL(pngBlob);
+  });
+
+  const bitmap = await createImageBitmap(pngBlob);
+  const imgW = bitmap.width;
+  const imgH = bitmap.height;
+  bitmap.close?.();
+  if (!(imgW > 0) || !(imgH > 0)) throw new Error("PDF_EMPTY_CONTENT:bitmap size 0");
+
+  const mod: any = await import("jspdf");
+  const JsPDF = mod.jsPDF ?? mod.default?.jsPDF ?? mod.default;
+  if (!JsPDF) throw new Error("PDF_LIB_UNAVAILABLE");
+
+  const pdf = new JsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
+  const pageW = pdf.internal.pageSize.getWidth();   // 210
+  const pageH = pdf.internal.pageSize.getHeight();  // 297
+  const margin = 8;
+  const drawW = pageW - margin * 2;
+  const drawH = (imgH * drawW) / imgW;
+
+  let remaining = drawH;
+  let position = margin;
+  pdf.addImage(dataUrl, "PNG", margin, position, drawW, drawH, undefined, "FAST");
+  remaining -= (pageH - margin * 2);
+  while (remaining > 0) {
+    position = position - (pageH - margin * 2);
+    pdf.addPage();
+    pdf.addImage(dataUrl, "PNG", margin, position, drawW, drawH, undefined, "FAST");
+    remaining -= (pageH - margin * 2);
+  }
+
+  const blob: Blob = pdf.output("blob");
+  if (!blob || blob.size < MIN_RENDER_BLOB_SIZE) throw new Error("PDF_EMPTY_CONTENT:pdf blob too small");
+  return blob;
 }
 
 /**
