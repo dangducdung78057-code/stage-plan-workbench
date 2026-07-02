@@ -79,7 +79,31 @@ export default function Exports() {
     }
   }
 
+  async function handlePdf(row: Row) {
+    setBusy(row.id + ":pdf");
+    try {
+      if (!(await guard(row))) return;
+      const title = projectTitles[row.project_id];
+      const createdAt = new Date(row.created_at).toLocaleString("zh-CN", { hour12: false });
+      const fn = buildFilename("pdf", title, row.version, row.project_id);
+      const html = renderPrintableHtml(row.payload, row.format, {
+        projectTitle: title,
+        version: row.version,
+        createdAt,
+        filenameTitle: fn.replace(/\.pdf$/, ""),
+      });
+      await downloadPdf(html, fn);
+      toast.success("PDF 已生成并下载");
+    } catch (e) {
+      console.error(e);
+      toast.error("PDF 生成失败，请改用 Markdown 或稍后重试");
+    } finally {
+      setBusy(null);
+    }
+  }
+
   const showMd = flags.markdownDownload;
+  const showPdf = flags.pdfExport;
 
   return (
     <div className="p-4 md:p-6 space-y-4">
@@ -91,7 +115,9 @@ export default function Exports() {
             在 <span className="font-mono">设置 → 分支能力开关</span> 中开启 Markdown 下载。
           </p>
         )}
-        <p className="text-xs text-muted-foreground mt-1">PDF 导出暂未完成，请先下载 Markdown。</p>
+        {showPdf && (
+          <p className="text-xs text-muted-foreground mt-1">PDF 采用 html2pdf 光栅化渲染，中文原样输出。</p>
+        )}
       </div>
       <div className="panel">
         <div className="panel-header">
