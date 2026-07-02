@@ -11,6 +11,7 @@ import {
   renderPrintableHtml,
   downloadBlob,
   openPrintWindow,
+  canPrint,
 } from "@/lib/exportRender";
 import { toast } from "sonner";
 import { FileDown, Printer, Eye } from "lucide-react";
