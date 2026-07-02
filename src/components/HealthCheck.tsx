@@ -73,54 +73,98 @@ export function HealthCheck() {
     const push = (c: Check) => { out.push(c); setChecks([...out]); };
     let procurementSettings: ProcurementSettings = { ...PROCUREMENT_SETTINGS_DEFAULTS };
 
+    const samplePayload = JSON.stringify({
+      project: { title: "健康检查样本", performance_date: "2026-06-30" },
+      input: { schoolStage: "primary", programType: "chorus", performerCount: 2, femaleCount: 1, maleCount: 1, performanceDate: "2026-06-30", perPersonBudget: 120 },
+      snapshot: {
+        mode: "mock",
+        generated_at: new Date().toISOString(),
+        costume_plan: {
+          femalePlan: [{ category: "上装", description: "白衬衫", qty: 1, unitEstimate: 50, subtotal: 50 }],
+          malePlan: [{ category: "上装", description: "西装背心", qty: 1, unitEstimate: 70, subtotal: 70 }],
+          accessories: [{ category: "配饰", description: "蝴蝶结", qty: 2, unitEstimate: 10, subtotal: 20 }],
+          totalEstimate: 140,
+          purchaseStrategy: ["先验样再批量下单"],
+          planB: ["改用替代面料"],
+        },
+        risks: [{ level: "medium", title: "面料缺货", detail: "需提前确认库存" }],
+        reverse_schedule: [{ daysBefore: 14, date: "2026-06-16", task: "面料到货", owner: "采购" }],
+        platform_search: [{ platform: "淘宝", query: "儿童合唱服", note: "人工核验" }],
+      },
+    });
+    const sampleHtml = renderPrintableHtml(samplePayload, "json", {
+      projectTitle: "健康检查样本", version: 0, createdAt: new Date().toISOString(), filenameTitle: "healthcheck",
+    });
+
     // 0. PDF Capability Reclassification (v4.3)
-    //    在读取 SSoT 之前，将 pdf_export 在 system_capabilities 中的状态同步到运行时真实结果：
-    //      flag off        → SKIP · enabled=false · notes="PDF disabled by config"（不触发 L2 WARN）
-    //      flag on + 成功  → PASS · enabled=true
-    //      flag on + 失败  → WARN · enabled=true · notes=错误原因（触发 L2 WARN → G1）
-    //    只改状态映射，不改 PDF 导出实现；Gate Engine 规则不动。
-    try {
-      const pdfOn = getFlag("pdfExport");
-      let capStatus: "SKIP" | "PASS" | "WARN" = "SKIP";
-      let capEnabled = false;
-      let capNotes: string | null = "PDF disabled by config";
-      if (pdfOn) {
-        capEnabled = true;
-        try {
-          const probePayload = JSON.stringify({
-            project: { title: "cap-probe", performance_date: "2026-06-30" },
-            input: { schoolStage: "primary", programType: "chorus", performerCount: 1, femaleCount: 1, maleCount: 0, performanceDate: "2026-06-30", perPersonBudget: 60 },
-            snapshot: {
-              mode: "mock", generated_at: new Date().toISOString(),
-              costume_plan: { femalePlan: [{ category: "上装", description: "白衬衫", qty: 1, unitEstimate: 50, subtotal: 50 }], malePlan: [], accessories: [], totalEstimate: 50, purchaseStrategy: [], planB: [] },
-              risks: [], reverse_schedule: [], platform_search: [],
-            },
-          });
-          const probeHtml = renderPrintableHtml(probePayload, "json", {
-            projectTitle: "cap-probe", version: 0, createdAt: new Date().toISOString(), filenameTitle: "cap-probe",
-          });
-          if (!validatePrintableHtml(probeHtml)) {
-            capStatus = "WARN"; capNotes = "printable html invalid";
-          } else {
-            const blob = await renderPdfBlob(probeHtml);
-            if (blob && blob.size > 1024) { capStatus = "PASS"; capNotes = null; }
-            else { capStatus = "WARN"; capNotes = `pdf generation failed (bytes=${blob?.size ?? 0})`; }
-          }
-        } catch (e: any) {
-          capStatus = "WARN";
-          capNotes = `pdf generation failed: ${e?.message ?? "unknown error"}`;
+    //    先跑真实 PDF 检查，再同步 system_capabilities.pdf_export，最后读取 SSoT 计算 Gate。
+    let pdfDetail: { status: Status; reason: string; detail: string };
+    if (!getFlag("pdfExport")) {
+      pdfDetail = {
+        status: "skip",
+        reason: "PDF disabled by config",
+        detail: "pdfExport flag 未开启（Settings → 分支能力开关）",
+      };
+    } else if (!validatePrintableHtml(sampleHtml)) {
+      pdfDetail = {
+        status: "warn",
+        reason: "PDF generation failed",
+        detail: "printable html invalid",
+      };
+    } else {
+      try {
+        const { result, ms } = await timed(async () => await renderPdfBlob(sampleHtml));
+        const bytes = result?.size ?? 0;
+        if (result && bytes > 1024) {
+          pdfDetail = { status: "pass", reason: "PDF success", detail: `bytes=${bytes}` };
+          push({ id: "pdf", label: "PDF 导出（实验版）", status: "pass", detail: `PDF success — bytes=${bytes}`, ms });
+        } else {
+          pdfDetail = { status: "warn", reason: "PDF generation failed", detail: `bytes=${bytes}` };
         }
+      } catch (e: any) {
+        pdfDetail = { status: "warn", reason: "PDF generation failed", detail: e?.message ?? "unknown error" };
       }
-      await supabase.rpc("sync_pdf_capability", {
-        p_status: capStatus, p_enabled: capEnabled, p_notes: capNotes,
+    }
+    if (pdfDetail.status !== "pass") {
+      push({
+        id: "pdf",
+        label: "PDF 导出（实验版）",
+        status: pdfDetail.status,
+        detail: `${pdfDetail.reason} — ${pdfDetail.detail}`,
       });
-    } catch {
-      /* non-fatal: 同步失败不阻塞验收，Gate 会读取现存 SSoT */
+    }
+    (checks as any).__pdfDetail = pdfDetail;
+
+    let pdfCapabilitySyncError: string | null = null;
+    try {
+      const capStatus = pdfDetail.status === "pass" ? "PASS" : pdfDetail.status === "skip" ? "SKIP" : "WARN";
+      const capEnabled = pdfDetail.status !== "skip";
+      const capNotes = pdfDetail.status === "pass"
+        ? "PDF success"
+        : pdfDetail.status === "skip"
+          ? "PDF disabled by config"
+          : pdfDetail.detail;
+      const { error } = await supabase.rpc("sync_pdf_capability", {
+        p_status: capStatus,
+        p_enabled: capEnabled,
+        p_notes: capNotes,
+      });
+      if (error) throw error;
+    } catch (e: any) {
+      pdfCapabilitySyncError = e?.message ?? "unknown error";
+      push({ id: "pdf_capability_sync", label: "PDF capability 同步", status: "fail", detail: pdfCapabilitySyncError });
     }
 
     // 1. Capability Snapshot + Release Gate（唯一事实源 · 决策层）
     //    治理宪章：能力清单不仅统计，直接参与 Gate 判定；WARN 参与 Gate 计算。
-    const snap = await loadCapabilitySnapshot();
+    const snap = pdfCapabilitySyncError
+      ? {
+          rows: [],
+          counts: { L0: 0, L1: 0, L2: 0, PASS: 0, WARN: 0, FAIL: 0, SKIP: 0, total: 0, L0_WARN: 0, L1_WARN: 0, L2_WARN: 0, L0_FAIL: 0, L1_FAIL: 0, L2_FAIL: 0, warnUnique: 0 },
+          loadedAt: new Date().toISOString(),
+          error: `PDF capability sync failed: ${pdfCapabilitySyncError}`,
+        } satisfies CapabilitySnapshot
+      : await loadCapabilitySnapshot();
     setSnapshot(snap);
     const gateResult = computeReleaseGate(snap);
     setGate(gateResult);
@@ -300,67 +344,6 @@ export function HealthCheck() {
     } catch (e: any) {
       push({ id: "md", label: "Markdown 导出能力", status: "fail", detail: e?.message });
     }
-
-    const samplePayload = JSON.stringify({
-      project: { title: "健康检查样本", performance_date: "2026-06-30" },
-      input: { schoolStage: "primary", programType: "chorus", performerCount: 2, femaleCount: 1, maleCount: 1, performanceDate: "2026-06-30", perPersonBudget: 120 },
-      snapshot: {
-        mode: "mock",
-        generated_at: new Date().toISOString(),
-        costume_plan: {
-          femalePlan: [{ category: "上装", description: "白衬衫", qty: 1, unitEstimate: 50, subtotal: 50 }],
-          malePlan: [{ category: "上装", description: "西装背心", qty: 1, unitEstimate: 70, subtotal: 70 }],
-          accessories: [{ category: "配饰", description: "蝴蝶结", qty: 2, unitEstimate: 10, subtotal: 20 }],
-          totalEstimate: 140,
-          purchaseStrategy: ["先验样再批量下单"],
-          planB: ["改用替代面料"],
-        },
-        risks: [{ level: "medium", title: "面料缺货", detail: "需提前确认库存" }],
-        reverse_schedule: [{ daysBefore: 14, date: "2026-06-16", task: "面料到货", owner: "采购" }],
-        platform_search: [{ platform: "淘宝", query: "儿童合唱服", note: "人工核验" }],
-      },
-    });
-    const sampleHtml = renderPrintableHtml(samplePayload, "json", {
-      projectTitle: "健康检查样本", version: 0, createdAt: new Date().toISOString(), filenameTitle: "healthcheck",
-    });
-
-    // 11. PDF 导出 (v3.4 三态): 显式 PASS/SKIP/WARN + 原因
-    let pdfDetail: { status: Status; reason: string; detail: string };
-    if (!getFlag("pdfExport")) {
-      pdfDetail = {
-        status: "skip",
-        reason: "PDF disabled by config",
-        detail: "pdfExport flag 未开启（Settings → 分支能力开关）",
-      };
-    } else if (!validatePrintableHtml(sampleHtml)) {
-      pdfDetail = {
-        status: "warn",
-        reason: "PDF generation failed",
-        detail: "printable html invalid",
-      };
-    } else {
-      try {
-        const { result, ms } = await timed(async () => await renderPdfBlob(sampleHtml));
-        const bytes = result?.size ?? 0;
-        if (result && bytes > 1024) {
-          pdfDetail = { status: "pass", reason: "PDF success", detail: `bytes=${bytes}` };
-          push({ id: "pdf", label: "PDF 导出（实验版）", status: "pass", detail: `PDF success — bytes=${bytes}`, ms });
-        } else {
-          pdfDetail = { status: "warn", reason: "PDF generation failed", detail: `bytes=${bytes}` };
-        }
-      } catch (e: any) {
-        pdfDetail = { status: "warn", reason: "PDF generation failed", detail: e?.message ?? "unknown error" };
-      }
-    }
-    if (pdfDetail.status !== "pass") {
-      push({
-        id: "pdf",
-        label: "PDF 导出（实验版）",
-        status: pdfDetail.status,
-        detail: `${pdfDetail.reason} — ${pdfDetail.detail}`,
-      });
-    }
-    (checks as any).__pdfDetail = pdfDetail;
 
     // 11a. PDF 三态调试探针 (v3.4)：仅用于 debug 面板复现 PASS/SKIP/WARN，不进入主验收摘要与结论
     // (a) disabled: 固定 SKIP
