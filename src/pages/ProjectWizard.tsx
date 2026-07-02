@@ -480,7 +480,7 @@ export default function ProjectWizard() {
                               <Check className="h-3 w-3" />所有校验通过
                             </div>
                           ) : (
-                            top5.map((it, idx) => (
+                            issues.map((it, idx) => (
                               <button
                                 key={idx}
                                 type="button"
@@ -503,9 +503,42 @@ export default function ProjectWizard() {
                               </button>
                             ))
                           )}
-                          {issues.length > 5 && (
-                            <div className="px-2 py-1 text-[10px] text-muted-foreground font-mono">
-                              还有 {issues.length - 5} 项未列出 · 进入向导查看全部
+                          {issues.length > 0 && (
+                            <div className="px-2 py-1.5 flex items-center justify-between bg-muted/60">
+                              {(() => {
+                                const navIdx = Math.max(0, Math.min((popoverNavIndex[d.id] ?? 0), issues.length - 1));
+                                return (
+                                  <>
+                                    <button
+                                      type="button"
+                                      disabled={navIdx === 0}
+                                      onClick={() => {
+                                        const prev = Math.max(0, navIdx - 1);
+                                        setPopoverNavIndex((s) => ({ ...s, [d.id]: prev }));
+                                        jumpTo(issues[prev]);
+                                      }}
+                                      className="inline-flex items-center gap-0.5 text-[11px] px-2 py-1 rounded-md border border-border bg-background hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                                    >
+                                      <ChevronLeft className="h-3 w-3" />上一问题
+                                    </button>
+                                    <span className="text-[11px] font-mono text-muted-foreground">
+                                      {navIdx + 1} / {issues.length}
+                                    </span>
+                                    <button
+                                      type="button"
+                                      disabled={navIdx >= issues.length - 1}
+                                      onClick={() => {
+                                        const next = Math.min(issues.length - 1, navIdx + 1);
+                                        setPopoverNavIndex((s) => ({ ...s, [d.id]: next }));
+                                        jumpTo(issues[next]);
+                                      }}
+                                      className="inline-flex items-center gap-0.5 text-[11px] px-2 py-1 rounded-md border border-border bg-background hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                                    >
+                                      下一问题<ChevronRight className="h-3 w-3" />
+                                    </button>
+                                  </>
+                                );
+                              })()}
                             </div>
                           )}
                         </div>
