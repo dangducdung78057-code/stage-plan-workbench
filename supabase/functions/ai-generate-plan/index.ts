@@ -75,9 +75,12 @@ const PLAN_SCHEMA_HINT = `
 `;
 
 async function callLovableAi(prompt: string, apiKey: string): Promise<{ ok: true; data: unknown } | { ok: false; code: string; message: string }> {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 25000);
   try {
     const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
+      signal: ctrl.signal,
       headers: {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${apiKey}`,
@@ -108,17 +111,31 @@ async function callLovableAi(prompt: string, apiKey: string): Promise<{ ok: true
     }
     return { ok: true, data: parsed };
   } catch (e) {
-    return { ok: false, code: "AI_NETWORK_ERROR", message: (e as Error).message ?? "AI 网络错误。" };
+    const msg = (e as Error).message ?? "";
+    if ((e as any)?.name === "AbortError" || /abort/i.test(msg)) {
+      return { ok: false, code: "AI_TIMEOUT", message: "AI 网关调用超时。" };
+    }
+    return { ok: false, code: "AI_NETWORK_ERROR", message: msg || "AI 网络错误。" };
+  } finally {
+    clearTimeout(timer);
   }
 }
 
-function shapeOk(plan: any): boolean {
-  if (!plan || typeof plan !== "object") return false;
+function validatePlanShape(plan: any): { ok: true } | { ok: false; missing: string[] } {
+  const missing: string[] = [];
+  if (!plan || typeof plan !== "object") return { ok: false, missing: ["plan"] };
   const cp = plan.costumePlan;
-  if (!cp || !Array.isArray(cp.femalePlan) || !Array.isArray(cp.malePlan) || !Array.isArray(cp.accessories)) return false;
-  if (typeof cp.totalEstimate !== "number") return false;
-  if (!Array.isArray(plan.risks) || !Array.isArray(plan.reverseSchedule) || !Array.isArray(plan.platformSearch)) return false;
-  return true;
+  if (!cp || typeof cp !== "object") missing.push("costumePlan");
+  else {
+    if (!Array.isArray(cp.femalePlan) || cp.femalePlan.length === 0) missing.push("femalePlan");
+    if (!Array.isArray(cp.malePlan) || cp.malePlan.length === 0) missing.push("malePlan");
+    if (!Array.isArray(cp.accessories) || cp.accessories.length === 0) missing.push("accessories");
+    if (typeof cp.totalEstimate !== "number") missing.push("totalEstimate");
+  }
+  if (!Array.isArray(plan.risks) || plan.risks.length === 0) missing.push("risks");
+  if (!Array.isArray(plan.reverseSchedule) || plan.reverseSchedule.length === 0) missing.push("reverseSchedule");
+  if (!Array.isArray(plan.platformSearch) || plan.platformSearch.length === 0) missing.push("platformSearch");
+  return missing.length === 0 ? { ok: true } : { ok: false, missing };
 }
 
 Deno.serve(async (req) => {
