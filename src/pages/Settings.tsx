@@ -24,7 +24,7 @@ import {
 import {
   WEBHOOK_EVENTS, WEBHOOK_EVENT_META, WEBHOOK_SETTINGS_DEFAULTS,
   normalizeWebhookSettings, readLocalWebhookSettings, saveLocalWebhookSettings,
-  dispatchWebhook, type WebhookEvent, type WebhookSettings,
+  dispatchWebhook, generateWebhookSecret, type WebhookEvent, type WebhookSettings,
 } from "@/lib/webhook";
 
 export default function SettingsPage() {
@@ -128,10 +128,22 @@ export default function SettingsPage() {
         webhook_enabled: webhook.webhookEnabled,
         webhook_url: webhook.webhookUrl || null,
         webhook_events: webhook.webhookEvents,
+        webhook_secret: webhook.webhookSecret || null,
       } as any);
       if (error) { toast.error(`Webhook 保存失败：${error.message}`); return; }
       toast.success("Webhook 设置已保存");
     } finally { setWebhookSaving(false); }
+  }
+
+  function rotateWebhookSecret() {
+    const next = generateWebhookSecret();
+    patchWebhook({ webhookSecret: next });
+    toast.success("已生成新的签名密钥，记得点击「保存」后同步到接收端");
+  }
+
+  function clearWebhookSecret() {
+    patchWebhook({ webhookSecret: "" });
+    toast.message("已清空签名密钥（后续出站请求将不再签名）");
   }
 
   async function testWebhook() {
