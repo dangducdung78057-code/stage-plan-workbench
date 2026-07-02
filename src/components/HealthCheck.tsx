@@ -39,6 +39,8 @@ export function HealthCheck() {
   const [checks, setChecks] = useState<Check[]>([]);
   const [startedAt, setStartedAt] = useState<string | null>(null);
   const [recent, setRecent] = useState<RunRow[]>([]);
+  const [lastRunId, setLastRunId] = useState<string | null>(null);
+  const [compareIds, setCompareIds] = useState<[string | null, string | null]>([null, null]);
   type PdfProbe = { status: Status; reason: string; detail: string; ms?: number };
   const [pdfProbes, setPdfProbes] = useState<{ disabled: PdfProbe; enabled: PdfProbe; error: PdfProbe } | null>(null);
 
@@ -46,7 +48,7 @@ export function HealthCheck() {
     if (!user?.id) { setRecent([]); return; }
     const { data } = await supabase
       .from("health_check_runs")
-      .select("id,baseline,route,pass_count,warn_count,fail_count,skip_count,created_at")
+      .select("id,baseline,route,pass_count,warn_count,fail_count,skip_count,created_at,is_release,release_note")
       .order("created_at", { ascending: false })
       .limit(10);
     setRecent((data ?? []) as RunRow[]);
