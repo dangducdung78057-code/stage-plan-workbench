@@ -61,6 +61,10 @@ export default function SettingsPage() {
         </div>
       </div>
 
+      <HealthCheck />
+
+
+
       <div className="panel">
         <div className="panel-header">
           <h2 className="text-sm font-semibold">开发验收面板</h2>
