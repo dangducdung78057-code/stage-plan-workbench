@@ -100,6 +100,24 @@ export function HealthCheck() {
       detail: `[${gateResult.rule}] ${gateResult.reason}`,
     });
 
+    // 1b. Release Freeze 判定（G3=frozen · G2=candidate_frozen · G1/G0=rejected）
+    //     基于 system_capabilities snapshot + Gate，不依赖版本号；结果写入 release_freezes。
+    const frozen = await persistFreeze({
+      baseline: STAGEOS_VERSION,
+      snapshot: snap,
+      gate: gateResult,
+      userId: user?.id ?? null,
+    });
+    setFreeze(frozen);
+    push({
+      id: "release_freeze",
+      label: `Release Freeze · ${frozen.status}`,
+      status: frozen.status === "frozen" ? "pass" : frozen.status === "candidate_frozen" ? "warn" : "fail",
+      detail:
+        `gate=${frozen.gate} [${frozen.rule}] · ` +
+        (frozen.persisted ? `persisted id=${frozen.id ?? "-"}` : `not persisted${frozen.error ? `: ${frozen.error}` : ""}`),
+    });
+
 
 
 
