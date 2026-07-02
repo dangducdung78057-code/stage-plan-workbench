@@ -1,11 +1,15 @@
 // Renders export payloads to Markdown and printable HTML.
 // Never throws; missing sections show a placeholder.
 
-import { PROGRAM_TYPES, SCHOOL_STAGES } from "@/lib/stageos";
+import { PROGRAM_TYPES, SCHOOL_STAGES, STAGEOS_VERSION } from "@/lib/stageos";
 
 const MISSING = "_（本快照缺少此字段）_";
 const HTML_MISSING = "（本快照缺少此字段）";
 const MIN_RENDER_BLOB_SIZE = 1024;
+
+function watermarkLine(): string {
+  return `StageOS · ${STAGEOS_VERSION} · 导出于 ${new Date().toISOString()}`;
+}
 
 /**
  * Unified enum localizer used by Markdown / PDF / PNG export chains.
@@ -251,6 +255,9 @@ export function renderMarkdown(
       "## 隐私声明摘要",
       "",
       "本文件仅包含匿名 studentId、性别、身高、可选角色标签；不含真实姓名或联系方式。",
+      "",
+      "---",
+      `<sub>${watermarkLine()}</sub>`,
     ].join("\n");
     return localizeEnumsInText(out);
   }
@@ -280,6 +287,7 @@ export function renderMarkdown(
     section("采购搜索建议", searchListMd(doc.search)),
     section("mock / 非真实库存价格声明", "本导出所含所有价格、库存、供货商与平台链接均为 mock 或搜索建议，需人工核验，不构成采购承诺。"),
     section("隐私声明摘要", "本文件仅包含匿名 studentId、性别、身高、可选角色标签；不含真实姓名或联系方式。"),
+    `\n---\n\n<sub>${watermarkLine()}</sub>\n`,
   ].join("\n");
   return localizeEnumsInText(md);
 }
@@ -488,6 +496,7 @@ export function renderPrintableHtml(
   hr { border: none; border-top: 1px dashed #bbb; margin: 10pt 0; }
   strong { color: #000; }
   .footer-note { margin-top: 14pt; padding-top: 8pt; border-top: 1px solid #bbb; color: #444; font-size: 10pt; }
+  .stageos-watermark { margin-top: 18pt; padding-top: 6pt; border-top: 1px dashed #bbb; font-size: 8.5pt; color: #777; text-align: center; letter-spacing: .02em; font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; }
 </style>
 </head>
 <body>
@@ -517,6 +526,7 @@ export function renderPrintableHtml(
   <section><h2>倒排时间表</h2>${scheduleTable(doc.schedule)}</section>
   <section><h2>采购搜索建议</h2>${searchTable(doc.search)}</section>
   <section><h2>隐私与非真实库存/价格声明</h2><p>隐私声明：导出仅面向匿名学生数据、人数、身高分档和角色标签，不包含真实姓名、联系方式或敏感身份信息。</p><p>非真实库存/价格声明：本文件中的价格、SKU、库存、供应商和平台搜索建议均为 mock / 模拟或人工检索建议，需由采购负责人二次确认。</p></section>
+  <div class="stageos-watermark" data-stageos-watermark>${escapeHtml(watermarkLine())}</div>
 </article>
 </body>
 </html>`;

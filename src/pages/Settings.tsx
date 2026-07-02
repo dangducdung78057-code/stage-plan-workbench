@@ -146,6 +146,12 @@ export default function SettingsPage() {
           <p>· v2 仍不含真实支付、真实采购或真实 PDF 生成。</p>
         </div>
       </div>
+
+      <footer className="mt-2 px-3 py-2 border rounded bg-surface text-[11px] text-muted-foreground flex flex-wrap items-center gap-x-3 gap-y-1" data-stageos-watermark>
+        <span>StageOS 版本水印</span>
+        <span className="font-mono text-foreground/80 break-all">{STAGEOS_VERSION}</span>
+        <span className="ml-auto font-mono">build · {new Date().toISOString().slice(0, 10)}</span>
+      </footer>
     </div>
   );
 }

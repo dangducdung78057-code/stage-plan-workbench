@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ToneBadge } from "@/components/StatusBadge";
 import { supabase } from "@/integrations/supabase/client";
@@ -6,11 +6,23 @@ import { useAuth } from "@/hooks/useAuth";
 import { STAGEOS_VERSION } from "@/lib/stageos";
 import { getFlag } from "@/lib/featureFlags";
 import { renderMarkdown, renderPrintableHtml, renderPdfBlob, renderPngBlob, validatePrintableHtml, validatePrintableContent } from "@/lib/exportRender";
-import { CheckCircle2, XCircle, Loader2, AlertTriangle, Copy } from "lucide-react";
+import { CheckCircle2, XCircle, Loader2, AlertTriangle, Copy, Download as DownloadIcon, History } from "lucide-react";
 import { toast } from "sonner";
+
+const STABLE_BASELINE = "stageos-v2.6-acceptance-suite-pass";
 
 type Status = "pass" | "fail" | "warn" | "skip";
 type Check = { id: string; label: string; status: Status; detail?: string; ms?: number };
+type RunRow = {
+  id: string;
+  baseline: string;
+  route: string | null;
+  pass_count: number;
+  warn_count: number;
+  fail_count: number;
+  skip_count: number;
+  created_at: string;
+};
 
 async function timed<T>(fn: () => Promise<T>): Promise<{ result: T; ms: number }> {
   const t0 = performance.now();
@@ -23,6 +35,18 @@ export function HealthCheck() {
   const [running, setRunning] = useState(false);
   const [checks, setChecks] = useState<Check[]>([]);
   const [startedAt, setStartedAt] = useState<string | null>(null);
+  const [recent, setRecent] = useState<RunRow[]>([]);
+
+  async function loadRecent() {
+    if (!user?.id) { setRecent([]); return; }
+    const { data } = await supabase
+      .from("health_check_runs")
+      .select("id,baseline,route,pass_count,warn_count,fail_count,skip_count,created_at")
+      .order("created_at", { ascending: false })
+      .limit(10);
+    setRecent((data ?? []) as RunRow[]);
+  }
+  useEffect(() => { void loadRecent(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [user?.id]);
 
   async function run() {
     setRunning(true);
@@ -35,7 +59,7 @@ export function HealthCheck() {
     push({
       id: "version",
       label: "版本标记 (STAGEOS_VERSION)",
-      status: STAGEOS_VERSION === "stageos-v2.2-export-suite-pass" ? "pass" : "warn",
+      status: STAGEOS_VERSION === STABLE_BASELINE ? "pass" : "warn",
       detail: STAGEOS_VERSION,
     });
 
@@ -306,6 +330,31 @@ export function HealthCheck() {
     }
 
 
+    // persist run history (best-effort; RLS scopes to current user)
+    const summaryLocal = out.reduce(
+      (a, c) => ({ ...a, [c.status]: (a[c.status] ?? 0) + 1 }),
+      {} as Record<Status, number>,
+    );
+    if (user?.id) {
+      try {
+        await supabase.from("health_check_runs").insert({
+          user_id: user.id,
+          baseline: STAGEOS_VERSION,
+          route: typeof window !== "undefined" ? window.location.pathname : null,
+          user_agent: typeof navigator !== "undefined" ? navigator.userAgent : null,
+          summary: summaryLocal as any,
+          items: out as any,
+          pass_count: summaryLocal.pass ?? 0,
+          warn_count: summaryLocal.warn ?? 0,
+          fail_count: summaryLocal.fail ?? 0,
+          skip_count: summaryLocal.skip ?? 0,
+        });
+        void loadRecent();
+      } catch {
+        /* non-fatal */
+      }
+    }
+
     setRunning(false);
   }
 
@@ -316,10 +365,12 @@ export function HealthCheck() {
   const failed = (summary.fail ?? 0) > 0;
   const done = checks.length > 0 && !running;
 
-  async function copySummary() {
+  function buildSummaryText(): string {
     const lines: string[] = [];
     lines.push("StageOS 一键验收摘要");
-    lines.push(`版本标记: ${STAGEOS_VERSION}`);
+    lines.push(`baseline: ${STAGEOS_VERSION}`);
+    lines.push(`route: ${typeof window !== "undefined" ? window.location.pathname : "-"}`);
+    lines.push(`userAgent: ${typeof navigator !== "undefined" ? navigator.userAgent : "-"}`);
     lines.push(`时间: ${startedAt ?? new Date().toLocaleString()}`);
     lines.push(`登录状态: ${user?.email ?? user?.id ?? "未登录"}`);
     lines.push("");
@@ -331,7 +382,11 @@ export function HealthCheck() {
     lines.push(
       `汇总: pass=${summary.pass ?? 0} warn=${summary.warn ?? 0} fail=${summary.fail ?? 0} skip=${summary.skip ?? 0}`,
     );
-    const text = lines.join("\n");
+    return lines.join("\n");
+  }
+
+  async function copySummary() {
+    const text = buildSummaryText();
     try {
       await navigator.clipboard.writeText(text);
       toast.success("验收摘要已复制到剪贴板");
@@ -340,6 +395,20 @@ export function HealthCheck() {
       // eslint-disable-next-line no-console
       console.log(text);
     }
+  }
+
+  function downloadSummaryTxt() {
+    const text = "\uFEFF" + buildSummaryText();
+    const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    const stamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
+    a.href = url;
+    a.download = `stageos-acceptance-${stamp}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
   }
 
   return (
@@ -362,6 +431,9 @@ export function HealthCheck() {
               {(summary.skip ?? 0) > 0 && <ToneBadge tone="muted">skip {summary.skip}</ToneBadge>}
               <Button size="sm" variant="outline" onClick={copySummary} className="h-7">
                 <Copy className="h-3.5 w-3.5 mr-1" />复制验收摘要
+              </Button>
+              <Button size="sm" variant="outline" onClick={downloadSummaryTxt} className="h-7">
+                <DownloadIcon className="h-3.5 w-3.5 mr-1" />下载 .txt
               </Button>
             </div>
           )}
@@ -391,6 +463,37 @@ export function HealthCheck() {
             </li>
           ))}
         </ul>
+
+        {recent.length > 0 && (
+          <div className="border rounded bg-surface">
+            <div className="px-3 py-1.5 border-b flex items-center gap-2 text-xs text-muted-foreground">
+              <History className="h-3.5 w-3.5" />
+              <span>最近 10 次验收记录</span>
+            </div>
+            <ul className="divide-y">
+              {recent.map((r) => {
+                const failed = (r.fail_count ?? 0) > 0;
+                const warned = (r.warn_count ?? 0) > 0;
+                const tone: "success" | "warning" | "destructive" = failed ? "destructive" : warned ? "warning" : "success";
+                const label = failed ? "fail" : warned ? "warn" : "pass";
+                return (
+                  <li key={r.id} className="px-3 py-1.5 flex items-center gap-2 text-xs">
+                    <ToneBadge tone={tone}>{label}</ToneBadge>
+                    <span className="font-mono text-muted-foreground truncate">
+                      {new Date(r.created_at).toLocaleString()}
+                    </span>
+                    <span className="font-mono text-[11px] text-muted-foreground/80 truncate hidden md:inline">
+                      {r.baseline}
+                    </span>
+                    <span className="ml-auto font-mono text-[11px] text-muted-foreground shrink-0">
+                      p{r.pass_count}/w{r.warn_count}/f{r.fail_count}/s{r.skip_count}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        )}
       </div>
     </div>
   );

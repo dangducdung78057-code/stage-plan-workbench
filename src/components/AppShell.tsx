@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
+import { STAGEOS_VERSION } from "@/lib/stageos";
 import { toast } from "sonner";
 
 
@@ -52,7 +53,7 @@ function SidebarInner({ onNavigate }: { onNavigate?: () => void }) {
       </nav>
       <div className="px-4 py-3 border-t border-sidebar-border text-[11px] text-sidebar-foreground/60">
         <div className="whitespace-nowrap">学校演出服装排产</div>
-        <div className="font-mono">stageos-v2.2-export-suite-pass</div>
+        <div className="font-mono break-all" data-stageos-watermark>{STAGEOS_VERSION}</div>
       </div>
     </div>
   );
