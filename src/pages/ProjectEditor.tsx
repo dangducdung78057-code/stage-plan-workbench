@@ -166,7 +166,19 @@ export default function ProjectEditor() {
           <h1 className="text-xl font-semibold">{isEdit ? "编辑项目" : "新建项目"}</h1>
           <span className="kbd-route">{isEdit ? "PUT /projects/:id" : "POST /projects"}</span>
         </div>
-        <Button size="sm" onClick={save} disabled={saving || errors.length > 0}>{saving ? "保存中…" : errors.length > 0 ? `修正 ${errors.length} 项错误` : "保存项目"}</Button>
+        <div className="flex items-center gap-2">
+          {typeof window !== "undefined" && new URLSearchParams(window.location.search).get("from") === "confirm" && id && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate(`/projects/${id}?confirm=1`)}
+              title="回到确认弹窗并重新校验"
+            >
+              <ArrowLeft className="h-4 w-4 mr-1" />返回确认
+            </Button>
+          )}
+          <Button size="sm" onClick={save} disabled={saving || errors.length > 0}>{saving ? "保存中…" : errors.length > 0 ? `修正 ${errors.length} 项错误` : "保存项目"}</Button>
+        </div>
       </div>
 
       {errors.length > 0 && (

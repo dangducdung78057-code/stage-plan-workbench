@@ -101,6 +101,24 @@ export default function ProjectDetail() {
 
   useEffect(() => { load(); }, [id]);
 
+  // 从编辑页「返回确认」跳回时(?confirm=1),自动重新打开校验预览弹窗。
+  useEffect(() => {
+    if (!project) return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("confirm") !== "1") return;
+    (async () => {
+      const { data: siRow } = await supabase
+        .from("stage_inputs").select("data").eq("project_id", project.id).maybeSingle();
+      const fresh = (siRow?.data ?? input ?? {}) as StageInputData;
+      const { errors, warnings } = validateStageInputDetailed(fresh);
+      setConfirmPreview({ errors, warnings, checkedAt: new Date().toISOString(), snapshot: fresh });
+      // 清掉 query 参数,避免刷新反复弹出。
+      params.delete("confirm");
+      const qs = params.toString();
+      window.history.replaceState({}, "", `${window.location.pathname}${qs ? `?${qs}` : ""}`);
+    })();
+  }, [project?.id]);
+
   const hasPrivacyConfirmation = confirmations.some((c) => c.status === "confirmed");
 
   async function handleGenerate() {
@@ -621,7 +639,7 @@ export default function ProjectDetail() {
                                 type="button"
                                 onClick={() => {
                                   setConfirmPreview(null);
-                                  navigate(`/projects/${project?.id}/edit#field-${anchor}`);
+                                  navigate(`/projects/${project?.id}/edit?from=confirm#field-${anchor}`);
                                 }}
                                 className="inline-block rounded bg-destructive/15 hover:bg-destructive/25 text-destructive px-1.5 py-0.5 text-[10px] font-mono shrink-0 cursor-pointer"
                                 title="点击跳转到该字段"
@@ -650,7 +668,7 @@ export default function ProjectDetail() {
                                 type="button"
                                 onClick={() => {
                                   setConfirmPreview(null);
-                                  navigate(`/projects/${project?.id}/edit#field-${anchor}`);
+                                  navigate(`/projects/${project?.id}/edit?from=confirm#field-${anchor}`);
                                 }}
                                 className="inline-block rounded bg-warning/15 hover:bg-warning/25 text-warning px-1.5 py-0.5 text-[10px] font-mono shrink-0 cursor-pointer"
                                 title="点击跳转到该字段"
