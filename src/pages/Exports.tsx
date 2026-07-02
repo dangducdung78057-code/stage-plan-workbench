@@ -251,7 +251,7 @@ export default function Exports() {
           </p>
         )}
         {showPdf && (
-          <p className="text-xs text-muted-foreground mt-1">PDF 采用 html2pdf 光栅化渲染，中文原样输出。</p>
+          <p className="text-xs text-muted-foreground mt-1">PDF 实验版：基于 PNG 光栅化嵌入 A4，若渲染结果为空白将被拦截，推荐使用 Markdown 或 PNG。</p>
         )}
         {showPng && (
           <p className="text-xs text-muted-foreground mt-1">PNG 长图采用 html-to-image 光栅化，适合分享。</p>
