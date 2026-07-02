@@ -9,7 +9,7 @@ import { renderMarkdown, renderPrintableHtml, renderPdfBlob, renderPngBlob, vali
 import { CheckCircle2, XCircle, Loader2, AlertTriangle, Copy, Download as DownloadIcon, History } from "lucide-react";
 import { toast } from "sonner";
 
-const STABLE_BASELINE = "stageos-v3.0-procurement-provider-readonly";
+const STABLE_BASELINE = "stageos-v3.1-procurement-provider-fallback-pass";
 
 type Status = "pass" | "fail" | "warn" | "skip";
 type Check = { id: string; label: string; status: Status; detail?: string; ms?: number };
@@ -329,38 +329,67 @@ export function HealthCheck() {
       }
     }
 
-    // 15. 采购 provider 抽象层 v3.0
+    // 15. 采购 provider 抽象层 v3.1 · fallback hardening
+    //   mode=local                    → pass
+    //   mode=http + reachable + valid → pass
+    //   mode=http + 任何失败态         → warn + fallback local（永不 fail）
+    let providerDetail: {
+      providerMode: string;
+      providerId: string;
+      fallbackUsed: boolean;
+      candidates: number;
+      warningCode?: string;
+    } | null = null;
+
     if (!getFlag("procurement")) {
-      push({ id: "procurementProvider", label: "采购 provider (v3.0 抽象层)", status: "skip", detail: "flag off" });
+      push({ id: "procurementProvider", label: "采购 provider (v3.1 抽象层)", status: "skip", detail: "flag off" });
     } else {
       try {
-        const { getProviderMode, getHttpUrl, searchWithFallback } = await import("@/lib/procurementProvider");
-        const mode = getProviderMode();
-        const url = getHttpUrl();
+        const { searchWithFallback, getHttpUrl } = await import("@/lib/procurementProvider");
         const r = await searchWithFallback(
           { category: "上装", description: "白衬衫" },
           { programType: "chorus", schoolStage: "primary" },
         );
-        if (mode === "local") {
+        providerDetail = {
+          providerMode: r.providerMode,
+          providerId: r.providerId,
+          fallbackUsed: r.fallbackUsed,
+          candidates: r.candidates.length,
+          warningCode: r.warningCode,
+        };
+        const base = `mode=${r.providerMode}, providerId=${r.providerId}, fallbackUsed=${r.fallbackUsed}, candidates=${r.candidates.length}${r.warningCode ? `, warningCode=${r.warningCode}` : ""}`;
+        if (r.providerMode === "local") {
           push({
             id: "procurementProvider",
             label: "采购 provider (local)",
-            status: r.candidates.length ? "pass" : "warn",
-            detail: `mode=local, providerId=${r.providerId}, candidates=${r.candidates.length}`,
+            status: r.candidates.length > 0 ? "pass" : "warn",
+            detail: base,
           });
-        } else if (mode === "http") {
-          if (!url) {
-            push({ id: "procurementProvider", label: "采购 provider (http)", status: "warn", detail: "HTTP URL 未配置，已 fallback local" });
-          } else if (r.usedFallback) {
-            push({ id: "procurementProvider", label: "采购 provider (http)", status: "warn", detail: r.warning ?? "HTTP 不可用，已 fallback local" });
+        } else {
+          // http mode
+          if (r.fallbackUsed) {
+            push({
+              id: "procurementProvider",
+              label: "采购 provider (http → fallback-local)",
+              status: "warn",
+              detail: `${r.warning ?? "HTTP 不可用，已 fallback local"} · ${base}${getHttpUrl() ? "" : " · (endpoint 未配置)"}`,
+            });
           } else {
-            push({ id: "procurementProvider", label: "采购 provider (http)", status: "pass", detail: `mode=http, candidates=${r.candidates.length}` });
+            push({
+              id: "procurementProvider",
+              label: "采购 provider (http)",
+              status: r.candidates.length > 0 ? "pass" : "warn",
+              detail: base,
+            });
           }
         }
       } catch (e: any) {
-        push({ id: "procurementProvider", label: "采购 provider (v3.0 抽象层)", status: "warn", detail: `provider 异常: ${e?.message ?? "unknown"}` });
+        // 抽象层理论上不抛，兜底 warn
+        push({ id: "procurementProvider", label: "采购 provider (v3.1 抽象层)", status: "warn", detail: `provider 异常: ${e?.message ?? "unknown"}` });
       }
     }
+    // 暴露给 summary 文本使用
+    (out as any).__providerDetail = providerDetail;
 
 
 
@@ -411,6 +440,19 @@ export function HealthCheck() {
     lines.push("检查项:");
     for (const c of checks) {
       lines.push(`- [${c.status.toUpperCase()}] ${c.label}${c.detail ? ` — ${c.detail}` : ""}`);
+    }
+    const pd = (checks as any).__providerDetail as
+      | { providerMode: string; providerId: string; fallbackUsed: boolean; candidates: number; warningCode?: string }
+      | null
+      | undefined;
+    if (pd) {
+      lines.push("");
+      lines.push("采购 provider 细节:");
+      lines.push(`  providerMode: ${pd.providerMode}`);
+      lines.push(`  providerId: ${pd.providerId}`);
+      lines.push(`  fallbackUsed: ${pd.fallbackUsed}`);
+      lines.push(`  candidates: ${pd.candidates}`);
+      if (pd.warningCode) lines.push(`  warningCode: ${pd.warningCode}`);
     }
     lines.push("");
     lines.push(
