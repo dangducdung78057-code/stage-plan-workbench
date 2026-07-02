@@ -440,6 +440,9 @@ function procurementSectionHtml(bundle: any): string {
     return `${head}${table}`;
   }).join("");
   return `<section><h2>候选商品清单</h2>${meta}${body}${disclaimer}</section>`;
+}
+
+
 
 // Minimal Markdown -> HTML for print (headings, lists, tables, bold, blockquote, code)
 function mdToHtml(md: string): string {
