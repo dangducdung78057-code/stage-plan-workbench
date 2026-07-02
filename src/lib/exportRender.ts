@@ -520,7 +520,16 @@ function parseMarkdownPayload(raw: string): {
     else schedule.push(item);
   }
 
-  return { project, input, plan, snapshot, risks, planB, purchaseStrategy: [], schedule, search: [] };
+  // ## 采购搜索建议 → "- **平台**：关键词 — 备注"
+  const search: any[] = [];
+  const searchBlock = extractListBlock(raw, /^##\s+采购搜索建议\s*$/m);
+  for (const item of searchBlock) {
+    const m = /^\*\*([^*]+)\*\*\s*[:：]\s*(.+?)(?:\s+[—-]\s+(.+))?$/.exec(item);
+    if (m) search.push({ platform: m[1].trim(), query: m[2].trim(), note: (m[3] ?? "").trim() || undefined });
+    else search.push(item);
+  }
+
+  return { project, input, plan, snapshot, risks, planB, purchaseStrategy: [], schedule, search };
 }
 
 function numOrRaw(s: string): any {
