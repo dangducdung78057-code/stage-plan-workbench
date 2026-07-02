@@ -13,7 +13,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { PROJECT_STATUSES } from "@/lib/stageos";
-import { Plus, ArrowRight, Package, AlertTriangle, CheckCircle2, FileDown, Presentation, Download } from "lucide-react";
+import { Plus, ArrowRight, Package, AlertTriangle, CheckCircle2, FileDown, Presentation, Download, ChevronUp, ChevronDown } from "lucide-react";
 import { MobileCard, MobileCardList, MobileField } from "@/components/MobileCard";
 
 const SLIDE_OUTLINE: { title: string; desc: string }[] = [
