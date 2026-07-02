@@ -67,6 +67,7 @@ export function HealthCheck() {
     setChecks([]);
     setSnapshot(null);
     setGate(null);
+    setFreeze(null);
     setStartedAt(new Date().toLocaleString());
     const out: Check[] = [];
     const push = (c: Check) => { out.push(c); setChecks([...out]); };
