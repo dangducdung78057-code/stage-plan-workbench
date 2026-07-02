@@ -473,26 +473,51 @@ function PlanView({ snapshot }: { snapshot: Snapshot }) {
 }
 
 function PlanTable({ title, rows }: { title: string; rows: any[] }) {
+  const list = rows ?? [];
+  const subtotal = list.reduce((sum, r) => sum + (Number(r.subtotal) || 0), 0);
   return (
     <div className="panel">
-      <div className="panel-header"><h3 className="text-sm font-semibold">{title}</h3></div>
-      <table className="ops-table">
-        <thead><tr><th>项</th><th className="w-14 text-right">数量</th><th className="w-20 text-right">单价</th><th className="w-20 text-right">小计</th></tr></thead>
-        <tbody>
-          {(rows ?? []).map((r, i) => (
-            <tr key={i}>
-              <td>
-                <div className="font-medium text-xs">{r.category}</div>
-                <div className="text-xs text-muted-foreground">{r.description}</div>
-                {r.sizing && <div className="text-[10px] text-muted-foreground font-mono">size: {r.sizing}</div>}
-              </td>
-              <td className="text-right font-mono text-xs">{r.qty}</td>
-              <td className="text-right font-mono text-xs">¥{r.unitEstimate}</td>
-              <td className="text-right font-mono text-xs">¥{r.subtotal}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <div className="panel-header">
+        <h3 className="text-sm font-semibold">{title}</h3>
+        <span className="text-xs font-mono text-muted-foreground">¥{subtotal}</span>
+      </div>
+      <div className="hidden md:block">
+        <table className="ops-table">
+          <thead><tr><th>项</th><th className="w-14 text-right">数量</th><th className="w-20 text-right">单价</th><th className="w-20 text-right">小计</th></tr></thead>
+          <tbody>
+            {list.map((r, i) => (
+              <tr key={i}>
+                <td>
+                  <div className="font-medium text-xs">{r.category}</div>
+                  <div className="text-xs text-muted-foreground">{r.description}</div>
+                  {r.sizing && <div className="text-[10px] text-muted-foreground font-mono">size: {r.sizing}</div>}
+                </td>
+                <td className="text-right font-mono text-xs">{r.qty}</td>
+                <td className="text-right font-mono text-xs">¥{r.unitEstimate}</td>
+                <td className="text-right font-mono text-xs">¥{r.subtotal}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <MobileCardList empty="暂无条目">
+        {list.map((r, i) => (
+          <MobileCard
+            key={i}
+            title={
+              <div className="min-w-0">
+                <div className="text-sm font-medium break-words">{r.category}</div>
+                <div className="text-xs text-muted-foreground break-words">{r.description}</div>
+                {r.sizing && <div className="text-[10px] text-muted-foreground font-mono mt-0.5">size: {r.sizing}</div>}
+              </div>
+            }
+          >
+            <MobileField label="数量" value={r.qty} mono />
+            <MobileField label="单价" value={`¥${r.unitEstimate}`} mono />
+            <MobileField label="小计" value={`¥${r.subtotal}`} mono />
+          </MobileCard>
+        ))}
+      </MobileCardList>
     </div>
   );
 }
