@@ -441,6 +441,19 @@ export function HealthCheck() {
     for (const c of checks) {
       lines.push(`- [${c.status.toUpperCase()}] ${c.label}${c.detail ? ` — ${c.detail}` : ""}`);
     }
+    const pd = (checks as any).__providerDetail as
+      | { providerMode: string; providerId: string; fallbackUsed: boolean; candidates: number; warningCode?: string }
+      | null
+      | undefined;
+    if (pd) {
+      lines.push("");
+      lines.push("采购 provider 细节:");
+      lines.push(`  providerMode: ${pd.providerMode}`);
+      lines.push(`  providerId: ${pd.providerId}`);
+      lines.push(`  fallbackUsed: ${pd.fallbackUsed}`);
+      lines.push(`  candidates: ${pd.candidates}`);
+      if (pd.warningCode) lines.push(`  warningCode: ${pd.warningCode}`);
+    }
     lines.push("");
     lines.push(
       `汇总: pass=${summary.pass ?? 0} warn=${summary.warn ?? 0} fail=${summary.fail ?? 0} skip=${summary.skip ?? 0}`,
