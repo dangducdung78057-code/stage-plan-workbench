@@ -362,8 +362,9 @@ export async function renderPdfBlob(html: string): Promise<Blob> {
 
 /**
  * Render the printable HTML into a PNG Blob (long-image, share-friendly).
- * Uses html-to-image on an off-screen host so Chinese renders via the browser font stack.
+ * Off-screen but laid-out host so html-to-image can measure & rasterize.
  * Never mutates or replaces the Markdown / Storage export chains.
+ * Throws PNG_EMPTY_CONTENT when the mounted node has no measurable content.
  */
 export async function renderPngBlob(html: string, opts?: { widthPx?: number; pixelRatio?: number }): Promise<Blob> {
   if (typeof window === "undefined") throw new Error("PNG_UNSUPPORTED");
@@ -372,33 +373,51 @@ export async function renderPngBlob(html: string, opts?: { widthPx?: number; pix
   if (!toBlob) throw new Error("PNG_LIB_UNAVAILABLE");
 
   const width = opts?.widthPx ?? 794; // ~A4 @96dpi
+
+  // Off-screen but laid-out (no display:none). Must be attached to body.
   const host = document.createElement("div");
+  host.setAttribute("data-stageos-png-host", "1");
   host.style.position = "fixed";
   host.style.left = "-10000px";
   host.style.top = "0";
   host.style.width = `${width}px`;
   host.style.background = "#ffffff";
+  host.style.opacity = "1";
+  host.style.pointerEvents = "none";
+  host.style.zIndex = "-1";
+
   const bodyMatch = /<body[^>]*>([\s\S]*?)<\/body>/i.exec(html);
   const styleMatch = /<style[^>]*>([\s\S]*?)<\/style>/i.exec(html);
   host.innerHTML =
     (styleMatch ? `<style>${styleMatch[1]}</style>` : "") +
-    `<div style="padding:24px 20px;">${bodyMatch ? bodyMatch[1] : html}</div>`;
+    `<div style="padding:24px 20px;background:#ffffff;color:#111;">${bodyMatch ? bodyMatch[1] : html}</div>`;
   document.body.appendChild(host);
 
   try {
-    // Let fonts & layout settle
+    // Wait for fonts
     if ((document as any).fonts?.ready) {
       try { await (document as any).fonts.ready; } catch { /* noop */ }
     }
+    // Two RAFs so layout & paint settle
+    await new Promise((r) => requestAnimationFrame(() => r(null)));
     await new Promise((r) => requestAnimationFrame(() => r(null)));
 
+    const w = host.offsetWidth;
+    const h = host.scrollHeight;
+    const txt = (host.innerText || "").trim();
+    if (!(w > 0) || !(h > 0) || txt.length === 0) {
+      throw new Error("PNG_EMPTY_CONTENT");
+    }
+
     const blob: Blob | null = await toBlob(host, {
-      pixelRatio: opts?.pixelRatio ?? 2,
       backgroundColor: "#ffffff",
+      width,
+      height: h,
+      pixelRatio: opts?.pixelRatio ?? 2,
       cacheBust: true,
       style: { transform: "none" },
     });
-    if (!blob) throw new Error("PNG_EMPTY");
+    if (!blob || blob.size === 0) throw new Error("PNG_EMPTY_CONTENT");
     return blob;
   } finally {
     try { host.remove(); } catch { /* noop */ }
