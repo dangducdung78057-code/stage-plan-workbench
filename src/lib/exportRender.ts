@@ -300,8 +300,13 @@ export function downloadBlob(content: string, filename: string, mime: string) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
+export function canPrint(): boolean {
+  return typeof window !== "undefined" && typeof window.print === "function";
+}
+
 export function openPrintWindow(html: string): Promise<void> {
   return new Promise((resolve, reject) => {
+    if (!canPrint()) { reject(new Error("PRINT_UNSUPPORTED")); return; }
     try {
       const iframe = document.createElement("iframe");
       iframe.style.position = "fixed";
@@ -313,23 +318,25 @@ export function openPrintWindow(html: string): Promise<void> {
       iframe.setAttribute("aria-hidden", "true");
       document.body.appendChild(iframe);
 
-      const cleanup = () => {
+      let settled = false;
+      const done = (err?: any) => {
+        if (settled) return;
+        settled = true;
         setTimeout(() => { try { iframe.remove(); } catch {} }, 500);
+        err ? reject(err) : resolve();
       };
 
       iframe.onload = () => {
         try {
           const w = iframe.contentWindow;
-          if (!w) throw new Error("no contentWindow");
-          const onAfter = () => { w.removeEventListener("afterprint", onAfter); cleanup(); resolve(); };
-          w.addEventListener("afterprint", onAfter);
+          if (!w || typeof w.print !== "function") throw new Error("PRINT_UNSUPPORTED");
+          w.addEventListener("afterprint", () => done());
           w.focus();
           w.print();
-          // Fallback cleanup in case afterprint doesn't fire
-          setTimeout(() => { cleanup(); resolve(); }, 60_000);
+          // Fallback resolve if afterprint doesn't fire
+          setTimeout(() => done(), 60_000);
         } catch (e) {
-          cleanup();
-          reject(e);
+          done(e);
         }
       };
 
