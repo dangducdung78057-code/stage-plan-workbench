@@ -190,9 +190,24 @@ export default function ProjectWizard() {
           <h1 className="text-xl font-semibold">新建项目 · 向导</h1>
           <span className="kbd-route">wizard://projects/new</span>
         </div>
-        <Button asChild variant="ghost" size="sm">
-          <Link to="/projects/new">切换到经典表单</Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          {savedAt && (
+            <span className="text-[11px] text-muted-foreground font-mono hidden sm:inline">
+              draft saved · {new Date(savedAt).toLocaleTimeString()}
+            </span>
+          )}
+          {savedAt && (
+            <Button variant="ghost" size="sm" onClick={discardDraft} title="清空当前草稿">
+              <RotateCcw className="h-4 w-4 mr-1" />清空草稿
+            </Button>
+          )}
+          <Button variant="outline" size="sm" onClick={saveDraftAndExit}>
+            <Save className="h-4 w-4 mr-1" />保存草稿并退出
+          </Button>
+          <Button asChild variant="ghost" size="sm">
+            <Link to="/projects/new">切换到经典表单</Link>
+          </Button>
+        </div>
       </div>
 
       {/* Stepper */}
