@@ -275,23 +275,28 @@ export default function Exports() {
           <h2 className="text-sm font-semibold">全部记录</h2>
           <span className="kbd-route">GET /export</span>
         </div>
-        <div className="hidden md:block overflow-x-auto"><table className="ops-table">
+        <div className="hidden md:block overflow-x-auto"><table className="ops-table" style={{ minWidth: 860, tableLayout: "auto" }}>
           <thead>
             <tr>
-              <th>项目</th><th>版本</th><th>格式</th><th>时间</th><th>大小</th><th className="w-56">操作</th>
+              <th style={{ minWidth: 160, whiteSpace: "nowrap" }}>项目</th>
+              <th style={{ minWidth: 64, whiteSpace: "nowrap" }}>版本</th>
+              <th style={{ minWidth: 80, whiteSpace: "nowrap" }}>格式</th>
+              <th style={{ minWidth: 160, whiteSpace: "nowrap" }}>时间</th>
+              <th style={{ minWidth: 80, whiteSpace: "nowrap" }}>大小</th>
+              <th style={{ minWidth: 280, whiteSpace: "nowrap" }}>操作</th>
             </tr>
           </thead>
           <tbody>
             {rows.length === 0 && <tr><td colSpan={6} className="text-center text-muted-foreground py-8">暂无导出记录</td></tr>}
             {rows.map((r) => (
               <tr key={r.id}>
-                <td>{projectTitles[r.project_id] ?? r.project_id.slice(0, 8)}</td>
-                <td className="font-mono">v{r.version}</td>
-                <td><ToneBadge tone={r.format === "json" ? "info" : "primary"}>{r.format}</ToneBadge></td>
-                <td className="font-mono text-xs text-muted-foreground">{new Date(r.created_at).toLocaleString("zh-CN", { hour12: false })}</td>
-                <td className="font-mono text-xs">{r.payload?.length ?? 0} B</td>
-                <td>
-                  <div className="flex gap-1 flex-wrap">
+                <td style={{ minWidth: 160, whiteSpace: "normal", wordBreak: "break-word" }}>{projectTitles[r.project_id] ?? r.project_id.slice(0, 8)}</td>
+                <td className="font-mono" style={{ whiteSpace: "nowrap" }}>v{r.version}</td>
+                <td style={{ whiteSpace: "nowrap" }}><ToneBadge tone={r.format === "json" ? "info" : "primary"}>{r.format}</ToneBadge></td>
+                <td className="font-mono text-xs text-muted-foreground" style={{ whiteSpace: "nowrap" }}>{new Date(r.created_at).toLocaleString("zh-CN", { hour12: false })}</td>
+                <td className="font-mono text-xs" style={{ whiteSpace: "nowrap" }}>{r.payload?.length ?? 0} B</td>
+                <td style={{ minWidth: 280 }}>
+                  <div className="flex gap-1 flex-wrap" style={{ whiteSpace: "nowrap" }}>
                     <Button variant="ghost" size="sm" onClick={() => setOpen(r)}>
                       <Eye className="h-3.5 w-3.5 mr-1" />查看
                     </Button>
