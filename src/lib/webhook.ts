@@ -73,7 +73,7 @@ export async function loadWebhookSettings(): Promise<WebhookSettings> {
     if (data) {
       // webhook_secret is admin-only; fetch it via the secure RPC (returns null for non-admins).
       const { data: secret } = await supabase.rpc("get_webhook_secret" as any);
-      const merged = normalizeWebhookSettings({ ...data, webhook_secret: secret ?? "" }, readLocalWebhookSettings());
+      const merged = normalizeWebhookSettings({ ...(data as any), webhook_secret: secret ?? "" }, readLocalWebhookSettings());
       saveLocalWebhookSettings(merged);
       return merged;
     }
