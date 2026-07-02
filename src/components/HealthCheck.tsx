@@ -34,7 +34,7 @@ export function HealthCheck() {
     push({
       id: "version",
       label: "版本标记 (STAGEOS_VERSION)",
-      status: STAGEOS_VERSION === "stageos-v2-auth-mock-mvp-pass + storageUpload branch pass" ? "pass" : "warn",
+      status: STAGEOS_VERSION === "stageos-v2.2-export-suite-pass" ? "pass" : "warn",
       detail: STAGEOS_VERSION,
     });
 

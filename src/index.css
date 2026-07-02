@@ -125,7 +125,7 @@
 
   /* Checkpoint banner — shown once at build-time */
   .checkpoint-banner::before {
-    content: "CHECKPOINT: stageos-v2-auth-mock-mvp-pass";
+    content: "CHECKPOINT: stageos-v2.2-export-suite-pass";
     display: block;
     font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     font-size: 10px;

@@ -1,5 +1,5 @@
 // StageOS domain constants and helpers
-export const STAGEOS_VERSION = "stageos-v2-auth-mock-mvp-pass + storageUpload branch pass" as const;
+export const STAGEOS_VERSION = "stageos-v2.2-export-suite-pass" as const;
 
 export const SCHOOL_STAGES = [
   { value: "primary", label: "小学" },
