@@ -7,6 +7,7 @@ import { AppShell } from "@/components/AppShell";
 import Workspace from "./pages/Workspace";
 import Projects from "./pages/Projects";
 import ProjectEditor from "./pages/ProjectEditor";
+import ProjectWizard from "./pages/ProjectWizard";
 import ProjectDetail from "./pages/ProjectDetail";
 import Modules from "./pages/Modules";
 import Exports from "./pages/Exports";
@@ -26,6 +27,7 @@ const App = () => (
             <Route path="/" element={<Workspace />} />
             <Route path="/projects" element={<Projects />} />
             <Route path="/projects/new" element={<ProjectEditor />} />
+            <Route path="/projects/new/wizard" element={<ProjectWizard />} />
             <Route path="/projects/:id/edit" element={<ProjectEditor />} />
             <Route path="/projects/:id" element={<ProjectDetail />} />
             <Route path="/modules" element={<Modules />} />
