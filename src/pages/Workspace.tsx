@@ -113,19 +113,42 @@ export default function Workspace() {
               先浏览 10 页要点脉络，再下载 .pptx 用于线下汇报。
             </DialogDescription>
           </DialogHeader>
-          <ol className="max-h-[52vh] overflow-y-auto pr-1 space-y-2">
-            {SLIDE_OUTLINE.map((s, i) => (
-              <li key={i} className="flex gap-3 rounded-md border border-border/60 p-2.5">
-                <span className="font-mono text-xs text-muted-foreground w-6 shrink-0 pt-0.5">
-                  {String(i + 1).padStart(2, "0")}
-                </span>
-                <div className="min-w-0">
-                  <div className="text-sm font-medium">{s.title}</div>
-                  <div className="text-xs text-muted-foreground mt-0.5">{s.desc}</div>
-                </div>
-              </li>
-            ))}
-          </ol>
+          <div className="max-h-[52vh] overflow-y-auto pr-1">
+            <ol className="relative space-y-4">
+              <div className="pointer-events-none absolute left-[19px] top-2 bottom-2 w-px bg-border" aria-hidden />
+              {SLIDE_OUTLINE.map((s, i) => {
+                const isFirst = i === 0;
+                const isLast = i === SLIDE_OUTLINE.length - 1;
+                const emphasised = isFirst || isLast;
+                return (
+                  <li key={i} className="relative flex items-stretch gap-3 group">
+                    <div
+                      className={`relative z-10 h-10 w-10 shrink-0 rounded-lg flex items-center justify-center text-xs font-bold font-mono ring-4 ring-background shadow-sm ${
+                        isFirst
+                          ? "bg-primary text-primary-foreground"
+                          : isLast
+                            ? "bg-foreground text-background"
+                            : "bg-background border-2 border-border text-muted-foreground"
+                      }`}
+                    >
+                      {String(i + 1).padStart(2, "0")}
+                    </div>
+                    <div
+                      className={`flex-1 min-w-0 rounded-xl border px-3 py-2 transition-colors group-hover:border-primary/40 ${
+                        emphasised ? "border-border bg-muted/40" : "border-border/70 bg-background"
+                      }`}
+                    >
+                      <div className={`text-sm ${emphasised ? "font-semibold" : "font-medium"} truncate`}>
+                        {s.title}
+                      </div>
+                      <div className="text-xs text-muted-foreground mt-0.5 truncate">{s.desc}</div>
+                    </div>
+                  </li>
+                );
+              })}
+            </ol>
+          </div>
+
           <DialogFooter>
             <Button asChild size="sm">
               <a href="/stageos-overview.pptx" download>
