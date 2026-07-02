@@ -43,6 +43,8 @@ export default function ProjectDetail() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [generationNotice, setGenerationNotice] = useState<PrecheckResult | null>(null);
+  const flags = useFlags();
+  const aiOn = flags.aiProvider;
 
   const latest = snapshots[0];
   const latestConfirm = confirmations[0];
