@@ -77,7 +77,30 @@ class HttpProviderError extends Error {
   }
 }
 
-export function makeHttpProvider(url: string): ProcurementProvider {
+function buildHttpHeaders(url: string): Record<string, string> {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  try {
+    const u = new URL(url);
+    const supaUrl = (import.meta as any).env?.VITE_SUPABASE_URL as string | undefined;
+    const supaKey = (import.meta as any).env?.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined;
+    if (supaUrl && supaKey && u.origin === new URL(supaUrl).origin) {
+      headers["apikey"] = supaKey;
+      headers["Authorization"] = `Bearer ${supaKey}`;
+    }
+  } catch { /* noop */ }
+  return headers;
+}
+
+export type HttpProviderResult = {
+  candidates: Candidate[];
+  providerId?: string; // 允许 endpoint 返回自定义 id，例如 http-mock
+};
+
+export function makeHttpProvider(url: string): {
+  id: "http";
+  label: string;
+  search(item: PlanItem, ctx: MatchContext): Promise<HttpProviderResult>;
+} {
   return {
     id: "http",
     label: "HTTP (预留)",
@@ -89,8 +112,8 @@ export function makeHttpProvider(url: string): ProcurementProvider {
       try {
         res = await fetch(url, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ item, ctx }),
+          headers: buildHttpHeaders(url),
+          body: JSON.stringify({ item, ctx, query: `${item?.category ?? ""} ${item?.description ?? ""}`.trim() }),
           signal: ctrl.signal,
         });
       } catch (e: any) {
@@ -116,11 +139,11 @@ export function makeHttpProvider(url: string): ProcurementProvider {
       }
       const arr: Candidate[] = json.candidates.filter(isValidCandidate).slice(0, 3);
       if (arr.length === 0) {
-        // 区分 schema 合法但空 vs schema 不合法
         if (json.candidates.length > 0) throw new HttpProviderError("HTTP_SCHEMA_INVALID");
         throw new HttpProviderError("HTTP_EMPTY_CANDIDATES");
       }
-      return arr;
+      const providerId = typeof json.providerId === "string" ? json.providerId : undefined;
+      return { candidates: arr, providerId };
     },
   };
 }
