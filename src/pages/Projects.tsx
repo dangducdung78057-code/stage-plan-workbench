@@ -27,13 +27,13 @@ export default function Projects() {
   const filtered = rows.filter((r) => !q || r.title.toLowerCase().includes(q.toLowerCase()));
 
   return (
-    <div className="p-6 space-y-4">
-      <div className="flex items-center justify-between">
+    <div className="p-4 md:p-6 space-y-4">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
         <div>
           <h1 className="text-xl font-semibold">项目</h1>
           <p className="text-sm text-muted-foreground">全部演出服装排产项目。</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <Button asChild variant="outline" size="sm"><Link to="/projects/new">经典表单</Link></Button>
           <Button asChild size="sm"><Link to="/projects/new/wizard"><Plus className="h-4 w-4 mr-1" />新建项目 · 向导</Link></Button>
         </div>
