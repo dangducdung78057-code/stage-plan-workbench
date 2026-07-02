@@ -51,11 +51,12 @@ export function readLocalProcurementSettings(): ProcurementSettings {
   }
 }
 
-export function saveLocalProcurementSettings(settings: ProcurementSettings) {
+export function saveLocalProcurementSettings(settings: ProcurementSettings, notify = true) {
   if (typeof localStorage === "undefined") return;
   localStorage.setItem(LOCAL_KEY, JSON.stringify(settings));
   localStorage.setItem(LEGACY_MODE_KEY, settings.procurementProvider);
   localStorage.setItem(LEGACY_URL_KEY, settings.procurementApiBaseUrl);
+  if (!notify) return;
   window.dispatchEvent(new CustomEvent("stageos:procurementSettings"));
   window.dispatchEvent(new CustomEvent("stageos:procurementProvider"));
 }
@@ -67,7 +68,7 @@ export async function readProcurementSettings(): Promise<{ settings: Procurement
     if (error) return { settings: local, source: "local", error: error.message };
     if (!data) return { settings: local, source: "local" };
     const settings = normalizeProcurementSettings(data, local);
-    saveLocalProcurementSettings(settings);
+    saveLocalProcurementSettings(settings, false);
     return { settings, source: "global" };
   } catch (e: any) {
     return { settings: local, source: "local", error: e?.message ?? "unknown" };
