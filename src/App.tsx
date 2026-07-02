@@ -4,6 +4,8 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AppShell } from "@/components/AppShell";
+import { AuthProvider } from "@/hooks/useAuth";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Workspace from "./pages/Workspace";
 import Projects from "./pages/Projects";
 import ProjectEditor from "./pages/ProjectEditor";
@@ -12,6 +14,7 @@ import ProjectDetail from "./pages/ProjectDetail";
 import Modules from "./pages/Modules";
 import Exports from "./pages/Exports";
 import SettingsPage from "./pages/Settings";
+import AuthPage from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -22,20 +25,32 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <AppShell>
+        <AuthProvider>
           <Routes>
-            <Route path="/" element={<Workspace />} />
-            <Route path="/projects" element={<Projects />} />
-            <Route path="/projects/new" element={<ProjectEditor />} />
-            <Route path="/projects/new/wizard" element={<ProjectWizard />} />
-            <Route path="/projects/:id/edit" element={<ProjectEditor />} />
-            <Route path="/projects/:id" element={<ProjectDetail />} />
-            <Route path="/modules" element={<Modules />} />
-            <Route path="/exports" element={<Exports />} />
-            <Route path="/settings" element={<SettingsPage />} />
-            <Route path="*" element={<NotFound />} />
+            <Route path="/auth" element={<AuthPage />} />
+            <Route
+              path="/*"
+              element={
+                <ProtectedRoute>
+                  <AppShell>
+                    <Routes>
+                      <Route path="/" element={<Workspace />} />
+                      <Route path="/projects" element={<Projects />} />
+                      <Route path="/projects/new" element={<ProjectEditor />} />
+                      <Route path="/projects/new/wizard" element={<ProjectWizard />} />
+                      <Route path="/projects/:id/edit" element={<ProjectEditor />} />
+                      <Route path="/projects/:id" element={<ProjectDetail />} />
+                      <Route path="/modules" element={<Modules />} />
+                      <Route path="/exports" element={<Exports />} />
+                      <Route path="/settings" element={<SettingsPage />} />
+                      <Route path="*" element={<NotFound />} />
+                    </Routes>
+                  </AppShell>
+                </ProtectedRoute>
+              }
+            />
           </Routes>
-        </AppShell>
+        </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
