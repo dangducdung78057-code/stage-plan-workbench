@@ -113,12 +113,7 @@ export default function ProjectWizard() {
     toast.success("已清空草稿,重新开始。");
   };
 
-  const set = <K extends keyof StageInputData>(k: K, v: StageInputData[K]) =>
-    setData((d) => ({ ...d, [k]: v }));
 
-  const stepIssues = useMemo(() => validateStep(step, title, data), [step, title, data]);
-  const globalIssues = useMemo(() => validateStageInput(data), [data]);
-  const canNext = stepIssues.blockers.length === 0;
 
   const goNext = () => {
     if (!canNext) {
