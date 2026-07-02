@@ -43,6 +43,23 @@ export default function Workspace() {
   const [rows, setRows] = useState<Row[]>([]);
   const [counts, setCounts] = useState({ total: 0, confirmed: 0, revision: 0, exported: 0 });
   const [loading, setLoading] = useState(true);
+  const [guideOpen, setGuideOpen] = useState(false);
+  const [activeSlide, setActiveSlide] = useState(0);
+  const itemRefs = useRef<Array<HTMLButtonElement | null>>([]);
+
+  useEffect(() => {
+    if (!guideOpen) return;
+    setActiveSlide(0);
+  }, [guideOpen]);
+
+  useEffect(() => {
+    if (!guideOpen) return;
+    itemRefs.current[activeSlide]?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }, [guideOpen, activeSlide]);
+
+  const moveSlide = (delta: number) =>
+    setActiveSlide((i) => Math.min(SLIDE_OUTLINE.length - 1, Math.max(0, i + delta)));
+
 
   useEffect(() => {
     (async () => {
