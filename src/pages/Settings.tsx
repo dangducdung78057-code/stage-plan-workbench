@@ -21,6 +21,11 @@ import {
   saveLocalProcurementSettings,
   type ProcurementSettings,
 } from "@/lib/procurementSettings";
+import {
+  WEBHOOK_EVENTS, WEBHOOK_EVENT_META, WEBHOOK_SETTINGS_DEFAULTS,
+  normalizeWebhookSettings, readLocalWebhookSettings, saveLocalWebhookSettings,
+  dispatchWebhook, type WebhookEvent, type WebhookSettings,
+} from "@/lib/webhook";
 
 export default function SettingsPage() {
   const { user, signOut } = useAuth();
