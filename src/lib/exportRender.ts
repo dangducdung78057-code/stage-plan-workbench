@@ -310,19 +310,32 @@ export function canPrint(): boolean {
  * no PDF-embedded font needed. Produces an actual .pdf file, not a print dialog.
  */
 export async function downloadPdf(html: string, filename: string): Promise<void> {
+  const blob = await renderPdfBlob(html);
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+/**
+ * Render the printable HTML to a real PDF Blob via html2pdf.js (html2canvas + jsPDF).
+ * Rasterized — Chinese renders through the browser font stack, no embedded font required.
+ */
+export async function renderPdfBlob(html: string): Promise<Blob> {
   if (typeof window === "undefined") throw new Error("PDF_UNSUPPORTED");
-  // Dynamic import — keeps html2pdf.js out of the initial bundle.
   const mod: any = await import("html2pdf.js");
   const html2pdf = mod.default ?? mod;
 
-  // Off-screen host so the DOM has real width for html2canvas to measure.
   const host = document.createElement("div");
   host.style.position = "fixed";
   host.style.left = "-10000px";
   host.style.top = "0";
-  host.style.width = "794px"; // ~A4 @ 96dpi
+  host.style.width = "794px";
   host.style.background = "#ffffff";
-  // Strip outer <!doctype>/<html>/<head> — html2canvas only renders <body>.
   const bodyMatch = /<body[^>]*>([\s\S]*?)<\/body>/i.exec(html);
   const styleMatch = /<style[^>]*>([\s\S]*?)<\/style>/i.exec(html);
   host.innerHTML =
@@ -331,22 +344,17 @@ export async function downloadPdf(html: string, filename: string): Promise<void>
   document.body.appendChild(host);
 
   try {
-    await html2pdf()
+    const blob: Blob = await html2pdf()
       .from(host)
       .set({
         margin: [10, 10, 12, 10],
-        filename,
         image: { type: "jpeg", quality: 0.95 },
-        html2canvas: {
-          scale: 2,
-          useCORS: true,
-          backgroundColor: "#ffffff",
-          logging: false,
-        },
+        html2canvas: { scale: 2, useCORS: true, backgroundColor: "#ffffff", logging: false },
         jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
         pagebreak: { mode: ["css", "legacy"] },
       })
-      .save();
+      .outputPdf("blob");
+    return blob;
   } finally {
     try { host.remove(); } catch { /* noop */ }
   }
