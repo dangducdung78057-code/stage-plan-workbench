@@ -374,17 +374,18 @@ export default function ProjectEditor() {
 }
 
 function Field({
-  label, required, children, hint,
+  label, required, children, hint, field,
 }: {
   label: string;
   required?: boolean;
   children: React.ReactNode;
   hint?: { errors: string[]; warnings: string[] };
+  field?: string;
 }) {
   const hasErr = (hint?.errors.length ?? 0) > 0;
   const hasWarn = (hint?.warnings.length ?? 0) > 0;
   return (
-    <div className="space-y-1.5">
+    <div className="space-y-1.5 scroll-mt-24 rounded-sm" id={field ? `field-${field}` : undefined} data-field={field}>
       <Label className={`text-xs ${hasErr ? "text-destructive" : hasWarn ? "text-warning" : "text-muted-foreground"}`}>
         {label}{required && <span className="text-destructive ml-0.5">*</span>}
       </Label>
@@ -402,4 +403,5 @@ function Field({
     </div>
   );
 }
+
 
