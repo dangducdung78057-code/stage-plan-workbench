@@ -177,10 +177,11 @@ export default function Exports() {
     setBusy(row.id + ":pdf");
     try {
       if (!(await guard(row))) return;
-      const title = projectTitles[row.project_id];
+      const source = await readMarkdownSource(row);
+      const title = source.projectTitle ?? projectTitles[row.project_id];
       const createdAt = new Date(row.created_at).toLocaleString("zh-CN", { hour12: false });
       const fn = buildFilename("pdf", title, row.version, row.project_id);
-      const html = renderPrintableHtml(row.payload as string, row.format, {
+      const html = renderPrintableHtml(source.payload, source.format, {
         projectTitle: title,
         version: row.version,
         createdAt,
@@ -216,10 +217,11 @@ export default function Exports() {
     setBusy(row.id + ":png");
     try {
       if (!(await guard(row))) return;
-      const title = projectTitles[row.project_id];
+      const source = await readMarkdownSource(row);
+      const title = source.projectTitle ?? projectTitles[row.project_id];
       const createdAt = new Date(row.created_at).toLocaleString("zh-CN", { hour12: false });
       const fn = buildFilename("png", title, row.version, row.project_id);
-      const html = renderPrintableHtml(row.payload as string, row.format, {
+      const html = renderPrintableHtml(source.payload, source.format, {
         projectTitle: title,
         version: row.version,
         createdAt,
