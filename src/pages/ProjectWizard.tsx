@@ -87,6 +87,7 @@ export default function ProjectWizard() {
   const [renameValue, setRenameValue] = useState("");
   const autosaveRef = useRef<number | null>(null);
   const [expandedIssueDrafts, setExpandedIssueDrafts] = useState<Set<string>>(new Set());
+  const [popoverNavIndex, setPopoverNavIndex] = useState<Record<string, number>>({});
 
   // Restore drafts on mount
   useEffect(() => {
