@@ -186,12 +186,16 @@ export default function Exports() {
                   </Button>
                   {showMd && (
                     <Button variant="outline" size="sm" className="w-full justify-center" disabled={busy === r.id + ":md"} onClick={() => handleMarkdown(r)}>
-                      <FileDown className="h-3.5 w-3.5 mr-1.5" />下载 Markdown
+                      {busy === r.id + ":md"
+                        ? <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />生成中…</>
+                        : <><FileDown className="h-3.5 w-3.5 mr-1.5" />下载 Markdown</>}
                     </Button>
                   )}
                   {showPdf && (
                     <Button variant="outline" size="sm" className="w-full justify-center" disabled={busy === r.id + ":pdf"} onClick={() => handlePdf(r)}>
-                      <Printer className="h-3.5 w-3.5 mr-1.5" />打印 / 保存为 PDF
+                      {busy === r.id + ":pdf"
+                        ? <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />生成中，请在对话框中选择保存…</>
+                        : <><Printer className="h-3.5 w-3.5 mr-1.5" />打印 / 保存为 PDF</>}
                     </Button>
                   )}
                 </div>
