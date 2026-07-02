@@ -9,8 +9,11 @@ import { PROCUREMENT_SETTINGS_DEFAULTS, normalizeProcurementSettings, procuremen
 import { renderMarkdown, renderPrintableHtml, renderPdfBlob, renderPngBlob, validatePrintableHtml, validatePrintableContent } from "@/lib/exportRender";
 import { CheckCircle2, XCircle, Loader2, AlertTriangle, Copy, Download as DownloadIcon, History } from "lucide-react";
 import { toast } from "sonner";
+import {
+  loadCapabilitySnapshot, computeReleaseGate,
+  type CapabilitySnapshot,
+} from "@/lib/capabilitySnapshot";
 
-const STABLE_BASELINE = "stageos-v4.1-webhook-signature";
 
 type Status = "pass" | "fail" | "warn" | "skip";
 type Check = { id: string; label: string; status: Status; detail?: string; ms?: number };
