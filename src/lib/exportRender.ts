@@ -73,7 +73,12 @@ export function buildFilename(
   return `stageos-${base}-v${version}-${stamp()}.${ext}`;
 }
 
-function parsePayload(payload: string, format: string): any {
+function parsePayload(payload: unknown, format: string): any {
+  // Source-of-truth rule: if the backend gives us JSON/object fields, use them
+  // directly. If a legacy payload is a string, only JSON.parse is allowed — no
+  // URI/base64/TextDecoder recovery that can corrupt Chinese text.
+  if (payload && typeof payload === "object") return payload;
+  if (typeof payload !== "string") return null;
   if (format === "json") {
     try { return JSON.parse(payload); } catch { return null; }
   }
@@ -205,18 +210,20 @@ function fmtSearch(d: any): string {
 }
 
 export function renderMarkdown(
-  payload: string,
+  payload: unknown,
   format: string,
   meta: { projectTitle?: string; version: number; createdAt: string },
 ): string {
   const data = parsePayload(payload, format);
+  const rawPayload = typeof payload === "string" ? payload : "";
+  const directProjectTitle = data?.project?.title ?? data?.snapshot?.project?.title ?? meta.projectTitle ?? "未命名项目";
 
   // If it's already Markdown (not JSON), keep original body but localize enums
   // and guarantee the "## 采购搜索建议" section is present.
   if (format === "markdown" && data === null) {
-    let body = payload;
+    let body = rawPayload;
     if (!/^##\s+采购搜索建议\s*$/m.test(body)) {
-      const md = parseMarkdownPayload(payload);
+      const md = parseMarkdownPayload(rawPayload);
       const recs = md.search ?? [];
       const searchMd = recs.length
         ? recs.map((r: any) => {
@@ -231,7 +238,7 @@ export function renderMarkdown(
       body = body.replace(/\s*$/, "") + `\n\n## 采购搜索建议\n\n${searchMd}\n`;
     }
     const out = [
-      `# StageOS 排产导出 · ${meta.projectTitle ?? "未命名项目"}`,
+      `# StageOS 服装总表导出 · ${directProjectTitle}`,
       `> 版本 v${meta.version} · 生成于 ${meta.createdAt}`,
       "",
       body,
@@ -249,7 +256,7 @@ export function renderMarkdown(
   }
 
   const header = [
-    `# StageOS 排产导出 · ${meta.projectTitle ?? data?.project?.title ?? "未命名项目"}`,
+    `# StageOS 服装总表导出 · ${directProjectTitle}`,
     `> 版本 v${meta.version} · 生成于 ${meta.createdAt}`,
     "",
   ].join("\n");
@@ -339,7 +346,7 @@ function mdToHtml(md: string): string {
 }
 
 export function renderPrintableHtml(
-  payload: string,
+  payload: unknown,
   format: string,
   meta: { projectTitle?: string; version: number; createdAt: string; filenameTitle: string },
 ): string {
@@ -458,9 +465,9 @@ export function validatePrintableContent(html: string): { ok: boolean; missing: 
 }
 
 
-function buildPrintableDoc(data: any, rawPayload: string, format: string, meta: { projectTitle?: string; version: number; createdAt: string }) {
+function buildPrintableDoc(data: any, rawPayload: unknown, format: string, meta: { projectTitle?: string; version: number; createdAt: string }) {
   // Always compute an MD fallback so JSON+MD payloads produce identical printable content.
-  const md = parseMarkdownPayload(rawPayload);
+  const md = parseMarkdownPayload(typeof rawPayload === "string" ? rawPayload : "");
 
   const project = data?.project ?? data?.input?.project ?? md.project ?? {};
   const input = data?.input ?? data?.stageInput ?? data?.stage_input ?? data?.project?.input ?? md.input ?? {};
