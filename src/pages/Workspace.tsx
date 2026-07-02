@@ -46,6 +46,7 @@ export default function Workspace() {
   const [guideOpen, setGuideOpen] = useState(false);
   const [activeSlide, setActiveSlide] = useState(0);
   const itemRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const guideTriggerRef = useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => {
     if (!guideOpen) return;
