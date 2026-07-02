@@ -258,6 +258,9 @@ export type Database = {
           procurement_provider: string
           procurement_provider_enabled: boolean
           updated_at: string
+          webhook_enabled: boolean
+          webhook_events: string[]
+          webhook_url: string | null
         }
         Insert: {
           api_base_url?: string | null
@@ -269,6 +272,9 @@ export type Database = {
           procurement_provider?: string
           procurement_provider_enabled?: boolean
           updated_at?: string
+          webhook_enabled?: boolean
+          webhook_events?: string[]
+          webhook_url?: string | null
         }
         Update: {
           api_base_url?: string | null
@@ -280,6 +286,9 @@ export type Database = {
           procurement_provider?: string
           procurement_provider_enabled?: boolean
           updated_at?: string
+          webhook_enabled?: boolean
+          webhook_events?: string[]
+          webhook_url?: string | null
         }
         Relationships: []
       }
@@ -311,6 +320,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      webhook_delivery_logs: {
+        Row: {
+          attempt: number
+          created_at: string
+          error: string | null
+          event: string
+          http_status: number | null
+          id: string
+          payload: Json | null
+          project_id: string | null
+          status: string
+          url: string
+          user_id: string
+        }
+        Insert: {
+          attempt?: number
+          created_at?: string
+          error?: string | null
+          event: string
+          http_status?: number | null
+          id?: string
+          payload?: Json | null
+          project_id?: string | null
+          status: string
+          url: string
+          user_id: string
+        }
+        Update: {
+          attempt?: number
+          created_at?: string
+          error?: string | null
+          event?: string
+          http_status?: number | null
+          id?: string
+          payload?: Json | null
+          project_id?: string | null
+          status?: string
+          url?: string
+          user_id?: string
+        }
+        Relationships: []
       }
     }
     Views: {
