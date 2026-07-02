@@ -10,8 +10,8 @@ import { renderMarkdown, renderPrintableHtml, renderPdfBlob, renderPngBlob, vali
 import { CheckCircle2, XCircle, Loader2, AlertTriangle, Copy, Download as DownloadIcon, History } from "lucide-react";
 import { toast } from "sonner";
 import {
-  loadCapabilitySnapshot, computeReleaseGate,
-  type CapabilitySnapshot,
+  loadCapabilitySnapshot, computeReleaseGate, gateTone,
+  type CapabilitySnapshot, type GateResult,
 } from "@/lib/capabilitySnapshot";
 
 
@@ -45,6 +45,7 @@ export function HealthCheck() {
   const [lastRunId, setLastRunId] = useState<string | null>(null);
   const [compareIds, setCompareIds] = useState<[string | null, string | null]>([null, null]);
   const [snapshot, setSnapshot] = useState<CapabilitySnapshot | null>(null);
+  const [gate, setGate] = useState<GateResult | null>(null);
   type PdfProbe = { status: Status; reason: string; detail: string; ms?: number };
   const [pdfProbes, setPdfProbes] = useState<{ disabled: PdfProbe; enabled: PdfProbe; error: PdfProbe } | null>(null);
 
@@ -63,30 +64,40 @@ export function HealthCheck() {
     setRunning(true);
     setChecks([]);
     setSnapshot(null);
+    setGate(null);
     setStartedAt(new Date().toLocaleString());
     const out: Check[] = [];
     const push = (c: Check) => { out.push(c); setChecks([...out]); };
     let procurementSettings: ProcurementSettings = { ...PROCUREMENT_SETTINGS_DEFAULTS };
 
-    // 1. Capability Snapshot（唯一事实源）
-    //    治理宪章：系统成熟度只以 Capability Layer + Release Gate + 一键验收结果为准，
-    //    版本号不参与判定。此项从 public.system_capabilities 读取快照，展示于本次运行。
+    // 1. Capability Snapshot + Release Gate（唯一事实源 · 决策层）
+    //    治理宪章：能力清单不仅统计，直接参与 Gate 判定；WARN 参与 Gate 计算。
     const snap = await loadCapabilitySnapshot();
     setSnapshot(snap);
+    const gateResult = computeReleaseGate(snap);
+    setGate(gateResult);
     if (snap.error) {
       push({ id: "capability_snapshot", label: "能力清单快照 (system_capabilities)", status: "fail", detail: `读取失败: ${snap.error}` });
     } else if (snap.rows.length === 0) {
       push({ id: "capability_snapshot", label: "能力清单快照 (system_capabilities)", status: "fail", detail: "快照为空，缺少 SSoT" });
     } else {
       const { counts } = snap;
-      const gate = computeReleaseGate(snap);
       push({
         id: "capability_snapshot",
         label: "能力清单快照 (system_capabilities)",
         status: counts.FAIL > 0 ? "fail" : counts.WARN > 0 ? "warn" : "pass",
-        detail: `L0=${counts.L0} L1=${counts.L1} L2=${counts.L2} · PASS=${counts.PASS} WARN=${counts.WARN} FAIL=${counts.FAIL} SKIP=${counts.SKIP} · gate=${gate.gate}`,
+        detail: `L0=${counts.L0} L1=${counts.L1} L2=${counts.L2} · PASS=${counts.PASS} WARN=${counts.WARN} FAIL=${counts.FAIL} SKIP=${counts.SKIP}`,
       });
     }
+    // Gate 作为独立检查项呈现：G0 → fail；G1/G2 → warn；G3 → pass
+    push({
+      id: "release_gate",
+      label: `Release Gate · ${gateResult.gate}`,
+      status: gateResult.gate === "G0" ? "fail" : gateResult.gate === "G3" ? "pass" : "warn",
+      detail: `[${gateResult.rule}] ${gateResult.reason}`,
+    });
+
+
 
 
     // 2. auth session
@@ -550,12 +561,20 @@ export function HealthCheck() {
     let newRunId: string | null = null;
     if (user?.id) {
       try {
+        const summaryPayload = {
+          ...summaryLocal,
+          gate_level: gateResult.gate,
+          gate_rule: gateResult.rule,
+          gate_reason: gateResult.reason,
+          gate_triggers: gateResult.triggers,
+          capability_counts: snap.counts,
+        };
         const { data: inserted } = await supabase.from("health_check_runs").insert({
           user_id: user.id,
           baseline: STAGEOS_VERSION,
           route: typeof window !== "undefined" ? window.location.pathname : null,
           user_agent: typeof navigator !== "undefined" ? navigator.userAgent : null,
-          summary: summaryLocal as any,
+          summary: summaryPayload as any,
           items: out as any,
           pass_count: summaryLocal.pass ?? 0,
           warn_count: summaryLocal.warn ?? 0,
@@ -576,6 +595,9 @@ export function HealthCheck() {
             warn: summaryLocal.warn ?? 0,
             fail: summaryLocal.fail ?? 0,
             skip: summaryLocal.skip ?? 0,
+            gate_level: gateResult.gate,
+            gate_rule: gateResult.rule,
+            gate_reason: gateResult.reason,
           },
         });
       } catch {
@@ -596,11 +618,21 @@ export function HealthCheck() {
   function buildSummaryText(): string {
     const lines: string[] = [];
     lines.push("StageOS 一键验收摘要");
-    lines.push(`baseline: ${STAGEOS_VERSION}`);
+    lines.push(`baseline: ${STAGEOS_VERSION}  (仅标签，不参与 Gate 判定)`);
     lines.push(`route: ${typeof window !== "undefined" ? window.location.pathname : "-"}`);
     lines.push(`userAgent: ${typeof navigator !== "undefined" ? navigator.userAgent : "-"}`);
     lines.push(`时间: ${startedAt ?? new Date().toLocaleString()}`);
     lines.push(`登录状态: ${user?.email ?? user?.id ?? "未登录"}`);
+    if (gate) {
+      lines.push("");
+      lines.push(`Release Gate: ${gate.gate}  [rule ${gate.rule}]`);
+      lines.push(`reason: ${gate.reason}`);
+      if (gate.triggers.length > 0) lines.push(`triggers: ${gate.triggers.join(", ")}`);
+    }
+    if (snapshot && !snapshot.error && snapshot.rows.length > 0) {
+      const c = snapshot.counts;
+      lines.push(`capability_counts: L0=${c.L0} L1=${c.L1} L2=${c.L2} · PASS=${c.PASS} WARN=${c.WARN} FAIL=${c.FAIL} SKIP=${c.SKIP}`);
+    }
     lines.push("");
     lines.push("检查项:");
     for (const c of checks) {
@@ -734,19 +766,36 @@ export function HealthCheck() {
           </div>
         )}
 
+        {gate && (
+          <div className={
+            "rounded border px-3 py-2 text-xs flex items-start gap-2 " +
+            (gate.gate === "G3"
+              ? "border-success/40 bg-success/5"
+              : gate.gate === "G0"
+                ? "border-destructive/40 bg-destructive/5"
+                : "border-warning/40 bg-warning/5")
+          }>
+            <ToneBadge tone={gateTone(gate.gate) as any}>{gate.gate}</ToneBadge>
+            <div className="min-w-0 flex-1">
+              <div className="font-semibold text-sm">Release Gate · {gate.gate}</div>
+              <div className="font-mono text-[11px] mt-0.5 break-words">
+                [{gate.rule}] {gate.reason}
+              </div>
+              {gate.triggers.length > 0 && (
+                <div className="font-mono text-[10px] text-muted-foreground mt-0.5 break-words">
+                  triggers: {gate.triggers.join(", ")}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {snapshot && (
           <div className="border rounded bg-surface">
             <div className="px-3 py-1.5 border-b flex items-center gap-2 text-xs flex-wrap">
               <span className="font-semibold">Capability Snapshot</span>
               <span className="text-muted-foreground font-mono">system_capabilities · SSoT</span>
-              {(() => {
-                const g = computeReleaseGate(snapshot);
-                const tone =
-                  g.gate === "G3" ? "success" :
-                  g.gate === "G2" ? "warning" :
-                  g.gate === "G1" ? "warning" : "destructive";
-                return <ToneBadge tone={tone as any}>gate {g.gate}</ToneBadge>;
-              })()}
+              {gate && <ToneBadge tone={gateTone(gate.gate) as any}>gate {gate.gate}</ToneBadge>}
               <span className="text-[11px] text-muted-foreground ml-auto font-mono">
                 L0={snapshot.counts.L0} · L1={snapshot.counts.L1} · L2={snapshot.counts.L2} · WARN={snapshot.counts.WARN} · FAIL={snapshot.counts.FAIL}
               </span>
