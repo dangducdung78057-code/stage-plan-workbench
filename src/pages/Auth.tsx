@@ -37,10 +37,6 @@ export default function AuthPage() {
 
   return (
     <div className="min-h-screen bg-background grid place-items-center p-4">
-      <SeoHead
-        title="登录 · StageOS"
-        description="登录 StageOS 学校演出服装排产工作台，管理项目、服装总表、风险倒排与导出。"
-      />
       <main className="w-full max-w-sm panel">
         <h1 className="sr-only">登录 StageOS 演出服装排产工作台</h1>
         <div className="panel-header">
