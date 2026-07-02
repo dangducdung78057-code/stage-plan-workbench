@@ -263,16 +263,16 @@ export default function ProjectEditor() {
       <div className="panel">
         <div className="panel-header"><h2 className="text-sm font-semibold">人数与预算</h2></div>
         <div className="panel-body grid grid-cols-4 gap-4">
-          <Field label="总人数 performerCount" hint={hints.performerCount}>
+          <Field label="总人数 performerCount" hint={hints.performerCount} field="performerCount">
             <Input type="number" value={data.performerCount ?? ""} onChange={(e) => set("performerCount", e.target.value ? Number(e.target.value) : undefined)} />
           </Field>
-          <Field label="男生数 maleCount" hint={hints.maleCount}>
+          <Field label="男生数 maleCount" hint={hints.maleCount} field="maleCount">
             <Input type="number" value={data.maleCount ?? ""} onChange={(e) => set("maleCount", e.target.value ? Number(e.target.value) : undefined)} />
           </Field>
-          <Field label="女生数 femaleCount" hint={hints.femaleCount}>
+          <Field label="女生数 femaleCount" hint={hints.femaleCount} field="femaleCount">
             <Input type="number" value={data.femaleCount ?? ""} onChange={(e) => set("femaleCount", e.target.value ? Number(e.target.value) : undefined)} />
           </Field>
-          <Field label="人均预算 (元)" hint={hints.perPersonBudget}>
+          <Field label="人均预算 (元)" hint={hints.perPersonBudget} field="perPersonBudget">
             <Input type="number" value={data.perPersonBudget ?? ""} onChange={(e) => set("perPersonBudget", e.target.value ? Number(e.target.value) : undefined)} />
           </Field>
         </div>
