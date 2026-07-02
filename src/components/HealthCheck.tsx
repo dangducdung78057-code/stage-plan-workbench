@@ -37,6 +37,8 @@ export function HealthCheck() {
   const [checks, setChecks] = useState<Check[]>([]);
   const [startedAt, setStartedAt] = useState<string | null>(null);
   const [recent, setRecent] = useState<RunRow[]>([]);
+  type PdfProbe = { status: Status; reason: string; detail: string; ms?: number };
+  const [pdfProbes, setPdfProbes] = useState<{ disabled: PdfProbe; enabled: PdfProbe; error: PdfProbe } | null>(null);
 
   async function loadRecent() {
     if (!user?.id) { setRecent([]); return; }
