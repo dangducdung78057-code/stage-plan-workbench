@@ -107,6 +107,7 @@ export default function Workspace() {
       <Dialog open={guideOpen} onOpenChange={setGuideOpen}>
         <DialogTrigger asChild>
           <button
+            ref={guideTriggerRef}
             type="button"
             className="panel w-full text-left flex items-center justify-between gap-3 p-3 hover:border-primary/40 hover:bg-accent/40 transition-colors group"
             aria-label="打开 StageOS 项目总览幻灯片导读"
