@@ -42,6 +42,24 @@ type PrecheckResult = {
   issues?: string[];
 };
 
+// Map a validation message to the offending StageInputData field (best-effort, keyword-based).
+function locateValidationField(msg: string): { field: string; label: string } | null {
+  const rules: Array<{ re: RegExp; field: string; label: string }> = [
+    { re: /performerCount|总人数/, field: "performerCount", label: "总人数" },
+    { re: /maleCount|男生数|男\(/, field: "maleCount", label: "男生数" },
+    { re: /femaleCount|女生数|女\(/, field: "femaleCount", label: "女生数" },
+    { re: /人均预算|perPersonBudget/, field: "perPersonBudget", label: "人均预算" },
+    { re: /彩排频次|rehearsalFrequency/, field: "rehearsalFrequencyPerWeek", label: "彩排频次" },
+    { re: /studentId/, field: "students.studentId", label: "学生编号" },
+    { re: /heightCm/, field: "students.heightCm", label: "身高" },
+    { re: /性别分布|gender/, field: "students.gender", label: "学生性别" },
+    { re: /学生行数/, field: "students", label: "学生名单" },
+  ];
+  for (const r of rules) if (r.re.test(msg)) return { field: r.field, label: r.label };
+  return null;
+}
+
+
 export default function ProjectDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
