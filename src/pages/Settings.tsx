@@ -22,6 +22,8 @@ export default function SettingsPage() {
   const [apiMode, setApiMode] = useState("mock");
   const [apiBaseUrl, setApiBaseUrl] = useState("");
   const [counts, setCounts] = useState({ projects: 0, snapshots: 0, exports: 0, confirmations: 0 });
+  const [procProvider, setProcProvider] = useState<ProcurementProviderId>(() => getProviderMode());
+  const [procHttpUrl, setProcHttpUrl] = useState<string>(() => getHttpUrl());
 
   useEffect(() => {
     (async () => {
