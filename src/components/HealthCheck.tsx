@@ -40,7 +40,7 @@ export function HealthCheck() {
 
     // 2. auth session
     try {
-      const { result, ms } = await timed(async () => await ( supabase.auth.getSession());
+      const { result, ms } = await timed(async () => await supabase.auth.getSession());
       const s = result.data.session;
       if (s?.user) {
         push({ id: "auth", label: "登录会话 (auth.session)", status: "pass", detail: s.user.email ?? s.user.id, ms });
