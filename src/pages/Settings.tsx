@@ -100,6 +100,53 @@ export default function SettingsPage() {
     });
   }
 
+  function patchWebhook(patch: Partial<WebhookSettings>) {
+    setWebhook((prev) => {
+      const next = { ...prev, ...patch };
+      saveLocalWebhookSettings(next);
+      return next;
+    });
+  }
+
+  function toggleWebhookEvent(ev: WebhookEvent, on: boolean) {
+    setWebhook((prev) => {
+      const set = new Set(prev.webhookEvents);
+      if (on) set.add(ev); else set.delete(ev);
+      const next = { ...prev, webhookEvents: Array.from(set) as WebhookEvent[] };
+      saveLocalWebhookSettings(next);
+      return next;
+    });
+  }
+
+  async function saveWebhook() {
+    setWebhookSaving(true);
+    try {
+      saveLocalWebhookSettings(webhook);
+      const { error } = await supabase.from("settings").upsert({
+        id: "global",
+        api_mode: apiMode,
+        webhook_enabled: webhook.webhookEnabled,
+        webhook_url: webhook.webhookUrl || null,
+        webhook_events: webhook.webhookEvents,
+      } as any);
+      if (error) { toast.error(`Webhook 保存失败：${error.message}`); return; }
+      toast.success("Webhook 设置已保存");
+    } finally { setWebhookSaving(false); }
+  }
+
+  async function testWebhook() {
+    if (!webhook.webhookEnabled) { toast.error("请先开启 webhookEnabled"); return; }
+    if (!webhook.webhookUrl) { toast.error("请先填写 webhookUrl"); return; }
+    setWebhookTesting(true);
+    try {
+      // 使用 audit.completed 作为测试事件（无需业务上下文）
+      dispatchWebhook("audit.completed", {
+        project_id: null,
+        summary: { test: true, note: "manual webhook test from Settings", baseline: STAGEOS_VERSION },
+      });
+      toast.success("已异步发送测试 webhook（结果见 webhook_delivery_logs）");
+    } finally { setWebhookTesting(false); }
+
   return (
     <div className="p-4 md:p-6 max-w-3xl space-y-4">
       <div>
