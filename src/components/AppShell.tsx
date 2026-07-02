@@ -90,7 +90,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <span className="kbd-route hidden md:inline">mode: mock</span>
             <span className="kbd-route hidden lg:inline">auth: enabled</span>
             <span className="hidden sm:inline font-mono truncate max-w-[160px]" title={user?.email ?? ""}>{user?.email}</span>
-            <Button variant="ghost" size="sm" className="h-7 px-2" onClick={doSignOut} title="退出登录">
+            <Button variant="ghost" size="sm" className="h-7 px-2" onClick={doSignOut} title="退出登录" aria-label="退出登录">
               <LogOut className="h-3.5 w-3.5 sm:mr-1" />
               <span className="hidden sm:inline">退出</span>
             </Button>

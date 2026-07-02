@@ -439,6 +439,7 @@ export default function ProjectDetail() {
         </div>
 
         <TabsContent value="plan" className="space-y-4 mt-4">
+          <h2 className="sr-only">服装总表工作区</h2>
           {!latest && (
             <div className="panel panel-body text-sm text-muted-foreground text-center py-10">
               尚未生成排产。点击右上角 <b>生成 Mock 排产</b>。<br />
@@ -448,7 +449,7 @@ export default function ProjectDetail() {
           {latest && <PlanView snapshot={latest} ctx={{ programType: input?.programType, schoolStage: input?.schoolStage }} procurementOn={procurementSettings.procurementCandidatesEnabled} />}
           {snapshots.length > 1 && (
             <div className="panel">
-              <div className="panel-header"><h3 className="text-sm font-semibold">历史快照</h3></div>
+              <div className="panel-header"><h2 className="text-sm font-semibold">历史快照</h2></div>
               <div className="hidden md:block">
                 <table className="ops-table">
                   <thead><tr><th>版本</th><th>模式</th><th>生成时间</th><th>合计</th></tr></thead>
@@ -477,6 +478,7 @@ export default function ProjectDetail() {
         </TabsContent>
 
         <TabsContent value="confirm" className="space-y-4 mt-4">
+          <h2 className="sr-only">用户确认</h2>
           <div className="panel">
             <div className="panel-header">
               <h3 className="text-sm font-semibold">用户确认</h3>
@@ -539,6 +541,7 @@ export default function ProjectDetail() {
         </TabsContent>
 
         <TabsContent value="export" className="space-y-4 mt-4">
+          <h2 className="sr-only">导出</h2>
           <div className="panel">
             <div className="panel-header">
               <h3 className="text-sm font-semibold">导出</h3>
@@ -562,6 +565,7 @@ export default function ProjectDetail() {
         </TabsContent>
 
         <TabsContent value="render" className="space-y-4 mt-4">
+          <h2 className="sr-only">渲染上下文</h2>
           <div className="panel">
             <div className="panel-header">
               <h3 className="text-sm font-semibold">渲染上下文预览(未来集成)</h3>
