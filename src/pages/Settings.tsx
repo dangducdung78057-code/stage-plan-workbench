@@ -11,6 +11,10 @@ import { CheckCircle2, XCircle } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { FLAG_META, useFlags, setFlag, type FeatureFlag } from "@/lib/featureFlags";
 import { HealthCheck } from "@/components/HealthCheck";
+import {
+  getProviderMode, setProviderMode, getHttpUrl, setHttpUrl,
+  type ProcurementProviderId,
+} from "@/lib/procurementProvider";
 
 export default function SettingsPage() {
   const { user, signOut } = useAuth();
