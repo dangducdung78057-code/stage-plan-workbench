@@ -241,11 +241,15 @@ export function renderMarkdown(
         : SEARCH_EMPTY_MSG;
       body = body.replace(/\s*$/, "") + `\n\n## 采购搜索建议\n\n${searchMd}\n`;
     }
+    const procurement = (data && typeof data === "object" ? (data as any)?.procurement_candidates : undefined)
+      ?? (typeof payload === "object" && payload ? (payload as any).procurement_candidates : undefined);
     const out = [
       `# StageOS 服装总表导出 · ${directProjectTitle}`,
       `> 版本 v${meta.version} · 生成于 ${meta.createdAt}`,
       "",
       body,
+      "",
+      procurementSectionMd(procurement),
       "",
       "---",
       "## mock / 非真实库存价格声明",
@@ -285,6 +289,7 @@ export function renderMarkdown(
     section("采购策略", fmtListMd(doc.purchaseStrategy)),
     section("倒排时间表", scheduleTableMd(doc.schedule)),
     section("采购搜索建议", searchListMd(doc.search)),
+    procurementSectionMd(doc.procurementCandidates),
     section("mock / 非真实库存价格声明", "本导出所含所有价格、库存、供货商与平台链接均为 mock 或搜索建议，需人工核验，不构成采购承诺。"),
     section("隐私声明摘要", "本文件仅包含匿名 studentId、性别、身高、可选角色标签；不含真实姓名或联系方式。"),
     `\n---\n\n<sub>${watermarkLine()}</sub>\n`,
@@ -380,6 +385,64 @@ function searchListMd(rows: any[]): string {
     return `- ${platform ? `**${platform}**：` : ""}${q}${tail}`;
   }).join("\n") + `\n\n> 平台搜索建议仅供人工核验，非实时库存价格。`;
 }
+
+const PROCUREMENT_EMPTY_MSG = "本导出未附加采购候选商品清单（procurement flag off 或未启用 provider）。";
+const PROCUREMENT_DISCLAIMER = "候选商品为模拟/检索建议，非实时库存价格，需人工核验。";
+
+function procurementSectionMd(bundle: any): string {
+  if (!bundle || typeof bundle !== "object") {
+    return `## 候选商品清单\n\n${PROCUREMENT_EMPTY_MSG}\n\n> ${PROCUREMENT_DISCLAIMER}\n`;
+  }
+  const groups = Array.isArray(bundle.groups) ? bundle.groups : [];
+  const header = `## 候选商品清单\n\n> provider: \`${bundle.providerMode ?? "-"}\` · providerId: \`${bundle.providerId ?? "-"}\` · fallbackUsed: \`${bundle.fallbackUsed ? "true" : "false"}\`${bundle.warningCode ? ` · warningCode: \`${bundle.warningCode}\`` : ""} · 条目数: ${groups.length} · 候选总数: ${bundle.totalCandidates ?? 0}\n`;
+  if (!groups.length) {
+    return `${header}\n${PROCUREMENT_EMPTY_MSG}\n\n> ${PROCUREMENT_DISCLAIMER}\n`;
+  }
+  const body = groups.map((g: any) => {
+    const cs = Array.isArray(g.candidates) ? g.candidates : [];
+    const groupHead = `### ${g.section ?? "-"} · #${g.itemIndex ?? "-"} ${g.itemLabel ?? ""}  \nprovider: \`${g.providerId ?? "-"}\`${g.fallbackUsed ? " · fallback-local" : ""}${g.warningCode ? ` · warningCode: \`${g.warningCode}\`` : ""}`;
+    if (!cs.length) {
+      return `${groupHead}\n\n_（未匹配到候选商品）_`;
+    }
+    const table = [
+      "| # | 平台 | 商品标题 | 关键词 | 单价估算 | providerId | matchScore |",
+      "|---|---|---|---|---|---|---|",
+      ...cs.map((c: any, i: number) =>
+        `| ${i + 1} | ${mdCell(c.platformLabel ?? c.platform)} | ${mdCell(c.title)} | ${mdCell(c.keyword)} | ${mdCell(typeof c.estimatedPrice === "number" ? `¥${c.estimatedPrice}` : "-")} | ${mdCell(c.providerId)} | ${mdCell(c.matchScore)} |`,
+      ),
+    ].join("\n");
+    const detail = cs.map((c: any, i: number) =>
+      `- **#${i + 1} ${c.platformLabel ?? c.platform} · ${c.title}**\n  - matchReason: ${c.matchReason ?? "-"}\n  - riskNote: ${c.riskNote ?? "-"}\n  - sourceNote: ${c.sourceNote ?? "-"}${c.url ? `\n  - link: ${c.url}` : ""}`,
+    ).join("\n");
+    return `${groupHead}\n\n${table}\n\n${detail}`;
+  }).join("\n\n");
+  return `${header}\n${body}\n\n> ${PROCUREMENT_DISCLAIMER}\n`;
+}
+
+function procurementSectionHtml(bundle: any): string {
+  const disclaimer = `<p class="notice">${escapeHtml(PROCUREMENT_DISCLAIMER)}</p>`;
+  if (!bundle || typeof bundle !== "object") {
+    return `<section><h2>候选商品清单</h2><p>${escapeHtml(PROCUREMENT_EMPTY_MSG)}</p>${disclaimer}</section>`;
+  }
+  const groups = Array.isArray(bundle.groups) ? bundle.groups : [];
+  const meta = `<p><code>provider=${escapeHtml(String(bundle.providerMode ?? "-"))} · providerId=${escapeHtml(String(bundle.providerId ?? "-"))} · fallbackUsed=${bundle.fallbackUsed ? "true" : "false"}${bundle.warningCode ? ` · warningCode=${escapeHtml(String(bundle.warningCode))}` : ""} · 条目=${groups.length} · 候选总数=${Number(bundle.totalCandidates ?? 0)}</code></p>`;
+  if (!groups.length) {
+    return `<section><h2>候选商品清单</h2>${meta}<p>${escapeHtml(PROCUREMENT_EMPTY_MSG)}</p>${disclaimer}</section>`;
+  }
+  const body = groups.map((g: any) => {
+    const cs = Array.isArray(g.candidates) ? g.candidates : [];
+    const head = `<h3>${escapeHtml(String(g.section ?? "-"))} · #${escapeHtml(String(g.itemIndex ?? "-"))} ${escapeHtml(String(g.itemLabel ?? ""))}</h3><p><code>providerId=${escapeHtml(String(g.providerId ?? "-"))}${g.fallbackUsed ? " · fallback-local" : ""}${g.warningCode ? ` · warningCode=${escapeHtml(String(g.warningCode))}` : ""}</code></p>`;
+    if (!cs.length) return `${head}<p>${HTML_MISSING}</p>`;
+    const rows = cs.map((c: any, i: number) =>
+      `<tr><td>${i + 1}</td><td>${escapeHtml(String(c.platformLabel ?? c.platform))}</td><td>${escapeHtml(String(c.title ?? "-"))}</td><td>${escapeHtml(String(c.keyword ?? "-"))}</td><td>${escapeHtml(typeof c.estimatedPrice === "number" ? `¥${c.estimatedPrice}` : "-")}</td><td>${escapeHtml(String(c.providerId ?? "-"))}</td><td>${escapeHtml(String(c.matchScore ?? "-"))}</td><td>${escapeHtml(String(c.matchReason ?? "-"))}</td><td>${escapeHtml(String(c.riskNote ?? "-"))}</td><td>${escapeHtml(String(c.sourceNote ?? "-"))}</td></tr>`,
+    ).join("");
+    const table = `<table><thead><tr><th>#</th><th>平台</th><th>标题</th><th>关键词</th><th>单价估算</th><th>providerId</th><th>matchScore</th><th>匹配</th><th>风险</th><th>来源</th></tr></thead><tbody>${rows}</tbody></table>`;
+    return `${head}${table}`;
+  }).join("");
+  return `<section><h2>候选商品清单</h2>${meta}${body}${disclaimer}</section>`;
+}
+
+
 
 // Minimal Markdown -> HTML for print (headings, lists, tables, bold, blockquote, code)
 function mdToHtml(md: string): string {
@@ -525,6 +588,7 @@ export function renderPrintableHtml(
   <section><h2>Plan B 与采购策略</h2><h3>Plan B</h3>${listHtml(doc.planB)}<h3>采购策略</h3>${listHtml(doc.purchaseStrategy)}</section>
   <section><h2>倒排时间表</h2>${scheduleTable(doc.schedule)}</section>
   <section><h2>采购搜索建议</h2>${searchTable(doc.search)}</section>
+  ${procurementSectionHtml(doc.procurementCandidates)}
   <section><h2>隐私与非真实库存/价格声明</h2><p>隐私声明：导出仅面向匿名学生数据、人数、身高分档和角色标签，不包含真实姓名、联系方式或敏感身份信息。</p><p>非真实库存/价格声明：本文件中的价格、SKU、库存、供应商和平台搜索建议均为 mock / 模拟或人工检索建议，需由采购负责人二次确认。</p></section>
   <div class="stageos-watermark" data-stageos-watermark>${escapeHtml(watermarkLine())}</div>
 </article>
@@ -603,6 +667,9 @@ function buildPrintableDoc(data: any, rawPayload: unknown, format: string, meta:
   );
   const totalEstimateRaw = value(plan?.totalEstimate, plan?.total_estimate, plan?.total, md.plan?.totalEstimate, "—");
 
+  const procurementCandidates = (data && typeof data === "object" ? (data as any)?.procurement_candidates : undefined)
+    ?? (typeof rawPayload === "object" && rawPayload ? (rawPayload as any).procurement_candidates : undefined);
+
   return {
     projectTitle,
     generatedAt,
@@ -621,6 +688,7 @@ function buildPrintableDoc(data: any, rawPayload: unknown, format: string, meta:
     purchaseStrategy: purchaseStrategy.length ? purchaseStrategy : ["主计划生成后由采购负责人进行人工验样、比价、库存确认和下单复核。"],
     schedule,
     search,
+    procurementCandidates,
   };
 }
 
