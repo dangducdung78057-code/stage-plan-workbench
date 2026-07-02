@@ -749,11 +749,17 @@ export function HealthCheck() {
 
 
 
+        {lastRunId && (
+          <div className="text-[11px] font-mono text-muted-foreground break-all">
+            run_id: {lastRunId}
+          </div>
+        )}
+
         {recent.length > 0 && (
           <div className="border rounded bg-surface">
             <div className="px-3 py-1.5 border-b flex items-center gap-2 text-xs text-muted-foreground">
               <History className="h-3.5 w-3.5" />
-              <span>最近 10 次验收记录</span>
+              <span>最近 10 次验收记录 · 勾选两条对比</span>
             </div>
             <ul className="divide-y">
               {recent.map((r) => {
@@ -761,9 +767,18 @@ export function HealthCheck() {
                 const warned = (r.warn_count ?? 0) > 0;
                 const tone: "success" | "warning" | "destructive" = failed ? "destructive" : warned ? "warning" : "success";
                 const label = failed ? "fail" : warned ? "warn" : "pass";
+                const picked = compareIds[0] === r.id || compareIds[1] === r.id;
                 return (
                   <li key={r.id} className="px-3 py-1.5 flex items-center gap-2 text-xs">
+                    <input
+                      type="checkbox"
+                      className="h-3.5 w-3.5"
+                      checked={picked}
+                      onChange={() => pickCompare(r.id)}
+                      aria-label="选择对比"
+                    />
                     <ToneBadge tone={tone}>{label}</ToneBadge>
+                    {r.is_release && <ToneBadge tone="success">release</ToneBadge>}
                     <span className="font-mono text-muted-foreground truncate">
                       {new Date(r.created_at).toLocaleString()}
                     </span>
@@ -773,10 +788,57 @@ export function HealthCheck() {
                     <span className="ml-auto font-mono text-[11px] text-muted-foreground shrink-0">
                       p{r.pass_count}/w{r.warn_count}/f{r.fail_count}/s{r.skip_count}
                     </span>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-6 px-2 text-[11px]"
+                      onClick={() => toggleRelease(r)}
+                    >
+                      {r.is_release ? "取消 release" : "锁定 release"}
+                    </Button>
                   </li>
                 );
               })}
             </ul>
+          </div>
+        )}
+
+        {compareRows[0] && compareRows[1] && (
+          <div className="border rounded bg-surface">
+            <div className="px-3 py-1.5 border-b flex items-center gap-2 text-xs text-muted-foreground">
+              <span>历史验收对比</span>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-6 px-2 text-[11px] ml-auto"
+                onClick={() => setCompareIds([null, null])}
+              >
+                清除
+              </Button>
+            </div>
+            <div className="p-3 grid grid-cols-3 gap-2 text-xs font-mono">
+              <div className="text-muted-foreground">字段</div>
+              <div className="truncate">A · {new Date(compareRows[0]!.created_at).toLocaleString()}</div>
+              <div className="truncate">B · {new Date(compareRows[1]!.created_at).toLocaleString()}</div>
+
+              {([
+                ["baseline", compareRows[0]!.baseline, compareRows[1]!.baseline],
+                ["pass", compareRows[0]!.pass_count, compareRows[1]!.pass_count],
+                ["warn", compareRows[0]!.warn_count, compareRows[1]!.warn_count],
+                ["fail", compareRows[0]!.fail_count, compareRows[1]!.fail_count],
+                ["skip", compareRows[0]!.skip_count, compareRows[1]!.skip_count],
+                ["release", compareRows[0]!.is_release ? "yes" : "no", compareRows[1]!.is_release ? "yes" : "no"],
+              ] as const).map(([k, a, b]) => {
+                const diff = String(a) !== String(b);
+                return (
+                  <>
+                    <div key={`${k}-k`} className="text-muted-foreground">{k}</div>
+                    <div key={`${k}-a`} className={diff ? "text-warning" : ""}>{String(a)}</div>
+                    <div key={`${k}-b`} className={diff ? "text-warning" : ""}>{String(b)}</div>
+                  </>
+                );
+              })}
+            </div>
           </div>
         )}
       </div>
