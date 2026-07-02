@@ -26,7 +26,7 @@ function SidebarInner({ onNavigate }: { onNavigate?: () => void }) {
           </div>
           <div className="min-w-0">
             <div className="text-sm font-semibold text-white whitespace-nowrap">StageOS</div>
-            <div className="text-[10px] font-mono text-sidebar-foreground/70 whitespace-nowrap">ops.costume.v1</div>
+            <div className="text-[10px] font-mono text-sidebar-foreground/70 whitespace-nowrap">ops.costume.v2</div>
           </div>
         </div>
       </div>
@@ -52,7 +52,7 @@ function SidebarInner({ onNavigate }: { onNavigate?: () => void }) {
       </nav>
       <div className="px-4 py-3 border-t border-sidebar-border text-[11px] text-sidebar-foreground/60">
         <div className="whitespace-nowrap">学校演出服装排产</div>
-        <div className="font-mono">v1 · mock mode</div>
+        <div className="font-mono">stageos-v2-auth-mock-mvp-pass</div>
       </div>
     </div>
   );
