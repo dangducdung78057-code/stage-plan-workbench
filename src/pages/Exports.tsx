@@ -32,9 +32,10 @@ type Row = {
 };
 
 function latestFileFirst(a: StorageFileEntry, b: StorageFileEntry) {
-  const at = a.updatedAt ?? a.createdAt ?? a.name;
-  const bt = b.updatedAt ?? b.createdAt ?? b.name;
-  return bt.localeCompare(at);
+  const pathTime = (name: string) => Number(name.match(/-(\d{12,})\.[^.]+$/)?.[1] ?? 0);
+  const at = Date.parse(a.updatedAt ?? a.createdAt ?? "") || pathTime(a.name);
+  const bt = Date.parse(b.updatedAt ?? b.createdAt ?? "") || pathTime(b.name);
+  return bt - at;
 }
 
 function payloadSize(payload: unknown) {
