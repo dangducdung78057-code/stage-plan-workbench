@@ -567,6 +567,10 @@ export function HealthCheck() {
           gate_rule: gateResult.rule,
           gate_reason: gateResult.reason,
           gate_triggers: gateResult.triggers,
+          system_warn_modules: gateResult.systemWarnModules,
+          gate_triggering_warn_modules: gateResult.gateTriggeringWarnModules,
+          isolated_experimental_warnings: gateResult.isolatedExperimentalWarnings,
+          warn_count_by_layer: gateResult.warnCountByLayer,
           capability_counts: snap.counts,
         };
         const { data: inserted } = await supabase.from("health_check_runs").insert({
@@ -598,6 +602,10 @@ export function HealthCheck() {
             gate_level: gateResult.gate,
             gate_rule: gateResult.rule,
             gate_reason: gateResult.reason,
+            warn_count_by_layer: gateResult.warnCountByLayer,
+            system_warn_modules: gateResult.systemWarnModules,
+            gate_triggering_warn_modules: gateResult.gateTriggeringWarnModules,
+            isolated_experimental_warnings: gateResult.isolatedExperimentalWarnings.map((w) => w.module),
           },
         });
       } catch {
@@ -628,10 +636,22 @@ export function HealthCheck() {
       lines.push(`Release Gate: ${gate.gate}  [rule ${gate.rule}]`);
       lines.push(`reason: ${gate.reason}`);
       if (gate.triggers.length > 0) lines.push(`triggers: ${gate.triggers.join(", ")}`);
+      lines.push(
+        `warn_count_by_layer: L0=${gate.warnCountByLayer.L0} L1=${gate.warnCountByLayer.L1} L2=${gate.warnCountByLayer.L2}`,
+      );
+      lines.push(`system_warn_modules (unique): ${gate.systemWarnModules.join(", ") || "(none)"}`);
+      lines.push(`gate_triggering_warn_modules: ${gate.gateTriggeringWarnModules.join(", ") || "(none)"}`);
+      if (gate.isolatedExperimentalWarnings.length > 0) {
+        lines.push(
+          `isolated_experimental_warnings: ${gate.isolatedExperimentalWarnings.map((w) => w.module).join(", ")}  [tag: isolated experimental warning]`,
+        );
+      }
     }
     if (snapshot && !snapshot.error && snapshot.rows.length > 0) {
       const c = snapshot.counts;
-      lines.push(`capability_counts: L0=${c.L0} L1=${c.L1} L2=${c.L2} · PASS=${c.PASS} WARN=${c.WARN} FAIL=${c.FAIL} SKIP=${c.SKIP}`);
+      lines.push(
+        `capability_counts: L0=${c.L0}(WARN=${c.L0_WARN},FAIL=${c.L0_FAIL}) L1=${c.L1}(WARN=${c.L1_WARN},FAIL=${c.L1_FAIL}) L2=${c.L2}(WARN=${c.L2_WARN},FAIL=${c.L2_FAIL}) · PASS=${c.PASS} WARN(unique)=${c.warnUnique} FAIL=${c.FAIL} SKIP=${c.SKIP}`,
+      );
     }
     lines.push("");
     lines.push("检查项:");
@@ -776,14 +796,27 @@ export function HealthCheck() {
                 : "border-warning/40 bg-warning/5")
           }>
             <ToneBadge tone={gateTone(gate.gate) as any}>{gate.gate}</ToneBadge>
-            <div className="min-w-0 flex-1">
+            <div className="min-w-0 flex-1 space-y-0.5">
               <div className="font-semibold text-sm">Release Gate · {gate.gate}</div>
-              <div className="font-mono text-[11px] mt-0.5 break-words">
+              <div className="font-mono text-[11px] break-words">
                 [{gate.rule}] {gate.reason}
               </div>
+              <div className="font-mono text-[10px] text-muted-foreground break-words">
+                warn_by_layer: L0={gate.warnCountByLayer.L0} · L1={gate.warnCountByLayer.L1} · L2={gate.warnCountByLayer.L2}
+                {" · "}system_warn(unique)={gate.systemWarnModules.length}
+                {" · "}gate_triggering_warn={gate.gateTriggeringWarnModules.length}
+              </div>
               {gate.triggers.length > 0 && (
-                <div className="font-mono text-[10px] text-muted-foreground mt-0.5 break-words">
+                <div className="font-mono text-[10px] text-muted-foreground break-words">
                   triggers: {gate.triggers.join(", ")}
+                </div>
+              )}
+              {gate.isolatedExperimentalWarnings.length > 0 && (
+                <div className="font-mono text-[10px] text-muted-foreground break-words">
+                  <span className="inline-block px-1 py-0.5 mr-1 rounded bg-warning/10 text-warning border border-warning/30">
+                    isolated experimental warning
+                  </span>
+                  {gate.isolatedExperimentalWarnings.map((w) => w.module).join(", ")}
                 </div>
               )}
             </div>
@@ -797,7 +830,7 @@ export function HealthCheck() {
               <span className="text-muted-foreground font-mono">system_capabilities · SSoT</span>
               {gate && <ToneBadge tone={gateTone(gate.gate) as any}>gate {gate.gate}</ToneBadge>}
               <span className="text-[11px] text-muted-foreground ml-auto font-mono">
-                L0={snapshot.counts.L0} · L1={snapshot.counts.L1} · L2={snapshot.counts.L2} · WARN={snapshot.counts.WARN} · FAIL={snapshot.counts.FAIL}
+                L0={snapshot.counts.L0}(W{snapshot.counts.L0_WARN}/F{snapshot.counts.L0_FAIL}) · L1={snapshot.counts.L1}(W{snapshot.counts.L1_WARN}/F{snapshot.counts.L1_FAIL}) · L2={snapshot.counts.L2}(W{snapshot.counts.L2_WARN}/F{snapshot.counts.L2_FAIL}) · WARN(unique)={snapshot.counts.warnUnique} · FAIL={snapshot.counts.FAIL}
               </span>
             </div>
             {snapshot.error ? (
@@ -810,6 +843,11 @@ export function HealthCheck() {
                   <li key={r.module} className="px-3 py-1.5 flex items-center gap-2">
                     <ToneBadge tone={r.layer === "L0" ? "success" : r.layer === "L1" ? "muted" : "warning"}>{r.layer}</ToneBadge>
                     <span className="font-mono min-w-0 flex-1 truncate">{r.module}</span>
+                    {r.layer === "L2" && r.status === "WARN" && (
+                      <span className="text-[10px] px-1 py-0.5 rounded bg-warning/10 text-warning border border-warning/30 whitespace-nowrap">
+                        isolated experimental warning
+                      </span>
+                    )}
                     {!r.enabled && <span className="text-[10px] text-muted-foreground">disabled</span>}
                     {r.notes && <span className="text-[10px] text-muted-foreground truncate hidden sm:inline max-w-[240px]">{r.notes}</span>}
                     <StatusTag status={r.status.toLowerCase() as Status} />
