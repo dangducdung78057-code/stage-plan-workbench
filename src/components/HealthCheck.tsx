@@ -245,72 +245,48 @@ export function HealthCheck() {
     }
     (checks as any).__pdfDetail = pdfDetail;
 
-    // 11a. PDF 三态用例 (v3.4)：不依赖 pdfExport flag，稳定复现 PASS / SKIP / WARN
-    // (a) disabled 用例：固定输出 SKIP（模拟 flag off 分支渲染正确）
+    // 11a. PDF 三态调试探针 (v3.4)：仅用于 debug 面板复现 PASS/SKIP/WARN，不进入主验收摘要与结论
+    // (a) disabled: 固定 SKIP
     const probeDisabledReason = "PDF disabled by config";
     const probeDisabledDetail = "pdfExport flag 未开启（Settings → 分支能力开关）";
-    push({
-      id: "pdf-probe-disabled",
-      label: "PDF 三态用例 · disabled",
-      status: "skip",
-      detail: `${probeDisabledReason} — ${probeDisabledDetail}`,
-    });
 
-    // (b) enabled 用例：直接调用 renderPdfBlob(sampleHtml)，期望 PASS
-    let probeEnabled: { status: Status; reason: string; detail: string };
+    // (b) enabled: 直接调用 renderPdfBlob(sampleHtml)
+    let probeEnabled: { status: Status; reason: string; detail: string; ms?: number };
     try {
       if (!validatePrintableHtml(sampleHtml)) {
         probeEnabled = { status: "warn", reason: "PDF generation failed", detail: "printable html invalid" };
       } else {
         const { result, ms } = await timed(async () => await renderPdfBlob(sampleHtml));
         const bytes = result?.size ?? 0;
-        if (result && bytes > 1024) {
-          probeEnabled = { status: "pass", reason: "PDF success", detail: `bytes=${bytes}` };
-          push({ id: "pdf-probe-enabled", label: "PDF 三态用例 · enabled", status: "pass", detail: `PDF success — bytes=${bytes}`, ms });
-        } else {
-          probeEnabled = { status: "warn", reason: "PDF generation failed", detail: `bytes=${bytes}` };
-        }
+        probeEnabled = result && bytes > 1024
+          ? { status: "pass", reason: "PDF success", detail: `bytes=${bytes}`, ms }
+          : { status: "warn", reason: "PDF generation failed", detail: `bytes=${bytes}`, ms };
       }
     } catch (e: any) {
       probeEnabled = { status: "warn", reason: "PDF generation failed", detail: e?.message ?? "unknown error" };
     }
-    if (probeEnabled.status !== "pass") {
-      push({
-        id: "pdf-probe-enabled",
-        label: "PDF 三态用例 · enabled",
-        status: probeEnabled.status,
-        detail: `${probeEnabled.reason} — ${probeEnabled.detail}`,
-      });
-    }
 
-    // (c) error 用例：输入无效 html，期望 WARN（validatePrintableHtml 失败 → WARN，不再 FAIL）
+    // (c) error: 无效 html 期望 WARN
     const invalidHtml = "<div>not a printable doc</div>";
     let probeError: { status: Status; reason: string; detail: string };
     if (validatePrintableHtml(invalidHtml)) {
-      // 兜底：若校验意外通过，尝试真渲染并期望非空；仍非 pass 则记 warn
       try {
         const blob = await renderPdfBlob(invalidHtml);
-        probeError = blob && blob.size > 1024
-          ? { status: "warn", reason: "PDF generation failed", detail: "error probe unexpectedly succeeded" }
-          : { status: "warn", reason: "PDF generation failed", detail: `bytes=${blob?.size ?? 0}` };
+        probeError = { status: "warn", reason: "PDF generation failed", detail: `bytes=${blob?.size ?? 0}` };
       } catch (e: any) {
         probeError = { status: "warn", reason: "PDF generation failed", detail: e?.message ?? "unknown error" };
       }
     } else {
       probeError = { status: "warn", reason: "PDF generation failed", detail: "printable html invalid (expected)" };
     }
-    push({
-      id: "pdf-probe-error",
-      label: "PDF 三态用例 · error",
-      status: probeError.status,
-      detail: `${probeError.reason} — ${probeError.detail}`,
-    });
 
-    (checks as any).__pdfProbes = {
-      disabled: { status: "skip" as Status, reason: probeDisabledReason, detail: probeDisabledDetail },
+    setPdfProbes({
+      disabled: { status: "skip", reason: probeDisabledReason, detail: probeDisabledDetail },
       enabled: probeEnabled,
       error: probeError,
-    };
+    });
+
+
 
 
 
