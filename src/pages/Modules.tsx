@@ -24,7 +24,7 @@ export default function Modules() {
   }
 
   return (
-    <div className="p-6 space-y-4 max-w-5xl">
+    <div className="p-4 md:p-6 space-y-4 max-w-5xl">
       <div>
         <h1 className="text-xl font-semibold">模块注册表</h1>
         <p className="text-sm text-muted-foreground">StageOS 模块与路由清单。v1 默认 mock 模式,可预留 apiBaseUrl。</p>
