@@ -391,6 +391,50 @@ export function HealthCheck() {
     // 暴露给 summary 文本使用
     (out as any).__providerDetail = providerDetail;
 
+    // 16. v3.3 · 采购候选商品导出附加
+    //   flag off               → skip
+    //   provider 返回候选 & MD 章节存在 → pass
+    //   provider 无候选但导出正常 → warn
+    //   永不 fail
+    if (!getFlag("procurement")) {
+      push({ id: "procurementExport", label: "采购导出附加 (v3.3)", status: "skip", detail: "procurement flag off" });
+    } else {
+      try {
+        const { resolveExportProcurement } = await import("@/lib/procurementExport");
+        const samplePlan = {
+          femalePlan: [{ category: "上装", description: "白衬衫", qty: 1, unitEstimate: 50, subtotal: 50 }],
+          malePlan: [{ category: "上装", description: "西装背心", qty: 1, unitEstimate: 70, subtotal: 70 }],
+          accessories: [{ category: "配饰", description: "蝴蝶结", qty: 2, unitEstimate: 10, subtotal: 20 }],
+        };
+        const { result: bundle, ms } = await timed(async () => await resolveExportProcurement(samplePlan, { programType: "chorus", schoolStage: "primary" }));
+        // 重新构造 payload + 渲染 markdown，校验 "候选商品清单" 章节是否落地
+        const md = renderMarkdown(
+          { ...JSON.parse(JSON.stringify({
+            project: { title: "健康检查样本", performance_date: "2026-06-30" },
+            input: { schoolStage: "primary", programType: "chorus", performerCount: 2, femaleCount: 1, maleCount: 1, performanceDate: "2026-06-30", perPersonBudget: 120 },
+            snapshot: { mode: "mock", generated_at: new Date().toISOString(), costume_plan: samplePlan, risks: [], reverse_schedule: [], platform_search: [] },
+          })), procurement_candidates: bundle },
+          "json",
+          { projectTitle: "健康检查样本", version: 0, createdAt: new Date().toISOString() },
+        );
+        const hasSection = /##\s+候选商品清单/.test(md);
+        const hasProviderMeta = /providerId:\s*`([^`]+)`/.test(md);
+        const empty = (bundle.totalCandidates ?? 0) === 0;
+        const base = `mode=${bundle.providerMode}, providerId=${bundle.providerId}, fallbackUsed=${bundle.fallbackUsed}, groups=${bundle.groups.length}, candidates=${bundle.totalCandidates}${bundle.warningCode ? `, warningCode=${bundle.warningCode}` : ""}`;
+        if (!hasSection || !hasProviderMeta) {
+          push({ id: "procurementExport", label: "采购导出附加 (v3.3)", status: "warn", detail: `导出章节缺失 · ${base}`, ms });
+        } else if (empty) {
+          push({ id: "procurementExport", label: "采购导出附加 (v3.3)", status: "warn", detail: `导出章节已附加但候选为空 · ${base}`, ms });
+        } else {
+          push({ id: "procurementExport", label: "采购导出附加 (v3.3)", status: "pass", detail: base, ms });
+        }
+      } catch (e: any) {
+        push({ id: "procurementExport", label: "采购导出附加 (v3.3)", status: "warn", detail: `附加异常: ${e?.message ?? "unknown"}` });
+      }
+    }
+
+
+
 
 
     // persist run history (best-effort; RLS scopes to current user)
