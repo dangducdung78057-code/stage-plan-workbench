@@ -124,6 +124,26 @@ export default function ProjectWizard() {
   };
   const goPrev = () => setStep((s) => Math.max(0, s - 1));
 
+  const allIssues = useMemo(() => collectIssues(title, data), [title, data]);
+
+  const jumpToIssue = (issue: WizardIssue) => {
+    setStep(issue.step);
+    // Wait for step body to render, then focus + highlight the field.
+    setTimeout(() => {
+      const el = document.getElementById(issue.fieldId)
+        ?? document.querySelector<HTMLElement>(`[data-field-wrapper="${issue.fieldId}"]`);
+      if (!el) return;
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      (el as HTMLElement).focus?.();
+      const wrapper = el.closest<HTMLElement>("[data-field-wrapper]") ?? el;
+      wrapper.classList.add("ring-2", "ring-warning", "rounded-md", "transition-shadow");
+      window.setTimeout(() => {
+        wrapper.classList.remove("ring-2", "ring-warning", "rounded-md");
+      }, 1600);
+    }, 80);
+  };
+
+
   async function submit() {
     if (!title.trim()) { toast.error("请填写项目标题"); return; }
     setSubmitting(true);
