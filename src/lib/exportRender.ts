@@ -117,15 +117,21 @@ function fmtSchedule(d: any): string {
 
 function fmtSearch(d: any): string {
   const recs =
-    d?.platformSearch ??
-    d?.platform_search ??
-    d?.snapshot?.platform_search ??
-    d?.snapshot?.platformSearch ??
-    d?.searchRecommendations ??
-    d?.plan?.searchRecommendations ??
-    d?.plan?.platformSearch ??
+    d?.platform_search ?? d?.platformSearch ??
+    d?.procurementSearch ?? d?.procurement_search ??
+    d?.commerceSuggestions ?? d?.commerce_suggestions ??
+    d?.searchSuggestions ?? d?.search_suggestions ??
+    d?.searchRecommendations ?? d?.search_recommendations ??
+    d?.snapshot?.platform_search ?? d?.snapshot?.platformSearch ??
+    d?.snapshot?.procurementSearch ?? d?.snapshot?.commerceSuggestions ??
+    d?.snapshot?.searchSuggestions ??
+    d?.plan?.platformSearch ?? d?.plan?.platform_search ??
+    d?.plan?.procurementSearch ?? d?.plan?.commerceSuggestions ??
+    d?.plan?.searchSuggestions ?? d?.plan?.searchRecommendations ??
     d?.recommendations;
-  if (!Array.isArray(recs) || !recs.length) return MISSING;
+  if (!Array.isArray(recs) || !recs.length) {
+    return "暂无采购搜索建议，需人工检索与核验。";
+  }
   return recs.map((r: any) => {
     if (typeof r === "string") return `- ${r}`;
     const q = r.query ?? r.keyword ?? r.q ?? "";
