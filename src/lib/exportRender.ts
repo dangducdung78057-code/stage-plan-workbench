@@ -526,6 +526,7 @@ export function renderPrintableHtml(
   <section><h2>倒排时间表</h2>${scheduleTable(doc.schedule)}</section>
   <section><h2>采购搜索建议</h2>${searchTable(doc.search)}</section>
   <section><h2>隐私与非真实库存/价格声明</h2><p>隐私声明：导出仅面向匿名学生数据、人数、身高分档和角色标签，不包含真实姓名、联系方式或敏感身份信息。</p><p>非真实库存/价格声明：本文件中的价格、SKU、库存、供应商和平台搜索建议均为 mock / 模拟或人工检索建议，需由采购负责人二次确认。</p></section>
+  <div class="stageos-watermark" data-stageos-watermark>${escapeHtml(watermarkLine())}</div>
 </article>
 </body>
 </html>`;
