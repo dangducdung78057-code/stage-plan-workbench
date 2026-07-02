@@ -222,9 +222,12 @@ export default function Exports() {
         {showPdf && (
           <p className="text-xs text-muted-foreground mt-1">PDF 采用 html2pdf 光栅化渲染，中文原样输出。</p>
         )}
+        {showPng && (
+          <p className="text-xs text-muted-foreground mt-1">PNG 长图采用 html-to-image 光栅化，适合分享。</p>
+        )}
         {storageOn && (
           <p className="text-xs text-muted-foreground mt-1">
-            Storage 同步已开启：下载的 MD / PDF 会同时写入私有 bucket <span className="font-mono">stageos-exports</span>，按 <span className="font-mono">user_id</span> 前缀隔离。
+            Storage 同步已开启：下载的 MD / PDF / PNG 会同时写入私有 bucket <span className="font-mono">stageos-exports</span>，按 <span className="font-mono">user_id</span> 前缀隔离。
           </p>
         )}
       </div>
@@ -268,6 +271,13 @@ export default function Exports() {
                           : <><FileText className="h-3.5 w-3.5 mr-1" />PDF</>}
                       </Button>
                     )}
+                    {showPng && (
+                      <Button variant="outline" size="sm" disabled={busy === r.id + ":png"} onClick={() => handlePng(r)}>
+                        {busy === r.id + ":png"
+                          ? <><Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />生成中…</>
+                          : <><ImageIcon className="h-3.5 w-3.5 mr-1" />PNG</>}
+                      </Button>
+                    )}
                   </div>
                 </td>
               </tr>
@@ -297,6 +307,13 @@ export default function Exports() {
                       {busy === r.id + ":pdf"
                         ? <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />生成中…</>
                         : <><FileText className="h-3.5 w-3.5 mr-1.5" />下载 PDF</>}
+                    </Button>
+                  )}
+                  {showPng && (
+                    <Button variant="outline" size="sm" className="w-full justify-center" disabled={busy === r.id + ":png"} onClick={() => handlePng(r)}>
+                      {busy === r.id + ":png"
+                        ? <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />生成中…</>
+                        : <><ImageIcon className="h-3.5 w-3.5 mr-1.5" />下载 PNG 长图</>}
                     </Button>
                   )}
                 </div>
