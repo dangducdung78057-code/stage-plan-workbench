@@ -25,6 +25,7 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { FileDown, Eye, Loader2, FileText, Cloud, Link2, Trash2, RefreshCcw, Image as ImageIcon, RotateCw } from "lucide-react";
+import { dispatchWebhook } from "@/lib/webhook";
 
 type Row = {
   id: string; project_id: string; version: number; format: string;
@@ -149,6 +150,18 @@ export default function Exports() {
           schoolStage: input?.schoolStage ?? input?.school_stage ?? p?.school_stage,
         };
         payload.procurement_candidates = await resolveExportProcurement(plan, ctx);
+        const bundle: any = payload.procurement_candidates;
+        dispatchWebhook("procurement.completed", {
+          project_id: (payload as any)?.project?.id ?? null,
+          summary: {
+            providerMode: bundle?.providerMode,
+            providerId: bundle?.providerId,
+            fallbackUsed: bundle?.fallbackUsed,
+            groups: bundle?.groups?.length ?? 0,
+            candidates: bundle?.totalCandidates ?? 0,
+            warningCode: bundle?.warningCode ?? null,
+          },
+        });
       }
     } catch (e) {
       console.warn("[StageOS Export] procurement attach failed", e);
@@ -240,6 +253,10 @@ export default function Exports() {
       setRows((prev) => [freshRow, ...prev.filter((item) => item.id !== freshRow.id)]);
       console.info("[StageOS Storage Debug] fresh.export_id", freshRow.id);
       await maybeUploadToStorage(freshRow, "md", utf8Blob, "text/markdown;charset=utf-8");
+      dispatchWebhook("export.created", {
+        project_id: row.project_id,
+        summary: { format: "markdown", version: row.version, snapshot_id: row.snapshot_id, bytes: utf8Blob.size, export_id: freshRow.id },
+      });
     } catch (e) {
       console.error(e);
       toast.error("下载失败，请稍后重试");
@@ -275,6 +292,10 @@ export default function Exports() {
       setTimeout(() => URL.revokeObjectURL(url), 1000);
       toast.success("PDF 已生成并下载（实验版）");
       await maybeUploadToStorage(row, "pdf", blob, "application/pdf");
+      dispatchWebhook("export.created", {
+        project_id: row.project_id,
+        summary: { format: "pdf", version: row.version, snapshot_id: row.snapshot_id, bytes: blob.size, export_id: row.id },
+      });
     } catch (e: any) {
       console.error(e);
       const msg = String(e?.message ?? "");
@@ -314,6 +335,10 @@ export default function Exports() {
       setTimeout(() => URL.revokeObjectURL(url), 1000);
       toast.success("PNG 已生成并下载");
       await maybeUploadToStorage(row, "png", blob, "image/png");
+      dispatchWebhook("export.created", {
+        project_id: row.project_id,
+        summary: { format: "png", version: row.version, snapshot_id: row.snapshot_id, bytes: blob.size, export_id: row.id },
+      });
     } catch (e: any) {
       console.error(e);
       const msg = String(e?.message ?? "");

@@ -10,7 +10,7 @@ import { renderMarkdown, renderPrintableHtml, renderPdfBlob, renderPngBlob, vali
 import { CheckCircle2, XCircle, Loader2, AlertTriangle, Copy, Download as DownloadIcon, History } from "lucide-react";
 import { toast } from "sonner";
 
-const STABLE_BASELINE = "stageos-v3.5-audit-layer-pass";
+const STABLE_BASELINE = "stageos-v4.0-outbound-webhook-layer";
 
 type Status = "pass" | "fail" | "warn" | "skip";
 type Check = { id: string; label: string; status: Status; detail?: string; ms?: number };
@@ -547,6 +547,19 @@ export function HealthCheck() {
         newRunId = (inserted as any)?.id ?? null;
         setLastRunId(newRunId);
         void loadRecent();
+        const { dispatchWebhook } = await import("@/lib/webhook");
+        dispatchWebhook("audit.completed", {
+          project_id: null,
+          summary: {
+            run_id: newRunId,
+            baseline: STAGEOS_VERSION,
+            route: typeof window !== "undefined" ? window.location.pathname : null,
+            pass: summaryLocal.pass ?? 0,
+            warn: summaryLocal.warn ?? 0,
+            fail: summaryLocal.fail ?? 0,
+            skip: summaryLocal.skip ?? 0,
+          },
+        });
       } catch {
         /* non-fatal */
       }

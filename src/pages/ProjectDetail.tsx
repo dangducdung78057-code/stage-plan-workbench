@@ -20,6 +20,7 @@ import { renderMarkdown } from "@/lib/exportRender";
 import { ProcurementCandidatesToggle, ProcurementDisclaimer } from "@/components/ProcurementCandidatesRow";
 import type { MatchContext } from "@/lib/procurementMatch";
 import { useProcurementSettings } from "@/lib/procurementSettings";
+import { dispatchWebhook } from "@/lib/webhook";
 
 type Project = { id: string; title: string; status: string; performance_date: string | null; performer_count: number | null; updated_at: string };
 type Snapshot = {
@@ -251,6 +252,10 @@ export default function ProjectDetail() {
       a.href = url; a.download = `${project.title}-v${latest.version}.${isJson ? "json" : "md"}`;
       a.click(); URL.revokeObjectURL(url);
       toast.success(`已导出 ${format.toUpperCase()}`);
+      dispatchWebhook("export.created", {
+        project_id: project.id,
+        summary: { format, version: latest.version, snapshot_id: latest.id, bytes: blob.size },
+      });
       load();
     } catch (e: any) { toast.error(e.message); }
     finally { setBusy(false); }
