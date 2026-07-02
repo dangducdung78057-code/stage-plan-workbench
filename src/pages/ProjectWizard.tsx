@@ -403,7 +403,7 @@ export default function ProjectWizard() {
 
 
           {step === 3 && (
-            <div className="space-y-3">
+            <div id="w-students-panel" data-field-wrapper="w-students-panel" tabIndex={-1} className="space-y-3 outline-none">
               <div className="flex items-center justify-between">
                 <p className="text-xs text-muted-foreground">
                   仅使用 studentId 匿名标识,不采集真实姓名。学生行数需与总人数一致时才通过校验;为空则跳过此校验。
