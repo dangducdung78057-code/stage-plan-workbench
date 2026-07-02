@@ -285,6 +285,7 @@ export function renderMarkdown(
     section("采购策略", fmtListMd(doc.purchaseStrategy)),
     section("倒排时间表", scheduleTableMd(doc.schedule)),
     section("采购搜索建议", searchListMd(doc.search)),
+    procurementSectionMd(doc.procurementCandidates),
     section("mock / 非真实库存价格声明", "本导出所含所有价格、库存、供货商与平台链接均为 mock 或搜索建议，需人工核验，不构成采购承诺。"),
     section("隐私声明摘要", "本文件仅包含匿名 studentId、性别、身高、可选角色标签；不含真实姓名或联系方式。"),
     `\n---\n\n<sub>${watermarkLine()}</sub>\n`,
