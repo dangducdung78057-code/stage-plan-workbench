@@ -40,14 +40,27 @@ function reject(code: string, message: string, status: number, extra: Record<str
   return jsonResponse({ ok: false, code, message, ...extra }, status);
 }
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
     const body = await req.json().catch(() => ({}));
-    const projectId: string | undefined = body?.projectId;
+    if (body?.healthcheck === true) {
+      return jsonResponse({
+        ok: true,
+        code: "PRECHECK_HEALTHCHECK_OK",
+        mode: "healthcheck",
+      });
+    }
+
+    const projectId: string | undefined = body?.projectId ?? body?.project_id;
     if (!projectId) {
       return reject("BAD_REQUEST", "projectId 必填。", 400);
+    }
+    if (typeof projectId !== "string" || !UUID_RE.test(projectId)) {
+      return reject("BAD_REQUEST", "project_id must be uuid", 400);
     }
 
     // 1) Auth check: require Bearer JWT and validate the caller.

@@ -107,17 +107,27 @@ export function HealthCheck() {
     // 9. Edge Function plan-precheck 可达性（业务拒绝也算可达）
     try {
       const { result, ms } = await timed(async () => await (
-        supabase.functions.invoke("plan-precheck", { body: { projectId: "__healthcheck__" } }))
+        supabase.functions.invoke("plan-precheck", { body: { healthcheck: true } }))
       );
+      const data: any = result.data;
+      const code: string | undefined = data?.code;
+      const reachableCodes = new Set(["UNAUTHORIZED", "FORBIDDEN", "CONFIRMATION_REQUIRED", "VALIDATION_REQUIRED"]);
+      const detail = code === "PRECHECK_HEALTHCHECK_OK"
+        ? "可达 (PRECHECK_HEALTHCHECK_OK)"
+        : code && reachableCodes.has(code)
+          ? `可达 (业务拒绝: ${code})`
+          : result.error
+            ? `可控异常: ${String(result.error.message ?? "unknown").slice(0, 80)}`
+            : "响应异常";
       push({
         id: "edge",
         label: "Edge Function plan-precheck",
-        status: "pass",
-        detail: result.error ? `可达 (业务拒绝: ${String(result.error.message ?? "").slice(0, 60)})` : "可达",
+        status: code === "PRECHECK_HEALTHCHECK_OK" || data?.ok === true || (code && reachableCodes.has(code)) ? "pass" : "warn",
+        detail,
         ms,
       });
     } catch (e: any) {
-      push({ id: "edge", label: "Edge Function plan-precheck", status: "fail", detail: e?.message });
+      push({ id: "edge", label: "Edge Function plan-precheck", status: "warn", detail: `调用异常: ${e?.message ?? "unknown"}` });
     }
 
     // 10. Markdown 导出能力
