@@ -55,6 +55,7 @@ export default function ProjectDetail() {
   const [generationNotice, setGenerationNotice] = useState<PrecheckResult | null>(null);
   const [confirmPreview, setConfirmPreview] = useState<{
     errors: string[]; warnings: string[]; checkedAt: string;
+    snapshot: StageInputData;
   } | null>(null);
   const flags = useFlags();
   const aiOn = flags.aiProvider;
@@ -460,7 +461,7 @@ export default function ProjectDetail() {
                     .from("stage_inputs").select("data").eq("project_id", project.id).maybeSingle();
                   const fresh = (siRow?.data ?? input ?? {}) as StageInputData;
                   const { errors, warnings } = validateStageInputDetailed(fresh);
-                  setConfirmPreview({ errors, warnings, checkedAt: new Date().toISOString() });
+                  setConfirmPreview({ errors, warnings, checkedAt: new Date().toISOString(), snapshot: fresh });
                 }} disabled={busy}>
                   <CheckCircle2 className="h-4 w-4 mr-1" />确认(隐私/用户)
                 </Button>
@@ -555,10 +556,36 @@ export default function ProjectDetail() {
           <AlertDialogHeader>
             <AlertDialogTitle>确认前校验预览</AlertDialogTitle>
             <AlertDialogDescription asChild>
-              <div className="space-y-2 text-sm">
+              <div className="space-y-3 text-sm">
                 <div className="text-xs text-muted-foreground">
                   校验时间:<span className="font-mono">{confirmPreview?.checkedAt}</span>
                 </div>
+
+                {confirmPreview && (
+                  <div className="rounded border border-border bg-muted/30 p-2 space-y-1">
+                    <div className="text-xs font-medium text-muted-foreground">解密后待确认数据</div>
+                    <dl className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
+                      {[
+                        ["学段", confirmPreview.snapshot.schoolStage],
+                        ["节目类型", confirmPreview.snapshot.programType],
+                        ["节目主题", confirmPreview.snapshot.programTheme],
+                        ["场地类型", confirmPreview.snapshot.venueType],
+                        ["演出人数", confirmPreview.snapshot.performerCount],
+                        ["男/女", (confirmPreview.snapshot.maleCount ?? "-") + " / " + (confirmPreview.snapshot.femaleCount ?? "-")],
+                        ["人均预算", confirmPreview.snapshot.perPersonBudget],
+                        ["演出日期", confirmPreview.snapshot.performanceDate],
+                        ["排练频率/周", confirmPreview.snapshot.rehearsalFrequencyPerWeek],
+                        ["学生名单", confirmPreview.snapshot.students?.length ?? 0],
+                      ].map(([k, v]) => (
+                        <div key={String(k)} className="contents">
+                          <dt className="text-muted-foreground">{k}</dt>
+                          <dd className="font-mono truncate">{v === undefined || v === null || v === "" ? "—" : String(v)}</dd>
+                        </div>
+                      ))}
+                    </dl>
+                  </div>
+                )}
+
                 {confirmPreview && confirmPreview.errors.length === 0 && confirmPreview.warnings.length === 0 && (
                   <div className="text-success">✓ 未发现错误或提示,可继续确认。</div>
                 )}
