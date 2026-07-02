@@ -635,6 +635,40 @@ export function HealthCheck() {
     setTimeout(() => URL.revokeObjectURL(url), 2000);
   }
 
+  async function toggleRelease(row: RunRow) {
+    if (!user?.id) return;
+    const next = !row.is_release;
+    let note: string | null = row.release_note ?? null;
+    if (next) {
+      const input = typeof window !== "undefined"
+        ? window.prompt("Release 备注（可留空）", row.baseline)
+        : null;
+      note = input ?? null;
+    }
+    const { error } = await supabase
+      .from("health_check_runs")
+      .update({ is_release: next, release_note: note, released_at: next ? new Date().toISOString() : null })
+      .eq("id", row.id);
+    if (error) { toast.error("锁定 release 失败：" + error.message); return; }
+    toast.success(next ? "已锁定为 stable release" : "已取消 release 标记");
+    void loadRecent();
+  }
+
+  function pickCompare(id: string) {
+    setCompareIds(([a, b]) => {
+      if (a === id) return [null, b];
+      if (b === id) return [a, null];
+      if (!a) return [id, b];
+      if (!b) return [a, id];
+      return [b, id]; // shift
+    });
+  }
+
+  const compareRows: [RunRow | null, RunRow | null] = [
+    recent.find((r) => r.id === compareIds[0]) ?? null,
+    recent.find((r) => r.id === compareIds[1]) ?? null,
+  ];
+
   return (
     <div className="panel">
       <div className="panel-header">
