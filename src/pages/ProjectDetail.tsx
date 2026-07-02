@@ -621,7 +621,7 @@ export default function ProjectDetail() {
                                 type="button"
                                 onClick={() => {
                                   setConfirmPreview(null);
-                                  navigate(`/projects/${project?.id}/edit#field-${anchor}`);
+                                  navigate(`/projects/${project?.id}/edit?from=confirm#field-${anchor}`);
                                 }}
                                 className="inline-block rounded bg-destructive/15 hover:bg-destructive/25 text-destructive px-1.5 py-0.5 text-[10px] font-mono shrink-0 cursor-pointer"
                                 title="点击跳转到该字段"
@@ -650,7 +650,7 @@ export default function ProjectDetail() {
                                 type="button"
                                 onClick={() => {
                                   setConfirmPreview(null);
-                                  navigate(`/projects/${project?.id}/edit#field-${anchor}`);
+                                  navigate(`/projects/${project?.id}/edit?from=confirm#field-${anchor}`);
                                 }}
                                 className="inline-block rounded bg-warning/15 hover:bg-warning/25 text-warning px-1.5 py-0.5 text-[10px] font-mono shrink-0 cursor-pointer"
                                 title="点击跳转到该字段"
