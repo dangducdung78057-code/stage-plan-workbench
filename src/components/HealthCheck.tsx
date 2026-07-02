@@ -350,6 +350,9 @@ export function HealthCheck() {
               {(summary.warn ?? 0) > 0 && <ToneBadge tone="warning">warn {summary.warn}</ToneBadge>}
               {(summary.fail ?? 0) > 0 && <ToneBadge tone="destructive">fail {summary.fail}</ToneBadge>}
               {(summary.skip ?? 0) > 0 && <ToneBadge tone="muted">skip {summary.skip}</ToneBadge>}
+              <Button size="sm" variant="outline" onClick={copySummary} className="h-7">
+                <Copy className="h-3.5 w-3.5 mr-1" />复制验收摘要
+              </Button>
             </div>
           )}
         </div>
