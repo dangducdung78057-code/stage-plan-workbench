@@ -5,6 +5,7 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { PROJECT_STATUSES } from "@/lib/stageos";
 import { Plus, ArrowRight, Package, AlertTriangle, CheckCircle2, FileDown } from "lucide-react";
+import { MobileCard, MobileCardList, MobileField } from "@/components/MobileCard";
 
 type Row = {
   id: string;
