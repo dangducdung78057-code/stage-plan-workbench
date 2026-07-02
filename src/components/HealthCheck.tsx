@@ -342,7 +342,7 @@ export function HealthCheck() {
     } | null = null;
 
     if (!getFlag("procurement")) {
-      push({ id: "procurementProvider", label: "采购 provider (v3.1 抽象层)", status: "skip", detail: "flag off" });
+      push({ id: "procurementProvider", label: "采购 provider (v3.2 抽象层 + http-mock)", status: "skip", detail: "flag off" });
     } else {
       try {
         const { searchWithFallback, getHttpUrl } = await import("@/lib/procurementProvider");
