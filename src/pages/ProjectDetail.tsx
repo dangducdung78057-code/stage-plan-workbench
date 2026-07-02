@@ -248,14 +248,17 @@ export default function ProjectDetail() {
               </span>
             </div>
             <div className="panel-body space-y-3">
+              <div className="text-xs text-muted-foreground">
+                用户/隐私确认为生成排产的前置条件。未完成确认前无法生成 Mock 排产。
+              </div>
               <Textarea rows={3} placeholder="填写确认/修订备注(可选)…" value={notes} onChange={(e) => setNotes(e.target.value)} />
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={() => handleConfirm("draft")} disabled={busy || !latest}>标记为草稿</Button>
-                <Button variant="outline" size="sm" onClick={() => handleConfirm("needs_revision")} disabled={busy || !latest}>
+              <div className="flex gap-2 flex-wrap">
+                <Button variant="outline" size="sm" onClick={() => handleConfirm("draft")} disabled={busy}>标记为草稿</Button>
+                <Button variant="outline" size="sm" onClick={() => handleConfirm("needs_revision")} disabled={busy}>
                   <AlertTriangle className="h-4 w-4 mr-1" />需要修订
                 </Button>
-                <Button size="sm" onClick={() => handleConfirm("confirmed")} disabled={busy || !latest}>
-                  <CheckCircle2 className="h-4 w-4 mr-1" />确认
+                <Button size="sm" onClick={() => handleConfirm("confirmed")} disabled={busy}>
+                  <CheckCircle2 className="h-4 w-4 mr-1" />确认(隐私/用户)
                 </Button>
               </div>
               {confirmations.length > 0 && (
