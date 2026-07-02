@@ -38,7 +38,7 @@ export default function Exports() {
           <h2 className="text-sm font-semibold">全部记录</h2>
           <span className="kbd-route">GET /export</span>
         </div>
-        <div className="overflow-x-auto"><table className="ops-table">
+        <div className="hidden md:block overflow-x-auto"><table className="ops-table">
           <thead>
             <tr>
               <th>项目</th><th>版本</th><th>格式</th><th>时间</th><th>大小</th><th className="w-24">操作</th>
@@ -58,6 +58,20 @@ export default function Exports() {
             ))}
           </tbody>
         </table></div>
+        <MobileCardList empty="暂无导出记录">
+          {rows.map((r) => (
+            <MobileCard
+              key={r.id}
+              title={projectTitles[r.project_id] ?? r.project_id.slice(0, 8)}
+              right={<ToneBadge tone={r.format === "json" ? "info" : "primary"}>{r.format}</ToneBadge>}
+              footer={<Button variant="ghost" size="sm" className="h-7 px-2" onClick={() => setOpen(r)}>查看载荷 →</Button>}
+            >
+              <MobileField label="版本" value={`v${r.version}`} mono />
+              <MobileField label="时间" value={new Date(r.created_at).toLocaleString("zh-CN", { hour12: false })} mono />
+              <MobileField label="大小" value={`${r.payload.length} B`} mono />
+            </MobileCard>
+          ))}
+        </MobileCardList>
       </div>
       <Dialog open={!!open} onOpenChange={(o) => !o && setOpen(null)}>
         <DialogContent className="max-w-3xl max-h-[80vh] overflow-auto">
