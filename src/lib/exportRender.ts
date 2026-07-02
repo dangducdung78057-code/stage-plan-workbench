@@ -117,15 +117,21 @@ function fmtSchedule(d: any): string {
 
 function fmtSearch(d: any): string {
   const recs =
-    d?.platformSearch ??
-    d?.platform_search ??
-    d?.snapshot?.platform_search ??
-    d?.snapshot?.platformSearch ??
-    d?.searchRecommendations ??
-    d?.plan?.searchRecommendations ??
-    d?.plan?.platformSearch ??
+    d?.platform_search ?? d?.platformSearch ??
+    d?.procurementSearch ?? d?.procurement_search ??
+    d?.commerceSuggestions ?? d?.commerce_suggestions ??
+    d?.searchSuggestions ?? d?.search_suggestions ??
+    d?.searchRecommendations ?? d?.search_recommendations ??
+    d?.snapshot?.platform_search ?? d?.snapshot?.platformSearch ??
+    d?.snapshot?.procurementSearch ?? d?.snapshot?.commerceSuggestions ??
+    d?.snapshot?.searchSuggestions ??
+    d?.plan?.platformSearch ?? d?.plan?.platform_search ??
+    d?.plan?.procurementSearch ?? d?.plan?.commerceSuggestions ??
+    d?.plan?.searchSuggestions ?? d?.plan?.searchRecommendations ??
     d?.recommendations;
-  if (!Array.isArray(recs) || !recs.length) return MISSING;
+  if (!Array.isArray(recs) || !recs.length) {
+    return "暂无采购搜索建议，需人工检索与核验。";
+  }
   return recs.map((r: any) => {
     if (typeof r === "string") return `- ${r}`;
     const q = r.query ?? r.keyword ?? r.q ?? "";
@@ -396,7 +402,20 @@ function buildPrintableDoc(data: any, rawPayload: string, format: string, meta: 
   const planB = firstNonEmpty(arrayOf(data?.planB, data?.plan_b, plan?.planB, plan?.plan_b, snapshot?.planB, snapshot?.plan_b), md.planB);
   const purchaseStrategy = firstNonEmpty(arrayOf(plan?.purchaseStrategy, plan?.purchase_strategy, data?.purchaseStrategy, data?.purchase_strategy), md.purchaseStrategy);
   const schedule = firstNonEmpty(arrayOf(data?.reverseSchedule, data?.reverse_schedule, snapshot?.reverse_schedule, snapshot?.reverseSchedule, plan?.reverseSchedule, plan?.schedule), md.schedule);
-  const search = firstNonEmpty(arrayOf(data?.platformSearch, data?.platform_search, snapshot?.platform_search, snapshot?.platformSearch, data?.searchRecommendations, plan?.searchRecommendations, plan?.platformSearch), md.search);
+  const search = firstNonEmpty(arrayOf(
+    data?.platform_search, data?.platformSearch,
+    data?.procurementSearch, data?.procurement_search,
+    data?.commerceSuggestions, data?.commerce_suggestions,
+    data?.searchSuggestions, data?.search_suggestions,
+    data?.searchRecommendations, data?.search_recommendations,
+    snapshot?.platform_search, snapshot?.platformSearch,
+    snapshot?.procurementSearch, snapshot?.procurement_search,
+    snapshot?.commerceSuggestions, snapshot?.commerce_suggestions,
+    snapshot?.searchSuggestions, snapshot?.search_suggestions,
+    plan?.platformSearch, plan?.platform_search,
+    plan?.procurementSearch, plan?.commerceSuggestions,
+    plan?.searchSuggestions, plan?.searchRecommendations,
+  ), md.search);
   const totalEstimateRaw = value(plan?.totalEstimate, plan?.total_estimate, plan?.total, md.plan?.totalEstimate, "—");
 
   return {
@@ -605,7 +624,9 @@ function scheduleTable(rows: any[]) {
 }
 
 function searchTable(rows: any[]) {
-  if (!Array.isArray(rows) || rows.length === 0) return `<p>${HTML_MISSING}</p><p>采购搜索建议仅用于人工检索，不代表实时库存、SKU 或成交价。</p>`;
+  if (!Array.isArray(rows) || rows.length === 0) {
+    return `<p>暂无采购搜索建议，需人工检索与核验。</p>`;
+  }
   return `<table><thead><tr><th>平台</th><th>关键词</th><th>链接/备注</th></tr></thead><tbody>${rows.map((r) => {
     if (typeof r === "string") return `<tr><td>—</td><td>${escapeHtml(r)}</td><td>人工核验</td></tr>`;
     return `<tr><td>${escapeHtml(String(value(r.platform, "—")))}</td><td>${escapeHtml(String(value(r.query, r.keyword, r.q, "—")))}</td><td>${escapeHtml(String(value(r.note, r.url, "需人工核验")))}</td></tr>`;
