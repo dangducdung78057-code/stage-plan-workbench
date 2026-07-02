@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { STAGEOS_VERSION } from "@/lib/stageos";
 import { getFlag } from "@/lib/featureFlags";
+import { PROCUREMENT_SETTINGS_DEFAULTS, normalizeProcurementSettings, procurementSettingsDetail, type ProcurementSettings } from "@/lib/procurementSettings";
 import { renderMarkdown, renderPrintableHtml, renderPdfBlob, renderPngBlob, validatePrintableHtml, validatePrintableContent } from "@/lib/exportRender";
 import { CheckCircle2, XCircle, Loader2, AlertTriangle, Copy, Download as DownloadIcon, History } from "lucide-react";
 import { toast } from "sonner";
@@ -54,6 +55,7 @@ export function HealthCheck() {
     setStartedAt(new Date().toLocaleString());
     const out: Check[] = [];
     const push = (c: Check) => { out.push(c); setChecks([...out]); };
+    let procurementSettings: ProcurementSettings = { ...PROCUREMENT_SETTINGS_DEFAULTS };
 
     // 1. version tag
     push({
@@ -123,7 +125,16 @@ export function HealthCheck() {
         supabase.from("settings").select("*").eq("id", "global").maybeSingle())
       );
       if (result.error) push({ id: "settings", label: "全局设置读取", status: "fail", detail: result.error.message, ms });
-      else push({ id: "settings", label: "全局设置读取", status: "pass", detail: `apiMode=${(result.data as any)?.api_mode ?? "mock"}`, ms });
+      else {
+        procurementSettings = normalizeProcurementSettings(result.data, procurementSettings);
+        push({
+          id: "settings",
+          label: "全局设置读取",
+          status: "pass",
+          detail: procurementSettingsDetail(procurementSettings, (result.data as any)?.api_mode ?? "mock"),
+          ms,
+        });
+      }
     } catch (e: any) {
       push({ id: "settings", label: "全局设置读取", status: "fail", detail: e?.message });
     }
@@ -298,8 +309,8 @@ export function HealthCheck() {
     }
 
     // 14. 采购候选商品 v1 · 本地目录
-    if (!getFlag("procurement")) {
-      push({ id: "procurement", label: "采购候选商品 v1 (本地目录)", status: "skip", detail: "flag off" });
+    if (!procurementSettings.procurementCandidatesEnabled) {
+      push({ id: "procurement", label: "采购候选商品 v1", status: "skip", detail: "procurementCandidatesEnabled=false" });
     } else {
       try {
         const { PROCUREMENT_CATALOG } = await import("@/lib/procurementCatalog");
@@ -318,7 +329,7 @@ export function HealthCheck() {
             const ok = !!(c.platform && c.title && c.keyword && typeof c.estimatedPrice === "number" && c.matchReason && c.riskNote);
             push({
               id: "procurement",
-              label: "采购候选商品 v1 (本地目录)",
+              label: "采购候选商品 v1",
               status: ok ? "pass" : "warn",
               detail: ok ? `entries=${PROCUREMENT_CATALOG.length}, sample=${sample.length}` : "候选字段缺失",
             });
@@ -341,11 +352,13 @@ export function HealthCheck() {
       warningCode?: string;
     } | null = null;
 
-    if (!getFlag("procurement")) {
-      push({ id: "procurementProvider", label: "采购 provider (v3.2 抽象层 + http-mock)", status: "skip", detail: "flag off" });
+    if (!procurementSettings.procurementProviderEnabled) {
+      push({ id: "procurementProvider", label: "采购 provider (v3.2 抽象层 + http-mock)", status: "skip", detail: "procurementProviderEnabled=false" });
     } else {
       try {
-        const { searchWithFallback, getHttpUrl } = await import("@/lib/procurementProvider");
+        const { searchWithFallback, getHttpUrl, setProviderMode, setHttpUrl } = await import("@/lib/procurementProvider");
+        setProviderMode(procurementSettings.procurementProvider);
+        setHttpUrl(procurementSettings.procurementApiBaseUrl);
         const r = await searchWithFallback(
           { category: "上装", description: "白衬衫" },
           { programType: "chorus", schoolStage: "primary" },
@@ -396,10 +409,13 @@ export function HealthCheck() {
     //   provider 返回候选 & MD 章节存在 → pass
     //   provider 无候选但导出正常 → warn
     //   永不 fail
-    if (!getFlag("procurement")) {
-      push({ id: "procurementExport", label: "采购导出附加 (v3.3)", status: "skip", detail: "procurement flag off" });
+    if (!procurementSettings.procurementExportAttachmentEnabled) {
+      push({ id: "procurementExport", label: "采购导出附加 (v3.3)", status: "skip", detail: "procurementExportAttachmentEnabled=false" });
     } else {
       try {
+        const { setProviderMode, setHttpUrl } = await import("@/lib/procurementProvider");
+        setProviderMode(procurementSettings.procurementProvider);
+        setHttpUrl(procurementSettings.procurementApiBaseUrl);
         const { resolveExportProcurement } = await import("@/lib/procurementExport");
         const samplePlan = {
           femalePlan: [{ category: "上装", description: "白衬衫", qty: 1, unitEstimate: 50, subtotal: 50 }],
