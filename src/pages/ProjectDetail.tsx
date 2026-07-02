@@ -53,6 +53,9 @@ export default function ProjectDetail() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [generationNotice, setGenerationNotice] = useState<PrecheckResult | null>(null);
+  const [confirmPreview, setConfirmPreview] = useState<{
+    errors: string[]; warnings: string[]; checkedAt: string;
+  } | null>(null);
   const flags = useFlags();
   const aiOn = flags.aiProvider;
   const procurementSettings = useProcurementSettings();
