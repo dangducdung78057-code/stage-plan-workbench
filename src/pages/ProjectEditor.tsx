@@ -268,7 +268,14 @@ export default function ProjectEditor() {
           </div>
           <Button variant="outline" size="sm" onClick={addStudent}><Plus className="h-3.5 w-3.5 mr-1" />添加</Button>
         </div>
+        {(hints.students.errors.length > 0 || hints.students.warnings.length > 0) && (
+          <div className="px-4 pt-2 space-y-0.5">
+            {hints.students.errors.map((m) => <div key={`se-${m}`} className="text-[11px] text-destructive">• {m}</div>)}
+            {hints.students.warnings.map((m) => <div key={`sw-${m}`} className="text-[11px] text-warning">• {m}</div>)}
+          </div>
+        )}
         <div className="overflow-x-auto">
+
           <table className="ops-table">
             <thead>
               <tr>
