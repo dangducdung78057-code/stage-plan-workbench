@@ -123,7 +123,7 @@ export default function Exports() {
       return { payload: row.payload, format: row.format, projectTitle };
     }
 
-    const payload = {
+    const payload: any = {
       project: { ...p, ...input, title: projectTitle },
       input,
       snapshot: { ...snap, ...snapshotPayload, project: { title: projectTitle } },
@@ -134,6 +134,22 @@ export default function Exports() {
       platform_search: snapshotPayload?.platform_search ?? snapshotPayload?.platformSearch ?? snap.platform_search ?? [],
       exportedAt: new Date().toISOString(),
     };
+
+    // v3.3 · 采购候选商品导出附加（受 procurement flag 控制；provider 遵循用户设置，含 fallback）
+    try {
+      const { getFlag } = await import("@/lib/featureFlags");
+      if (getFlag("procurement")) {
+        const { resolveExportProcurement } = await import("@/lib/procurementExport");
+        const ctx = {
+          programType: input?.programType ?? input?.program_type ?? p?.program_type,
+          schoolStage: input?.schoolStage ?? input?.school_stage ?? p?.school_stage,
+        };
+        payload.procurement_candidates = await resolveExportProcurement(plan, ctx);
+      }
+    } catch (e) {
+      console.warn("[StageOS Export] procurement attach failed", e);
+    }
+
     return { payload, format: "json", projectTitle };
   }
 
