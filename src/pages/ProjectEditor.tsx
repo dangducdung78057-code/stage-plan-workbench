@@ -105,14 +105,28 @@ export default function ProjectEditor() {
         <Button size="sm" onClick={save} disabled={saving}>{saving ? "保存中…" : "保存项目"}</Button>
       </div>
 
-      {issues.length > 0 && (
+      {errors.length > 0 && (
+        <div className="panel border-destructive/40 bg-destructive/5">
+          <div className="panel-body flex items-start gap-2 text-sm">
+            <AlertCircle className="h-4 w-4 text-destructive mt-0.5" />
+            <div>
+              <div className="font-medium text-destructive">校验错误(阻止保存)</div>
+              <ul className="mt-1 list-disc list-inside text-muted-foreground text-xs space-y-0.5">
+                {errors.map((i) => <li key={i}>{i}</li>)}
+              </ul>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {warnings.length > 0 && (
         <div className="panel border-warning/40 bg-warning/5">
           <div className="panel-body flex items-start gap-2 text-sm">
             <AlertTriangle className="h-4 w-4 text-warning mt-0.5" />
             <div>
               <div className="font-medium text-warning">数据校验提示</div>
               <ul className="mt-1 list-disc list-inside text-muted-foreground text-xs space-y-0.5">
-                {issues.map((i) => <li key={i}>{i}</li>)}
+                {warnings.map((i) => <li key={i}>{i}</li>)}
               </ul>
             </div>
           </div>
