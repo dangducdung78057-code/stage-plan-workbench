@@ -44,7 +44,7 @@ export default function Modules() {
             <Label className="text-xs text-muted-foreground">apiBaseUrl (可选,未来集成真实 StageOS 后端)</Label>
             <Input value={apiBaseUrl} onChange={(e) => setApiBaseUrl(e.target.value)} placeholder="https://api.stageos.example.com" />
           </div>
-          <div className="col-span-3">
+          <div className="md:col-span-3">
             <Button size="sm" onClick={save}>保存</Button>
             <span className="ml-3 text-xs text-muted-foreground">真实 API 模式在 v1 仅为保留配置,不依赖已部署的后端。</span>
           </div>
