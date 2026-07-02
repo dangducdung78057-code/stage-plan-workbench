@@ -392,7 +392,6 @@ export default function ProjectWizard() {
                   const firstErr = issues.find((i) => i.severity === "error");
                   const firstWarn = issues.find((i) => i.severity === "warning");
                   const expanded = expandedIssueDrafts.has(d.id);
-                  const top5 = issues.slice(0, 5);
                   const jumpTo = (issue: WizardIssue) => {
                     if (d.id !== activeId) switchDraft(d.id);
                     setTimeout(() => jumpToIssue(issue), d.id !== activeId ? 40 : 0);
