@@ -534,6 +534,18 @@ export function HealthCheck() {
       lines.push(`  candidates: ${pd.candidates}`);
       if (pd.warningCode) lines.push(`  warningCode: ${pd.warningCode}`);
     }
+    const pdfd = (checks as any).__pdfDetail as
+      | { status: Status; reason: string; detail: string }
+      | null
+      | undefined;
+    if (pdfd) {
+      lines.push("");
+      lines.push("PDF 模块状态:");
+      lines.push(`  status: ${pdfd.status}`);
+      lines.push(`  reason: ${pdfd.reason}`);
+      lines.push(`  detail: ${pdfd.detail}`);
+    }
+
     lines.push("");
     lines.push(
       `汇总: pass=${summary.pass ?? 0} warn=${summary.warn ?? 0} fail=${summary.fail ?? 0} skip=${summary.skip ?? 0}`,
