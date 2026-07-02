@@ -155,6 +155,7 @@ export default function ProjectWizard() {
         status: "draft",
       });
 
+      localStorage.removeItem(DRAFT_KEY);
       toast.success("项目已创建,mock 计划已生成");
       navigate(`/projects/${projectId}`);
     } catch (e: any) {
