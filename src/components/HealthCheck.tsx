@@ -40,7 +40,7 @@ export function HealthCheck() {
 
     // 2. auth session
     try {
-      const { result, ms } = await timed(() => supabase.auth.getSession());
+      const { result, ms } = await timed(async () => await ( supabase.auth.getSession());
       const s = result.data.session;
       if (s?.user) {
         push({ id: "auth", label: "登录会话 (auth.session)", status: "pass", detail: s.user.email ?? s.user.id, ms });
@@ -55,8 +55,8 @@ export function HealthCheck() {
     const tables = ["projects", "plan_snapshots", "confirmation_records", "export_records"] as const;
     for (const t of tables) {
       try {
-        const { result, ms } = await timed(() =>
-          supabase.from(t).select("id", { count: "exact", head: true })
+        const { result, ms } = await timed(async () => await (
+          supabase.from(t).select("id", { count: "exact", head: true }))
         );
         if (result.error) {
           push({ id: `tbl-${t}`, label: `表读取 ${t}`, status: "fail", detail: result.error.message, ms });
@@ -71,8 +71,8 @@ export function HealthCheck() {
     // 7. user_id 隔离抽样
     if (user?.id) {
       try {
-        const { result, ms } = await timed(() =>
-          supabase.from("projects").select("id,user_id").limit(20)
+        const { result, ms } = await timed(async () => await (
+          supabase.from("projects").select("id,user_id").limit(20))
         );
         if (result.error) {
           push({ id: "rls", label: "user_id 隔离抽样", status: "fail", detail: result.error.message, ms });
@@ -94,8 +94,8 @@ export function HealthCheck() {
 
     // 8. settings 全局配置
     try {
-      const { result, ms } = await timed(() =>
-        supabase.from("settings").select("*").eq("id", "global").maybeSingle()
+      const { result, ms } = await timed(async () => await (
+        supabase.from("settings").select("*").eq("id", "global").maybeSingle())
       );
       if (result.error) push({ id: "settings", label: "全局设置读取", status: "fail", detail: result.error.message, ms });
       else push({ id: "settings", label: "全局设置读取", status: "pass", detail: `apiMode=${(result.data as any)?.api_mode ?? "mock"}`, ms });
@@ -105,8 +105,8 @@ export function HealthCheck() {
 
     // 9. Edge Function plan-precheck 可达性（业务拒绝也算可达）
     try {
-      const { result, ms } = await timed(() =>
-        supabase.functions.invoke("plan-precheck", { body: { projectId: "__healthcheck__" } })
+      const { result, ms } = await timed(async () => await (
+        supabase.functions.invoke("plan-precheck", { body: { projectId: "__healthcheck__" } }))
       );
       push({
         id: "edge",
