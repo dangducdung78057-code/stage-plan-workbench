@@ -23,6 +23,13 @@ type Snapshot = {
   generated_at: string;
 };
 type Confirmation = { id: string; status: string; notes: string | null; confirmed_at: string | null; created_at: string; snapshot_id: string | null };
+type PrecheckResult = {
+  ok: boolean;
+  code?: string;
+  errorCode?: string;
+  message?: string;
+  issues?: string[];
+};
 
 export default function ProjectDetail() {
   const { id } = useParams();
@@ -34,6 +41,7 @@ export default function ProjectDetail() {
   const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [generationNotice, setGenerationNotice] = useState<PrecheckResult | null>(null);
 
   const latest = snapshots[0];
   const latestConfirm = confirmations[0];
@@ -62,31 +70,36 @@ export default function ProjectDetail() {
   async function handleGenerate() {
     if (!input || !project) return;
     setBusy(true);
+    setGenerationNotice(null);
     try {
       // Precheck order: auth -> permission -> confirmation -> validation.
       // Backend enforces the same order via the plan-precheck edge function.
-      // Business rejections come back as status 200 with { ok:false, errorCode }
-      // so supabase-js never throws for expected gating outcomes.
-      let pre: any = null;
+      // Business rejections may be non-2xx; parse their JSON body and return it to the UI.
+      let pre: PrecheckResult | null = null;
       try {
         const res = await supabase.functions.invoke("plan-precheck", {
           body: { projectId: project.id },
         });
         pre = res.data;
-        // If a system error slipped through (non-2xx), try to read the body.
+        // Non-2xx function responses are represented as errors by the client.
+        // They are still business responses when the body contains { ok:false, code, message }.
         if (res.error && !pre) {
           const ctx: any = (res.error as any)?.context;
-          if (ctx && typeof ctx.json === "function") {
+          if (ctx && typeof ctx.clone === "function" && typeof ctx.json === "function") {
+            try { pre = await ctx.clone().json(); } catch { /* ignore */ }
+          } else if (ctx && typeof ctx.json === "function") {
             try { pre = await ctx.json(); } catch { /* ignore */ }
           }
-          if (!pre) pre = { ok: false, errorCode: "INTERNAL", message: res.error.message };
+          if (!pre) pre = { ok: false, code: "INTERNAL", message: res.error.message };
         }
       } catch (netErr: any) {
-        pre = { ok: false, errorCode: "INTERNAL", message: netErr?.message ?? "network error" };
+        pre = { ok: false, code: "INTERNAL", message: netErr?.message ?? "network error" };
       }
 
       if (!pre?.ok) {
-        const errorCode = pre?.errorCode ?? "INTERNAL";
+        const errorCode = pre?.code ?? pre?.errorCode ?? "INTERNAL";
+        const notice = { ...pre, code: errorCode };
+        setGenerationNotice(notice);
         if (errorCode === "UNAUTHORIZED") {
           toast.error("请先登录后再生成排产。");
         } else if (errorCode === "FORBIDDEN") {
@@ -94,7 +107,9 @@ export default function ProjectDetail() {
         } else if (errorCode === "CONFIRMATION_REQUIRED") {
           toast.warning("请先完成用户确认/隐私确认后再生成排产。");
         } else if (errorCode === "VALIDATION_REQUIRED") {
-          toast.warning("请先解决数据校验提示,再生成排产。");
+          toast.warning("请先解决数据校验提示，再生成排产。", {
+            description: pre?.issues?.length ? pre.issues.join("\n") : undefined,
+          });
         } else {
           toast.error("生成前置校验失败:" + (pre?.message ?? errorCode));
         }
@@ -111,6 +126,7 @@ export default function ProjectDetail() {
       if (error) throw error;
       await supabase.from("projects").update({ status: "planning" }).eq("id", project.id);
       toast.success(`已生成 v${nextVersion} 服装总表(mock)`);
+      setGenerationNotice(null);
       load();
     } catch (e: any) { toast.error("生成失败:" + e.message); }
     finally { setBusy(false); }
@@ -199,6 +215,26 @@ export default function ProjectDetail() {
             <div className="mt-1 text-muted-foreground text-xs">
               请先在「确认 <span className="kbd-route">/confirm</span>」标签页完成确认后再生成排产。错误码:<span className="font-mono">CONFIRMATION_REQUIRED</span>
             </div>
+          </div>
+        </div>
+      )}
+
+      {generationNotice && !generationNotice.ok && (
+        <div className="panel border-warning/40 bg-warning/5 panel-body flex items-start gap-2 text-sm">
+          <AlertTriangle className="h-4 w-4 text-warning mt-0.5" />
+          <div className="min-w-0">
+            <div className="font-medium text-warning">
+              {generationNotice.code === "CONFIRMATION_REQUIRED"
+                ? "请先完成用户确认/隐私确认后再生成排产。"
+                : generationNotice.code === "VALIDATION_REQUIRED"
+                  ? "请先解决数据校验提示，再生成排产。"
+                  : generationNotice.message ?? "生成前置校验未通过"}
+            </div>
+            {generationNotice.issues && generationNotice.issues.length > 0 && (
+              <ul className="mt-1 list-disc list-inside text-muted-foreground text-xs space-y-0.5">
+                {generationNotice.issues.map((issue) => <li key={issue}>{issue}</li>)}
+              </ul>
+            )}
           </div>
         </div>
       )}
