@@ -339,28 +339,32 @@ export function validatePrintableHtml(html: string): boolean {
 }
 
 function buildPrintableDoc(data: any, rawPayload: string, format: string, meta: { projectTitle?: string; version: number; createdAt: string }) {
-  const project = data?.project ?? data?.input?.project ?? {};
-  const input = data?.input ?? data?.stageInput ?? data?.stage_input ?? data?.project?.input ?? {};
+  // Always compute an MD fallback so JSON+MD payloads produce identical printable content.
+  const md = parseMarkdownPayload(rawPayload);
+
+  const project = data?.project ?? data?.input?.project ?? md.project ?? {};
+  const input = data?.input ?? data?.stageInput ?? data?.stage_input ?? data?.project?.input ?? md.input ?? {};
   const snapshot = data?.snapshot ?? data?.planSnapshot ?? data?.plan_snapshot ?? data ?? {};
   const plan =
     data?.plan ?? data?.costumePlan ?? data?.costume_plan ??
-    snapshot?.costume_plan ?? snapshot?.costumePlan ?? snapshot?.plan ?? data?.costume ?? {};
+    snapshot?.costume_plan ?? snapshot?.costumePlan ?? snapshot?.plan ?? data?.costume ?? md.plan ?? {};
 
-  const projectTitle = value(meta.projectTitle, project.title, input.title, data?.title, "未命名项目");
+  const projectTitle = value(meta.projectTitle, project.title, input.title, data?.title, md.project?.title, "未命名项目");
   const generatedAt = value(meta.createdAt, snapshot.generated_at, snapshot.generatedAt, data?.exportedAt, data?.created_at, "—");
-  const schoolStage = labelOf(SCHOOL_STAGES, value(input.schoolStage, input.school_stage, project.schoolStage, project.school_stage));
-  const programType = labelOf(PROGRAM_TYPES, value(input.programType, input.program_type, project.programType, project.program_type));
-  const performanceDate = value(input.performanceDate, input.performance_date, project.performanceDate, project.performance_date, "—");
-  const performerCount = value(input.performerCount, input.performer_count, project.performerCount, project.performer_count, "—");
-  const maleCount = value(input.maleCount, input.male_count, project.maleCount, project.male_count, "—");
-  const femaleCount = value(input.femaleCount, input.female_count, project.femaleCount, project.female_count, "—");
-  const budget = value(input.perPersonBudget, input.per_person_budget, project.budget, plan.budget, "—");
-  const mode = value(snapshot.mode, data?.mode, format === "json" ? "mock" : "markdown/mock", "mock");
-  const risks = arrayOf(data?.risks, snapshot?.risks, plan?.risks);
-  const planB = arrayOf(data?.planB, data?.plan_b, plan?.planB, plan?.plan_b, snapshot?.planB, snapshot?.plan_b);
-  const purchaseStrategy = arrayOf(plan?.purchaseStrategy, plan?.purchase_strategy, data?.purchaseStrategy, data?.purchase_strategy);
-  const schedule = arrayOf(data?.reverseSchedule, data?.reverse_schedule, snapshot?.reverse_schedule, snapshot?.reverseSchedule, plan?.reverseSchedule, plan?.schedule);
-  const search = arrayOf(data?.platformSearch, data?.platform_search, snapshot?.platform_search, snapshot?.platformSearch, data?.searchRecommendations, plan?.searchRecommendations, plan?.platformSearch);
+  const schoolStage = labelOf(SCHOOL_STAGES, value(input.schoolStage, input.school_stage, project.schoolStage, project.school_stage, md.input?.schoolStage));
+  const programType = labelOf(PROGRAM_TYPES, value(input.programType, input.program_type, project.programType, project.program_type, md.input?.programType));
+  const performanceDate = value(input.performanceDate, input.performance_date, project.performanceDate, project.performance_date, md.input?.performanceDate, "—");
+  const performerCount = value(input.performerCount, input.performer_count, project.performerCount, project.performer_count, md.input?.performerCount, "—");
+  const maleCount = value(input.maleCount, input.male_count, project.maleCount, project.male_count, md.input?.maleCount, "—");
+  const femaleCount = value(input.femaleCount, input.female_count, project.femaleCount, project.female_count, md.input?.femaleCount, "—");
+  const budget = value(input.perPersonBudget, input.per_person_budget, project.budget, plan.budget, md.input?.perPersonBudget, "—");
+  const mode = value(snapshot.mode, data?.mode, md.snapshot?.mode, format === "json" ? "mock" : "markdown/mock", "mock");
+  const risks = firstNonEmpty(arrayOf(data?.risks, snapshot?.risks, plan?.risks), md.risks);
+  const planB = firstNonEmpty(arrayOf(data?.planB, data?.plan_b, plan?.planB, plan?.plan_b, snapshot?.planB, snapshot?.plan_b), md.planB);
+  const purchaseStrategy = firstNonEmpty(arrayOf(plan?.purchaseStrategy, plan?.purchase_strategy, data?.purchaseStrategy, data?.purchase_strategy), md.purchaseStrategy);
+  const schedule = firstNonEmpty(arrayOf(data?.reverseSchedule, data?.reverse_schedule, snapshot?.reverse_schedule, snapshot?.reverseSchedule, plan?.reverseSchedule, plan?.schedule), md.schedule);
+  const search = firstNonEmpty(arrayOf(data?.platformSearch, data?.platform_search, snapshot?.platform_search, snapshot?.platformSearch, data?.searchRecommendations, plan?.searchRecommendations, plan?.platformSearch), md.search);
+  const totalEstimateRaw = value(plan?.totalEstimate, plan?.total_estimate, plan?.total, md.plan?.totalEstimate, "—");
 
   return {
     projectTitle,
@@ -371,17 +375,141 @@ function buildPrintableDoc(data: any, rawPayload: string, format: string, meta: 
     performerSummary: `${performerCount}（男 ${maleCount} / 女 ${femaleCount}）`,
     budget: budget === "—" ? "—" : `¥${budget}`,
     mode,
-    femalePlan: arrayOf(plan?.femalePlan, plan?.female_plan, plan?.female),
-    malePlan: arrayOf(plan?.malePlan, plan?.male_plan, plan?.male),
-    accessories: arrayOf(plan?.accessories),
-    totalEstimate: value(plan?.totalEstimate, plan?.total_estimate, plan?.total, "—") === "—" ? "—" : `¥${value(plan?.totalEstimate, plan?.total_estimate, plan?.total)}`,
-    risks: risks.length ? risks : fallbackFromMarkdown(rawPayload, /风险/),
-    planB: planB.length ? planB : fallbackFromMarkdown(rawPayload, /Plan B|备用|采购策略/),
+    femalePlan: firstNonEmpty(arrayOf(plan?.femalePlan, plan?.female_plan, plan?.female), md.plan?.femalePlan ?? []),
+    malePlan: firstNonEmpty(arrayOf(plan?.malePlan, plan?.male_plan, plan?.male), md.plan?.malePlan ?? []),
+    accessories: firstNonEmpty(arrayOf(plan?.accessories), md.plan?.accessories ?? []),
+    totalEstimate: totalEstimateRaw === "—" ? "—" : `¥${totalEstimateRaw}`,
+    risks,
+    planB: planB.length ? planB : ["主计划风险控制以人工复核为主。"],
     purchaseStrategy: purchaseStrategy.length ? purchaseStrategy : ["主计划生成后由采购负责人进行人工验样、比价、库存确认和下单复核。"],
     schedule,
     search,
   };
 }
+
+function firstNonEmpty<T>(a: T[], b: T[] | undefined | null): T[] {
+  if (Array.isArray(a) && a.length) return a;
+  if (Array.isArray(b) && b.length) return b;
+  return [];
+}
+
+/**
+ * Extract StageOS fields from a Markdown payload string produced by buildMarkdownExport().
+ * Never throws. Missing sections return empty structures.
+ */
+function parseMarkdownPayload(raw: string): {
+  project: any; input: any; plan: any; snapshot: any;
+  risks: any[]; planB: any[]; purchaseStrategy: any[]; schedule: any[]; search: any[];
+} {
+  const empty = { project: {}, input: {}, plan: {}, snapshot: {}, risks: [], planB: [], purchaseStrategy: [], schedule: [], search: [] };
+  if (!raw || typeof raw !== "string") return empty;
+  const lines = raw.split(/\r?\n/);
+
+  const project: any = {};
+  const input: any = {};
+  const snapshot: any = {};
+  const plan: any = {};
+  const risks: any[] = [];
+  const planB: any[] = [];
+  const schedule: any[] = [];
+
+  const titleMatch = /^#\s+(.+?)\s+—\s+服装总表\s+v(\d+)/.exec(lines.find((l) => /^#\s+/.test(l)) ?? "");
+  if (titleMatch) { project.title = titleMatch[1]; snapshot.version = Number(titleMatch[2]); }
+
+  const genMatch = /生成时间[:：]\s*([^·]+)·\s*模式[:：]\s*(\S+)/.exec(raw);
+  if (genMatch) { snapshot.generated_at = genMatch[1].trim(); snapshot.mode = genMatch[2].trim(); }
+
+  const bulletField = (label: string) => {
+    const re = new RegExp("^[-*]\\s+" + label + "\\s*[:：]\\s*(.+)$", "m");
+    const m = re.exec(raw);
+    return m ? m[1].trim() : undefined;
+  };
+  const stage = bulletField("学段"); if (stage) input.schoolStage = stage;
+  const prog = bulletField("节目类型"); if (prog) input.programType = prog;
+  const perf = bulletField("演出日期"); if (perf) { input.performanceDate = perf; project.performance_date = perf; }
+  const totalLine = bulletField("总人数");
+  if (totalLine) {
+    const nums = /^([\d]+)\s*\(?\s*男\s*([\d]+)\s*\/\s*女\s*([\d]+)/.exec(totalLine);
+    if (nums) {
+      input.performerCount = Number(nums[1]);
+      input.maleCount = Number(nums[2]);
+      input.femaleCount = Number(nums[3]);
+    } else {
+      const n = /^(\d+)/.exec(totalLine); if (n) input.performerCount = Number(n[1]);
+    }
+  }
+
+  // Parse three plan tables under ## 女生方案 / ## 男生方案 / ## 配饰
+  const parsePlanSection = (heading: string): any[] => {
+    const rx = new RegExp("^##\\s+" + heading + "\\s*$", "m");
+    const idx = raw.split(/\r?\n/).findIndex((l) => rx.test(l));
+    if (idx < 0) return [];
+    const out: any[] = [];
+    for (let i = idx + 1; i < lines.length; i++) {
+      const ln = lines[i];
+      if (/^##\s+/.test(ln)) break;
+      if (!/^\|/.test(ln)) continue;
+      if (/^\|[\s\-|:]+\|/.test(ln)) continue;
+      const cells = ln.split("|").slice(1, -1).map((c) => c.trim());
+      if (cells.length < 2) continue;
+      if (cells[0] === "类别" || cells[1] === "描述") continue;
+      const [category, description, qty, unitEstimate, subtotal] = cells;
+      out.push({
+        category,
+        description,
+        qty: numOrRaw(qty),
+        unitEstimate: numOrRaw(unitEstimate),
+        subtotal: numOrRaw(subtotal),
+      });
+    }
+    return out;
+  };
+  plan.femalePlan = parsePlanSection("女生方案");
+  plan.malePlan = parsePlanSection("男生方案");
+  plan.accessories = parsePlanSection("配饰");
+
+  const totalM = /##\s+总额估算[:：]\s*¥?\s*([\d.]+)/.exec(raw);
+  if (totalM) plan.totalEstimate = Number(totalM[1]);
+
+  // ## 风险 → list items like "- **[level] title** — detail"
+  const risksBlock = extractListBlock(raw, /^##\s+风险\s*$/m);
+  for (const item of risksBlock) {
+    const m = /^\*\*\[([^\]]+)\]\s+([^*]+?)\*\*\s*—\s*(.+)$/.exec(item);
+    if (m) risks.push({ level: m[1].trim(), title: m[2].trim(), detail: m[3].trim() });
+    else risks.push(item);
+  }
+
+  // ## 倒排 → "- D-{days} {date} · {task} · {owner}"
+  const schedBlock = extractListBlock(raw, /^##\s+倒排\s*$/m);
+  for (const item of schedBlock) {
+    const m = /^D-(\d+)\s*([\d\-\/]+)?\s*·\s*(.+?)\s*·\s*(.+)$/.exec(item);
+    if (m) schedule.push({ daysBefore: Number(m[1]), date: m[2] || "", task: m[3], owner: m[4] });
+    else schedule.push(item);
+  }
+
+  return { project, input, plan, snapshot, risks, planB, purchaseStrategy: [], schedule, search: [] };
+}
+
+function numOrRaw(s: string): any {
+  if (s === undefined || s === null || s === "") return "";
+  const t = s.replace(/[¥,\s]/g, "");
+  const n = Number(t);
+  return Number.isFinite(n) ? n : s;
+}
+
+function extractListBlock(raw: string, headingRx: RegExp): string[] {
+  const lines = raw.split(/\r?\n/);
+  const idx = lines.findIndex((l) => headingRx.test(l));
+  if (idx < 0) return [];
+  const out: string[] = [];
+  for (let i = idx + 1; i < lines.length; i++) {
+    if (/^##\s+/.test(lines[i])) break;
+    const m = /^[-*]\s+(.+)$/.exec(lines[i]);
+    if (m) out.push(m[1].trim());
+  }
+  return out;
+}
+
 
 function value(...items: any[]) {
   for (const item of items) {
