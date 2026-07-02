@@ -625,8 +625,13 @@ export default function ProjectDetail() {
                   </div>
                 )}
 
+                {confirmPreview && (
+                  <div className="sr-only" role="status" aria-live="polite">
+                    校验完成:{confirmPreview.errors.length} 项错误,{confirmPreview.warnings.length} 项提示。
+                  </div>
+                )}
                 {confirmPreview && confirmPreview.errors.length === 0 && confirmPreview.warnings.length === 0 && (
-                  <div className="text-success">✓ 未发现错误或提示,可继续确认。</div>
+                  <div className="text-success"><span aria-hidden="true">✓ </span>未发现错误或提示,可继续确认。</div>
                 )}
                 {confirmPreview && confirmPreview.errors.length > 0 && (
                   <div>
@@ -644,10 +649,11 @@ export default function ProjectDetail() {
                                   setConfirmPreview(null);
                                   navigate(`/projects/${project?.id}/edit?from=confirm#field-${anchor}`);
                                 }}
-                                className="inline-block rounded bg-destructive/15 hover:bg-destructive/25 text-destructive px-1.5 py-0.5 text-[10px] font-mono shrink-0 cursor-pointer"
-                                title="点击跳转到该字段"
+                                className="inline-flex items-center rounded bg-destructive/15 hover:bg-destructive/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive focus-visible:ring-offset-1 text-destructive px-1.5 py-0.5 text-[10px] font-mono shrink-0"
+                                aria-label={`跳转到 ${loc.label}(${loc.field})字段并修正`}
                               >
-                                {loc.label}·{loc.field} ↗
+                                <span>{loc.label}·{loc.field}</span>
+                                <span aria-hidden="true" className="ml-0.5">↗</span>
                               </button>
                             )}
                             <span className="flex-1">{e}</span>
@@ -673,10 +679,11 @@ export default function ProjectDetail() {
                                   setConfirmPreview(null);
                                   navigate(`/projects/${project?.id}/edit?from=confirm#field-${anchor}`);
                                 }}
-                                className="inline-block rounded bg-warning/15 hover:bg-warning/25 text-warning px-1.5 py-0.5 text-[10px] font-mono shrink-0 cursor-pointer"
-                                title="点击跳转到该字段"
+                                className="inline-flex items-center rounded bg-warning/15 hover:bg-warning/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-warning focus-visible:ring-offset-1 text-warning px-1.5 py-0.5 text-[10px] font-mono shrink-0"
+                                aria-label={`跳转到 ${loc.label}(${loc.field})字段并复核`}
                               >
-                                {loc.label}·{loc.field} ↗
+                                <span>{loc.label}·{loc.field}</span>
+                                <span aria-hidden="true" className="ml-0.5">↗</span>
                               </button>
                             )}
                             <span className="flex-1">{w}</span>
