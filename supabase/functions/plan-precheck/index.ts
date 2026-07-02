@@ -1,10 +1,7 @@
 // StageOS plan generation precheck.
 // Enforces order: auth -> permission -> confirmation -> validation.
-// Error codes:
-//   AUTH_REQUIRED (401)
-//   FORBIDDEN (403)
-//   PRIVACY_CONFIRMATION_REQUIRED (403)
-//   VALIDATION_REQUIRED (422)
+// Business rejections return status 200 with { ok:false, errorCode, message }
+// so the Supabase JS client does not throw for expected gating outcomes.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 
@@ -33,11 +30,11 @@ function validateStageInput(data: StageInputData): string[] {
   return issues;
 }
 
-function fail(code: string, message: string, status: number, extra: Record<string, unknown> = {}) {
-  return new Response(JSON.stringify({ ok: false, code, message, ...extra }), {
-    status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
+function reject(errorCode: string, message: string, intendedStatus: number, extra: Record<string, unknown> = {}) {
+  return new Response(
+    JSON.stringify({ ok: false, errorCode, message, intendedStatus, ...extra }),
+    { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+  );
 }
 
 Deno.serve(async (req) => {
@@ -47,7 +44,7 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const projectId: string | undefined = body?.projectId;
     if (!projectId) {
-      return fail("BAD_REQUEST", "projectId 必填。", 400);
+      return reject("BAD_REQUEST", "projectId 必填。", 400);
     }
 
     const supabase = createClient(
@@ -55,18 +52,17 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
-    // 1) Auth check. V1 has no authentication; stub as "system" principal.
-    //    Kept explicit so the order matches the spec once auth ships.
+    // 1) Auth check. V1 has no authentication; stub as system principal.
     const principal = { id: "system", authenticated: true };
     if (!principal.authenticated) {
-      return fail("AUTH_REQUIRED", "请先登录后再生成排产。", 401);
+      return reject("UNAUTHORIZED", "请先登录后再生成排产。", 401);
     }
 
-    // 2) Permission check (V1: single-tenant, always allowed).
+    // 2) Permission check (V1: single-tenant, always allowed if project exists).
     const { data: project, error: pErr } = await supabase
       .from("projects").select("id, title").eq("id", projectId).maybeSingle();
     if (pErr) throw pErr;
-    if (!project) return fail("FORBIDDEN", "无权访问该项目。", 403);
+    if (!project) return reject("FORBIDDEN", "无权访问该项目。", 403);
 
     // 3) Privacy / user confirmation gate.
     const { data: confirmed } = await supabase
@@ -77,25 +73,35 @@ Deno.serve(async (req) => {
       .order("confirmed_at", { ascending: false })
       .limit(1);
     if (!confirmed || confirmed.length === 0) {
-      return fail(
-        "PRIVACY_CONFIRMATION_REQUIRED",
+      return reject(
+        "CONFIRMATION_REQUIRED",
         "请先完成用户确认/隐私确认后再生成排产。",
         403,
       );
     }
 
-    // 4) Data validation (only reached after confirmation).
+    // 4) Data validation (only after confirmation passes).
     const { data: si } = await supabase
       .from("stage_inputs").select("data").eq("project_id", projectId).maybeSingle();
     const issues = validateStageInput((si?.data ?? {}) as StageInputData);
     if (issues.length > 0) {
-      return fail("VALIDATION_REQUIRED", "请先解决数据校验提示,再生成排产。", 422, { issues });
+      return reject(
+        "VALIDATION_REQUIRED",
+        "请先解决数据校验提示,再生成排产。",
+        422,
+        { issues },
+      );
     }
 
     return new Response(JSON.stringify({ ok: true }), {
+      status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
-    return fail("INTERNAL", (e as Error).message ?? "internal error", 500);
+    // System errors keep a non-2xx status so client can treat them differently.
+    return new Response(
+      JSON.stringify({ ok: false, errorCode: "INTERNAL", message: (e as Error).message ?? "internal error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
   }
 });
