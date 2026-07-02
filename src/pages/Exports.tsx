@@ -150,6 +150,18 @@ export default function Exports() {
           schoolStage: input?.schoolStage ?? input?.school_stage ?? p?.school_stage,
         };
         payload.procurement_candidates = await resolveExportProcurement(plan, ctx);
+        const bundle: any = payload.procurement_candidates;
+        dispatchWebhook("procurement.completed", {
+          project_id: (payload as any)?.project?.id ?? null,
+          summary: {
+            providerMode: bundle?.providerMode,
+            providerId: bundle?.providerId,
+            fallbackUsed: bundle?.fallbackUsed,
+            groups: bundle?.groups?.length ?? 0,
+            candidates: bundle?.totalCandidates ?? 0,
+            warningCode: bundle?.warningCode ?? null,
+          },
+        });
       }
     } catch (e) {
       console.warn("[StageOS Export] procurement attach failed", e);
