@@ -745,3 +745,88 @@ function buildExportPayload(p: Project, input: StageInputData | null, s: Snapsho
     disclaimer: "所有价格/SKU/库存为估算或搜索建议,不代表真实采购承诺。",
   };
 }
+
+type ValidationEntry = { checkedAt: string; errors: string[]; warnings: string[] };
+
+function ValidationHistoryPanel({ input }: { input: StageInputData | null }) {
+  if (!input) return null;
+  const raw = input as StageInputData & { __validation?: ValidationEntry; __validationHistory?: ValidationEntry[] };
+  const history: ValidationEntry[] =
+    Array.isArray(raw.__validationHistory) && raw.__validationHistory.length > 0
+      ? raw.__validationHistory
+      : raw.__validation
+        ? [raw.__validation]
+        : [];
+  if (history.length === 0) return null;
+  const ordered = [...history].reverse(); // newest first
+  const latestIdx = 0;
+
+  const diff = (curr: string[], prev: string[] | undefined) => {
+    const prevSet = new Set(prev ?? []);
+    const currSet = new Set(curr);
+    const added = curr.filter((x) => !prevSet.has(x));
+    const removed = (prev ?? []).filter((x) => !currSet.has(x));
+    return { added, removed };
+  };
+
+  return (
+    <div className="panel">
+      <div className="panel-header">
+        <h3 className="text-sm font-semibold">校验历史</h3>
+        <span className="text-xs text-muted-foreground">共 {history.length} 次,保留最近 {history.length} 条</span>
+      </div>
+      <div className="panel-body space-y-2">
+        {ordered.map((entry, i) => {
+          const prev = ordered[i + 1]; // older
+          const errDiff = diff(entry.errors ?? [], prev?.errors);
+          const warnDiff = diff(entry.warnings ?? [], prev?.warnings);
+          const isLatest = i === latestIdx;
+          return (
+            <div
+              key={`${entry.checkedAt}-${i}`}
+              className={`rounded-md border p-3 ${isLatest ? "border-primary/40 bg-primary/5" : "border-border"}`}
+            >
+              <div className="flex flex-wrap items-center gap-2 mb-1">
+                <span className="font-mono text-xs text-muted-foreground">
+                  {new Date(entry.checkedAt).toLocaleString("zh-CN", { hour12: false })}
+                </span>
+                {isLatest && <ToneBadge tone="primary">最近一次</ToneBadge>}
+                <ToneBadge tone={(entry.errors?.length ?? 0) > 0 ? "destructive" : "success"}>
+                  错误 {entry.errors?.length ?? 0}
+                </ToneBadge>
+                <ToneBadge tone={(entry.warnings?.length ?? 0) > 0 ? "warning" : "muted"}>
+                  提示 {entry.warnings?.length ?? 0}
+                </ToneBadge>
+                {prev && (errDiff.added.length + errDiff.removed.length + warnDiff.added.length + warnDiff.removed.length > 0) && (
+                  <span className="text-[11px] text-muted-foreground">
+                    变化 +{errDiff.added.length + warnDiff.added.length} / -{errDiff.removed.length + warnDiff.removed.length}
+                  </span>
+                )}
+              </div>
+              {(errDiff.added.length > 0 || errDiff.removed.length > 0 || warnDiff.added.length > 0 || warnDiff.removed.length > 0) && (
+                <ul className="text-[11px] space-y-0.5 mt-1">
+                  {errDiff.added.map((x) => <li key={`ea-${x}`} className="text-destructive">+ 错误:{x}</li>)}
+                  {errDiff.removed.map((x) => <li key={`er-${x}`} className="text-muted-foreground line-through">- 错误:{x}</li>)}
+                  {warnDiff.added.map((x) => <li key={`wa-${x}`} className="text-warning">+ 提示:{x}</li>)}
+                  {warnDiff.removed.map((x) => <li key={`wr-${x}`} className="text-muted-foreground line-through">- 提示:{x}</li>)}
+                </ul>
+              )}
+              {!prev && ((entry.errors?.length ?? 0) + (entry.warnings?.length ?? 0) > 0) && (
+                <ul className="text-[11px] space-y-0.5 mt-1">
+                  {(entry.errors ?? []).map((x) => <li key={`e-${x}`} className="text-destructive">错误:{x}</li>)}
+                  {(entry.warnings ?? []).map((x) => <li key={`w-${x}`} className="text-warning">提示:{x}</li>)}
+                </ul>
+              )}
+              {prev &&
+                errDiff.added.length === 0 && errDiff.removed.length === 0 &&
+                warnDiff.added.length === 0 && warnDiff.removed.length === 0 && (
+                  <div className="text-[11px] text-muted-foreground">与上一次相比无变化</div>
+                )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
