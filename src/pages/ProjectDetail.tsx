@@ -510,17 +510,18 @@ function MetaCard({ label, value, mono }: { label: string; value: React.ReactNod
   );
 }
 
-function PlanView({ snapshot }: { snapshot: Snapshot }) {
+function PlanView({ snapshot, ctx, procurementOn }: { snapshot: Snapshot; ctx: MatchContext; procurementOn: boolean }) {
   const plan = snapshot.costume_plan;
   const risks = (snapshot.risks ?? []) as any[];
   const schedule = (snapshot.reverse_schedule ?? []) as any[];
   const search = (snapshot.platform_search ?? []) as any[];
   return (
     <>
+      {procurementOn && <ProcurementDisclaimer />}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <PlanTable title="女生方案 femalePlan" rows={plan.femalePlan} />
-        <PlanTable title="男生方案 malePlan" rows={plan.malePlan} />
-        <PlanTable title="配饰 accessories" rows={plan.accessories} />
+        <PlanTable title="女生方案 femalePlan" rows={plan.femalePlan} ctx={ctx} procurementOn={procurementOn} />
+        <PlanTable title="男生方案 malePlan" rows={plan.malePlan} ctx={ctx} procurementOn={procurementOn} />
+        <PlanTable title="配饰 accessories" rows={plan.accessories} ctx={ctx} procurementOn={procurementOn} />
       </div>
 
       <div className="panel">
