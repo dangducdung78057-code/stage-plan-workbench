@@ -73,6 +73,51 @@ export function HealthCheck() {
     const push = (c: Check) => { out.push(c); setChecks([...out]); };
     let procurementSettings: ProcurementSettings = { ...PROCUREMENT_SETTINGS_DEFAULTS };
 
+    // 0. PDF Capability Reclassification (v4.3)
+    //    在读取 SSoT 之前，将 pdf_export 在 system_capabilities 中的状态同步到运行时真实结果：
+    //      flag off        → SKIP · enabled=false · notes="PDF disabled by config"（不触发 L2 WARN）
+    //      flag on + 成功  → PASS · enabled=true
+    //      flag on + 失败  → WARN · enabled=true · notes=错误原因（触发 L2 WARN → G1）
+    //    只改状态映射，不改 PDF 导出实现；Gate Engine 规则不动。
+    try {
+      const pdfOn = getFlag("pdfExport");
+      let capStatus: "SKIP" | "PASS" | "WARN" = "SKIP";
+      let capEnabled = false;
+      let capNotes: string | null = "PDF disabled by config";
+      if (pdfOn) {
+        capEnabled = true;
+        try {
+          const probePayload = JSON.stringify({
+            project: { title: "cap-probe", performance_date: "2026-06-30" },
+            input: { schoolStage: "primary", programType: "chorus", performerCount: 1, femaleCount: 1, maleCount: 0, performanceDate: "2026-06-30", perPersonBudget: 60 },
+            snapshot: {
+              mode: "mock", generated_at: new Date().toISOString(),
+              costume_plan: { femalePlan: [{ category: "上装", description: "白衬衫", qty: 1, unitEstimate: 50, subtotal: 50 }], malePlan: [], accessories: [], totalEstimate: 50, purchaseStrategy: [], planB: [] },
+              risks: [], reverse_schedule: [], platform_search: [],
+            },
+          });
+          const probeHtml = renderPrintableHtml(probePayload, "json", {
+            projectTitle: "cap-probe", version: 0, createdAt: new Date().toISOString(), filenameTitle: "cap-probe",
+          });
+          if (!validatePrintableHtml(probeHtml)) {
+            capStatus = "WARN"; capNotes = "printable html invalid";
+          } else {
+            const blob = await renderPdfBlob(probeHtml);
+            if (blob && blob.size > 1024) { capStatus = "PASS"; capNotes = null; }
+            else { capStatus = "WARN"; capNotes = `pdf generation failed (bytes=${blob?.size ?? 0})`; }
+          }
+        } catch (e: any) {
+          capStatus = "WARN";
+          capNotes = `pdf generation failed: ${e?.message ?? "unknown error"}`;
+        }
+      }
+      await supabase.rpc("sync_pdf_capability", {
+        p_status: capStatus, p_enabled: capEnabled, p_notes: capNotes,
+      });
+    } catch {
+      /* non-fatal: 同步失败不阻塞验收，Gate 会读取现存 SSoT */
+    }
+
     // 1. Capability Snapshot + Release Gate（唯一事实源 · 决策层）
     //    治理宪章：能力清单不仅统计，直接参与 Gate 判定；WARN 参与 Gate 计算。
     const snap = await loadCapabilitySnapshot();
