@@ -180,7 +180,7 @@ export default function ProjectEditor() {
           <Field label="演出日期">
             <Input type="date" value={data.performanceDate ?? ""} onChange={(e) => set("performanceDate", e.target.value)} />
           </Field>
-          <Field label="彩排频次(次/周)">
+          <Field label="彩排频次(次/周)" hint={hints.rehearsal}>
             <Select value={String(data.rehearsalFrequencyPerWeek ?? "")} onValueChange={(v) => set("rehearsalFrequencyPerWeek", Number(v) as 2|3|5)}>
               <SelectTrigger><SelectValue placeholder="选择彩排频次" /></SelectTrigger>
               <SelectContent>{REHEARSAL_FREQUENCIES.map((n) => <SelectItem key={n} value={String(n)}>{n} 次/周</SelectItem>)}</SelectContent>
@@ -204,20 +204,21 @@ export default function ProjectEditor() {
       <div className="panel">
         <div className="panel-header"><h2 className="text-sm font-semibold">人数与预算</h2></div>
         <div className="panel-body grid grid-cols-4 gap-4">
-          <Field label="总人数 performerCount">
+          <Field label="总人数 performerCount" hint={hints.performerCount}>
             <Input type="number" value={data.performerCount ?? ""} onChange={(e) => set("performerCount", e.target.value ? Number(e.target.value) : undefined)} />
           </Field>
-          <Field label="男生数 maleCount">
+          <Field label="男生数 maleCount" hint={hints.maleCount}>
             <Input type="number" value={data.maleCount ?? ""} onChange={(e) => set("maleCount", e.target.value ? Number(e.target.value) : undefined)} />
           </Field>
-          <Field label="女生数 femaleCount">
+          <Field label="女生数 femaleCount" hint={hints.femaleCount}>
             <Input type="number" value={data.femaleCount ?? ""} onChange={(e) => set("femaleCount", e.target.value ? Number(e.target.value) : undefined)} />
           </Field>
-          <Field label="人均预算 (元)">
+          <Field label="人均预算 (元)" hint={hints.perPersonBudget}>
             <Input type="number" value={data.perPersonBudget ?? ""} onChange={(e) => set("perPersonBudget", e.target.value ? Number(e.target.value) : undefined)} />
           </Field>
         </div>
       </div>
+
 
       <div className="panel">
         <div className="panel-header"><h2 className="text-sm font-semibold">视觉与期待</h2></div>
