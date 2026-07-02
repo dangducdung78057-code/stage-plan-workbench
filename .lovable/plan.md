@@ -1,62 +1,34 @@
 ## 目标
 
-修复手机端 (<768px) 表格挤压/竖排问题：所有 `ops-table` 在移动端渲染为卡片列表，桌面端保留现有表格。**不改动**后端、Supabase 查询、mock provider、隐私确认逻辑。
+只修 `src/pages/ProjectDetail.tsx` 移动端头部布局，桌面端保留原样。不动后端、确认流程、生成逻辑、快照/导出。
 
-## 方案总览
+## 变更点（单文件：`src/pages/ProjectDetail.tsx`）
 
-新增一个共享的响应式模式：
-- 桌面 (`md:`+): 现有 `<table class="ops-table">` 原样保留。
-- 移动 (`<md`): 隐藏表格，改渲染同数据源的 `<ul>` 卡片列表。
+### 1. 外层容器（L184）
+- 把 `p-6 space-y-4 max-w-6xl` 改成 `p-4 md:p-6 space-y-4 max-w-6xl min-w-0`，避免手机端 24px 内边距+按钮溢出。
 
-使用 Tailwind `hidden md:block` / `md:hidden` 切换，无需 JS 判断视口 → 服务端/客户端一致，无闪烁。
+### 2. 头部布局（L185–L208）重写为响应式
+- 顶层 `flex items-start justify-between` → 改为 `flex flex-col gap-3 md:flex-row md:items-start md:justify-between`。
+- 左侧标题区：
+  - 「返回」按钮单独一行（`md:inline-flex` 保留旧行内），移动端放在标题上方独立一行，避免与标题挤在同一 flex 行导致标题被压成竖列。
+  - 标题行改成 `flex flex-wrap items-center gap-2 min-w-0`；`<h1>` 加 `text-lg md:text-xl font-semibold break-words min-w-0 flex-1 leading-snug`，`StatusBadge` `shrink-0`。这保证中文标题横向换行而非竖排（根因：父 flex 未 `min-w-0`、`h1` 无 `min-w-0/flex-1`，被兄弟按钮挤到极窄宽度触发逐字换行）。
+  - meta 行 `text-xs font-mono` 加 `break-all`。
+- 右侧操作按钮区：`flex items-center gap-2` → `flex flex-col gap-2 w-full md:flex-row md:w-auto md:items-center`；两个 `<Button>` 加 `w-full md:w-auto justify-center`，「需确认」小徽标 `whitespace-nowrap`。这样手机端按钮上下堆叠、占满宽度、不再截断。
 
-新增一个 `MobileCard` / `MobileCardList` 轻量原语放在 `src/components/MobileCard.tsx`，样式：
-- `rounded-md border bg-card p-3 space-y-1.5 text-sm`
-- 每行 `flex items-center justify-between gap-3`，label `text-xs text-muted-foreground whitespace-nowrap`，value `text-right min-w-0 truncate`（长文本改成 `flex-col` 竖向标签+值）。
-- 卡片根 `min-w-0`，容器 `space-y-2`。
+### 3. Meta 信息卡片网格（L254）
+- `grid grid-cols-4 gap-3` → `grid grid-cols-2 md:grid-cols-4 gap-3`。
+- 顺带确认 `MetaCard` 内的 label/value 用 `break-words`，不使用 `whitespace-nowrap`（若当前实现有 nowrap 则去掉，只改这个组件的样式，不改 API）。
 
-关键：卡片本体宽度 = 屏幕宽 - 外边距，文本 `break-words` 而不是列宽压缩，杜绝竖排。
+### 4. Tabs（L261–L267）
+- `TabsList` 外包一层 `<div className="overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0">`，并给 `TabsList` 加 `w-max` 类，让手机端整条 tab 横向滚动而不换行/竖排。tab 文字内 `<span className="kbd-route">` 保持 `whitespace-nowrap`（本就 inline 短文本，横向滚动即可解决）。
 
-## 需要改造的表格
+### 5. 不改动
+- 三个警告面板（confirmation / notice / issues）当前已是 flex 行内布局且文字会自然换行，不动。
+- 桌面端所有间距、字号、行内排布保持不变（所有新类均带 `md:` 断点还原原样）。
+- 后端接口、`handleGenerate`/`handleConfirm`/`handleExport`、快照/确认/导出/渲染 tabs 内容，一律不动。
 
-### 1. 项目列表卡片
-- `src/pages/Projects.tsx` (主列表)
-- `src/pages/Workspace.tsx` (Top 10 摘要)
+## 验证
 
-每卡片展示：标题（主标题行）、状态徽章、演出日期、人数、更新时间、操作（"打开 / 编辑" 链接）。
-
-### 2. 导出记录 (Exports)
-- `src/pages/Exports.tsx`
-
-每卡片：项目、格式徽章、大小、创建时间、下载操作。
-
-### 3. 项目详情内嵌表 (`ProjectDetail.tsx`)
-四张 `ops-table`，逐一提供移动卡片版：
-
-- **计划快照列表** (L187)：版本 / 模式 / 生成时间 / 合计
-- **确认记录列表** (L226)：状态 / 备注 / 时间
-- **倒排时间表** (L379)：D-day / 日期 / 任务 / 负责人
-- **平台搜索渠道表** (L403)：平台 / 关键词 / 打开链接 / 说明
-- **服装预算表** (L426)：项 / 数量 / 单价 / 小计
-  - 按用户要求：移动端拆成 **女生方案 / 男生方案 / 配饰** 三个纵向区块，各区块独立标题 + 卡片列表 + 小计行。桌面表格结构不变（仍是一张合计表）。
-  - 数据来源已是 `femalePlan / malePlan / accessories`，直接分组渲染即可。
-
-### 4. 其他表格（同样处理，非用户点名但同问题）
-- `ProjectEditor.tsx` L224 学生名单表 → 卡片：学号 / 性别 / 身高 / 角色
-- `ProjectWizard.tsx` L928 名单预览表 → 卡片同上
-
-## 实施步骤
-
-1. 新建 `src/components/MobileCard.tsx`：导出 `<MobileCard>` 与 `<MobileField label value />`。
-2. 各页面：把每处 `<div class="overflow-x-auto"><table>…</table></div>` 用一个包装组件替换为：
-   ```
-   <div class="hidden md:block overflow-x-auto"> <table … /> </div>
-   <ul class="md:hidden space-y-2 p-3"> {rows.map(...卡片)} </ul>
-   ```
-3. 服装预算表移动端分三段渲染 (`femalePlan` / `malePlan` / `accessories`)，桌面端保留合并表。
-4. 卡片内每个字段都用 `flex justify-between`，中文值 `break-words`，禁止 `whitespace-nowrap` 于长文本。空态与 loading 态在两个视图各自渲染一次。
-5. 视觉自检：Playwright 在 375 / 430 / 768 三档截图 `/projects`、`/workspace`、`/exports`、`/projects/:id`，确认无竖排、无横向溢出。
-
-## 非目标（不改）
-
-- 数据库/表结构、RLS、Supabase 查询、mock plan 生成、隐私/确认状态机、路由、桌面端表格样式与列宽。
+Playwright 在 375 / 430 / 768 三档打开一个真实项目详情：
+- 375px：标题横向单行或多行换行，无逐字竖排；两个按钮上下堆叠且完整可见（未截断）；meta 4 项呈 2×2；tabs 横向可滚动；页面无水平溢出（`document.documentElement.scrollWidth <= innerWidth`）。
+- 768px：与原桌面头部一致（返回+标题+状态同一行、按钮同一行右对齐、meta 4 列）。
