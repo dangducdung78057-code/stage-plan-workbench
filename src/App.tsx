@@ -32,6 +32,7 @@ const App = () => (
           <RootErrorBoundary>
             <AuthProvider>
               <RouteHead />
+              <ScrollToTop />
               <Routes>
                 <Route path="/auth" element={<AuthPage />} />
                 <Route path="/index" element={<Navigate to="/" replace />} />
