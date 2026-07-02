@@ -195,20 +195,27 @@ export default function Exports() {
       console.error(e);
       const msg = String(e?.message ?? "");
       const [code, detail] = msg.split(":");
-      const reasonMap: Record<string, string> = {
-        PRINTABLE_HTML_INVALID: "printable HTML 校验未通过（内容为空或字段缺失）",
-        PNG_FONTS_NOT_READY: "字体未就绪（document.fonts.ready 失败）",
-        PNG_NODE_SIZE_INVALID: "节点尺寸异常（宽/高为 0，可能被样式隐藏）",
-        PNG_EMPTY_CONTENT: "内容为空（渲染后文本长度不足）",
-        PNG_RASTERIZE_FAILED: "html-to-image 光栅化失败",
-        PNG_BLOB_TOO_SMALL: "生成的 PNG 体积过小（疑似空白图）",
-        PNG_BLANK_PIXELS: "像素为纯白（未检测到可见内容）",
-        PNG_LIB_UNAVAILABLE: "html-to-image 未加载",
-        PNG_UNSUPPORTED: "当前环境不支持 PNG 导出",
-      };
-      const reason = reasonMap[code] || "未知错误";
-      const description = detail ? `${reason}｜${detail.trim()}` : reason;
-      toast.error("PNG 生成失败", { description });
+      if (code === "PNG_INCOMPLETE_PAYLOAD") {
+        toast.error("PNG 导出失败：导出数据不完整，请先重新生成导出记录。", {
+          description: `缺失字段：${detail?.trim() || "未知"}`,
+        });
+      } else {
+        const reasonMap: Record<string, string> = {
+          PRINTABLE_HTML_INVALID: "printable HTML 校验未通过（内容为空或字段缺失）",
+          PNG_FONTS_NOT_READY: "字体未就绪（document.fonts.ready 失败）",
+          PNG_NODE_SIZE_INVALID: "节点尺寸异常（宽/高为 0，可能被样式隐藏）",
+          PNG_EMPTY_CONTENT: "内容为空（渲染后文本长度不足）",
+          PNG_RASTERIZE_FAILED: "html-to-image 光栅化失败",
+          PNG_BLOB_TOO_SMALL: "生成的 PNG 体积过小（疑似空白图）",
+          PNG_BLANK_PIXELS: "像素为纯白（未检测到可见内容）",
+          PNG_LIB_UNAVAILABLE: "html-to-image 未加载",
+          PNG_UNSUPPORTED: "当前环境不支持 PNG 导出",
+        };
+        const reason = reasonMap[code] || "未知错误";
+        const description = detail ? `${reason}｜${detail.trim()}` : reason;
+        toast.error("PNG 生成失败", { description });
+      }
+
 
     } finally {
       setBusy(null);
