@@ -46,6 +46,72 @@ export default function ProjectWizard() {
   const [title, setTitle] = useState("");
   const [data, setData] = useState<StageInputData>({ rehearsalFrequencyPerWeek: 3 });
   const [submitting, setSubmitting] = useState(false);
+  const [savedAt, setSavedAt] = useState<string | null>(null);
+  const [hydrated, setHydrated] = useState(false);
+  const autosaveRef = useRef<number | null>(null);
+
+  // Restore draft on mount
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(DRAFT_KEY);
+      if (raw) {
+        const d = JSON.parse(raw) as WizardDraft;
+        setStep(d.step ?? 0);
+        setTitle(d.title ?? "");
+        setData(d.data ?? { rehearsalFrequencyPerWeek: 3 });
+        setSavedAt(d.savedAt ?? null);
+        toast.success("已恢复上次草稿", {
+          description: `保存于 ${d.savedAt ? new Date(d.savedAt).toLocaleString() : "未知时间"} · step ${(d.step ?? 0) + 1}/${STEPS.length}`,
+        });
+      }
+    } catch { /* ignore */ }
+    setHydrated(true);
+  }, []);
+
+  // Autosave (debounced) after hydration
+  useEffect(() => {
+    if (!hydrated) return;
+    if (autosaveRef.current) window.clearTimeout(autosaveRef.current);
+    autosaveRef.current = window.setTimeout(() => {
+      const isEmpty = !title.trim() && Object.keys(data).length <= 1;
+      if (isEmpty) return;
+      const now = new Date().toISOString();
+      const draft: WizardDraft = { step, title, data, savedAt: now };
+      try {
+        localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+        setSavedAt(now);
+      } catch { /* quota */ }
+    }, 600);
+    return () => { if (autosaveRef.current) window.clearTimeout(autosaveRef.current); };
+  }, [hydrated, step, title, data]);
+
+  const set = <K extends keyof StageInputData>(k: K, v: StageInputData[K]) =>
+    setData((d) => ({ ...d, [k]: v }));
+
+  const stepIssues = useMemo(() => validateStep(step, title, data), [step, title, data]);
+  const globalIssues = useMemo(() => validateStageInput(data), [data]);
+  const canNext = stepIssues.blockers.length === 0;
+
+  const saveDraftAndExit = () => {
+    const now = new Date().toISOString();
+    const draft: WizardDraft = { step, title, data, savedAt: now };
+    try {
+      localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+      toast.success("草稿已保存,下次进入向导可继续。");
+      navigate("/projects");
+    } catch {
+      toast.error("保存草稿失败(存储配额限制)。");
+    }
+  };
+
+  const discardDraft = () => {
+    localStorage.removeItem(DRAFT_KEY);
+    setStep(0);
+    setTitle("");
+    setData({ rehearsalFrequencyPerWeek: 3 });
+    setSavedAt(null);
+    toast.success("已清空草稿,重新开始。");
+  };
 
   const set = <K extends keyof StageInputData>(k: K, v: StageInputData[K]) =>
     setData((d) => ({ ...d, [k]: v }));
