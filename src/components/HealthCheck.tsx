@@ -9,8 +9,11 @@ import { PROCUREMENT_SETTINGS_DEFAULTS, normalizeProcurementSettings, procuremen
 import { renderMarkdown, renderPrintableHtml, renderPdfBlob, renderPngBlob, validatePrintableHtml, validatePrintableContent } from "@/lib/exportRender";
 import { CheckCircle2, XCircle, Loader2, AlertTriangle, Copy, Download as DownloadIcon, History } from "lucide-react";
 import { toast } from "sonner";
+import {
+  loadCapabilitySnapshot, computeReleaseGate,
+  type CapabilitySnapshot,
+} from "@/lib/capabilitySnapshot";
 
-const STABLE_BASELINE = "stageos-v4.1-webhook-signature";
 
 type Status = "pass" | "fail" | "warn" | "skip";
 type Check = { id: string; label: string; status: Status; detail?: string; ms?: number };
@@ -41,6 +44,7 @@ export function HealthCheck() {
   const [recent, setRecent] = useState<RunRow[]>([]);
   const [lastRunId, setLastRunId] = useState<string | null>(null);
   const [compareIds, setCompareIds] = useState<[string | null, string | null]>([null, null]);
+  const [snapshot, setSnapshot] = useState<CapabilitySnapshot | null>(null);
   type PdfProbe = { status: Status; reason: string; detail: string; ms?: number };
   const [pdfProbes, setPdfProbes] = useState<{ disabled: PdfProbe; enabled: PdfProbe; error: PdfProbe } | null>(null);
 
@@ -58,18 +62,32 @@ export function HealthCheck() {
   async function run() {
     setRunning(true);
     setChecks([]);
+    setSnapshot(null);
     setStartedAt(new Date().toLocaleString());
     const out: Check[] = [];
     const push = (c: Check) => { out.push(c); setChecks([...out]); };
     let procurementSettings: ProcurementSettings = { ...PROCUREMENT_SETTINGS_DEFAULTS };
 
-    // 1. version tag
-    push({
-      id: "version",
-      label: "版本标记 (STAGEOS_VERSION)",
-      status: STAGEOS_VERSION === STABLE_BASELINE ? "pass" : "warn",
-      detail: STAGEOS_VERSION,
-    });
+    // 1. Capability Snapshot（唯一事实源）
+    //    治理宪章：系统成熟度只以 Capability Layer + Release Gate + 一键验收结果为准，
+    //    版本号不参与判定。此项从 public.system_capabilities 读取快照，展示于本次运行。
+    const snap = await loadCapabilitySnapshot();
+    setSnapshot(snap);
+    if (snap.error) {
+      push({ id: "capability_snapshot", label: "能力清单快照 (system_capabilities)", status: "fail", detail: `读取失败: ${snap.error}` });
+    } else if (snap.rows.length === 0) {
+      push({ id: "capability_snapshot", label: "能力清单快照 (system_capabilities)", status: "fail", detail: "快照为空，缺少 SSoT" });
+    } else {
+      const { counts } = snap;
+      const gate = computeReleaseGate(snap);
+      push({
+        id: "capability_snapshot",
+        label: "能力清单快照 (system_capabilities)",
+        status: counts.FAIL > 0 ? "fail" : counts.WARN > 0 ? "warn" : "pass",
+        detail: `L0=${counts.L0} L1=${counts.L1} L2=${counts.L2} · PASS=${counts.PASS} WARN=${counts.WARN} FAIL=${counts.FAIL} SKIP=${counts.SKIP} · gate=${gate.gate}`,
+      });
+    }
+
 
     // 2. auth session
     try {
@@ -712,9 +730,50 @@ export function HealthCheck() {
 
         {done && (
           <div className={"rounded border px-2.5 py-1.5 text-xs " + (failed ? "border-destructive/40 bg-destructive/5 text-destructive" : "border-success/40 bg-success/5 text-success")}>
-            {failed ? "存在失败项，请查看下方详情。" : "全部关键项通过，v2 基线正常。"}
+            {failed ? "存在失败项，请查看下方详情。" : "全部关键项通过。"}
           </div>
         )}
+
+        {snapshot && (
+          <div className="border rounded bg-surface">
+            <div className="px-3 py-1.5 border-b flex items-center gap-2 text-xs flex-wrap">
+              <span className="font-semibold">Capability Snapshot</span>
+              <span className="text-muted-foreground font-mono">system_capabilities · SSoT</span>
+              {(() => {
+                const g = computeReleaseGate(snapshot);
+                const tone =
+                  g.gate === "G3" ? "success" :
+                  g.gate === "G2" ? "warning" :
+                  g.gate === "G1" ? "warning" : "destructive";
+                return <ToneBadge tone={tone as any}>gate {g.gate}</ToneBadge>;
+              })()}
+              <span className="text-[11px] text-muted-foreground ml-auto font-mono">
+                L0={snapshot.counts.L0} · L1={snapshot.counts.L1} · L2={snapshot.counts.L2} · WARN={snapshot.counts.WARN} · FAIL={snapshot.counts.FAIL}
+              </span>
+            </div>
+            {snapshot.error ? (
+              <div className="px-3 py-2 text-xs text-destructive font-mono">读取失败: {snapshot.error}</div>
+            ) : snapshot.rows.length === 0 ? (
+              <div className="px-3 py-2 text-xs text-muted-foreground">快照为空</div>
+            ) : (
+              <ul className="divide-y text-xs">
+                {snapshot.rows.map((r) => (
+                  <li key={r.module} className="px-3 py-1.5 flex items-center gap-2">
+                    <ToneBadge tone={r.layer === "L0" ? "success" : r.layer === "L1" ? "muted" : "warning"}>{r.layer}</ToneBadge>
+                    <span className="font-mono min-w-0 flex-1 truncate">{r.module}</span>
+                    {!r.enabled && <span className="text-[10px] text-muted-foreground">disabled</span>}
+                    {r.notes && <span className="text-[10px] text-muted-foreground truncate hidden sm:inline max-w-[240px]">{r.notes}</span>}
+                    <StatusTag status={r.status.toLowerCase() as Status} />
+                  </li>
+                ))}
+              </ul>
+            )}
+            <div className="px-3 py-1.5 border-t text-[10px] text-muted-foreground font-mono">
+              loadedAt: {snapshot.loadedAt} · 版本号仅为标签，不参与 Gate 判定
+            </div>
+          </div>
+        )}
+
 
         <ul className="divide-y border rounded bg-surface">
           {checks.length === 0 && !running && (
