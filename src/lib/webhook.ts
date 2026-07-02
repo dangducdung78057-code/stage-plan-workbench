@@ -4,6 +4,7 @@
 // - Silently logs successes/failures to `webhook_delivery_logs`.
 // - v4.1: HMAC-SHA256 signing (Stripe-style scheme) and per-request nonce for replay defense.
 import { supabase } from "@/integrations/supabase/client";
+import { SETTINGS_SAFE_COLUMNS } from "@/lib/settingsColumns";
 import { STAGEOS_VERSION } from "@/lib/stageos";
 
 export type WebhookEvent =
@@ -68,9 +69,11 @@ export function normalizeWebhookSettings(row: any, fallback: WebhookSettings = W
 
 export async function loadWebhookSettings(): Promise<WebhookSettings> {
   try {
-    const { data } = await supabase.from("settings").select("*").eq("id", "global").maybeSingle();
+    const { data } = await supabase.from("settings").select(SETTINGS_SAFE_COLUMNS).eq("id", "global").maybeSingle();
     if (data) {
-      const merged = normalizeWebhookSettings(data, readLocalWebhookSettings());
+      // webhook_secret is admin-only; fetch it via the secure RPC (returns null for non-admins).
+      const { data: secret } = await supabase.rpc("get_webhook_secret" as any);
+      const merged = normalizeWebhookSettings({ ...data, webhook_secret: secret ?? "" }, readLocalWebhookSettings());
       saveLocalWebhookSettings(merged);
       return merged;
     }
