@@ -55,6 +55,7 @@ export default function ProjectDetail() {
   const [generationNotice, setGenerationNotice] = useState<PrecheckResult | null>(null);
   const [confirmPreview, setConfirmPreview] = useState<{
     errors: string[]; warnings: string[]; checkedAt: string;
+    snapshot: StageInputData;
   } | null>(null);
   const flags = useFlags();
   const aiOn = flags.aiProvider;
