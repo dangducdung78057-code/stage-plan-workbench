@@ -549,6 +549,55 @@ export default function ProjectDetail() {
           </div>
         </TabsContent>
       </Tabs>
+
+      <AlertDialog open={!!confirmPreview} onOpenChange={(o) => !o && setConfirmPreview(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>确认前校验预览</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-2 text-sm">
+                <div className="text-xs text-muted-foreground">
+                  校验时间:<span className="font-mono">{confirmPreview?.checkedAt}</span>
+                </div>
+                {confirmPreview && confirmPreview.errors.length === 0 && confirmPreview.warnings.length === 0 && (
+                  <div className="text-success">✓ 未发现错误或提示,可继续确认。</div>
+                )}
+                {confirmPreview && confirmPreview.errors.length > 0 && (
+                  <div>
+                    <div className="font-medium text-destructive mb-1">错误({confirmPreview.errors.length})</div>
+                    <ul className="list-disc pl-5 space-y-0.5">
+                      {confirmPreview.errors.map((e) => <li key={`e-${e}`} className="text-destructive">{e}</li>)}
+                    </ul>
+                  </div>
+                )}
+                {confirmPreview && confirmPreview.warnings.length > 0 && (
+                  <div>
+                    <div className="font-medium text-warning mb-1">提示({confirmPreview.warnings.length})</div>
+                    <ul className="list-disc pl-5 space-y-0.5">
+                      {confirmPreview.warnings.map((w) => <li key={`w-${w}`} className="text-warning">{w}</li>)}
+                    </ul>
+                  </div>
+                )}
+                {confirmPreview && confirmPreview.errors.length > 0 && (
+                  <div className="text-xs text-destructive">存在错误,无法继续确认。请先修正。</div>
+                )}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>取消</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={!!confirmPreview?.errors.length}
+              onClick={() => {
+                setConfirmPreview(null);
+                handleConfirm("confirmed");
+              }}
+            >
+              继续确认
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
