@@ -155,12 +155,16 @@ export default function Exports() {
                     </Button>
                     {showMd && (
                       <Button variant="outline" size="sm" disabled={busy === r.id + ":md"} onClick={() => handleMarkdown(r)}>
-                        <FileDown className="h-3.5 w-3.5 mr-1" />MD
+                        {busy === r.id + ":md"
+                          ? <><Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />生成中…</>
+                          : <><FileDown className="h-3.5 w-3.5 mr-1" />MD</>}
                       </Button>
                     )}
                     {showPdf && (
                       <Button variant="outline" size="sm" disabled={busy === r.id + ":pdf"} onClick={() => handlePdf(r)}>
-                        <Printer className="h-3.5 w-3.5 mr-1" />打印/PDF
+                        {busy === r.id + ":pdf"
+                          ? <><Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />生成中…</>
+                          : <><Printer className="h-3.5 w-3.5 mr-1" />打印/PDF</>}
                       </Button>
                     )}
                   </div>
