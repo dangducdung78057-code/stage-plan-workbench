@@ -254,7 +254,7 @@ export default function ProjectDetail() {
         </div>
       )}
 
-      <div className="grid grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <MetaCard label="学段" value={stageLabel} />
         <MetaCard label="节目类型" value={programLabel} mono={input?.programType} />
         <MetaCard label="总人数 / 男 / 女" value={`${input?.performerCount ?? "—"} / ${input?.maleCount ?? "—"} / ${input?.femaleCount ?? "—"}`} />
@@ -262,12 +262,14 @@ export default function ProjectDetail() {
       </div>
 
       <Tabs defaultValue="plan">
-        <TabsList>
-          <TabsTrigger value="plan">服装总表工作区</TabsTrigger>
-          <TabsTrigger value="confirm">确认 <span className="kbd-route ml-1">/confirm</span></TabsTrigger>
-          <TabsTrigger value="export">导出 <span className="kbd-route ml-1">/export</span></TabsTrigger>
-          <TabsTrigger value="render">渲染上下文 <span className="kbd-route ml-1">/render-context</span></TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0">
+          <TabsList className="w-max">
+            <TabsTrigger value="plan" className="whitespace-nowrap">服装总表工作区</TabsTrigger>
+            <TabsTrigger value="confirm" className="whitespace-nowrap">确认 <span className="kbd-route ml-1">/confirm</span></TabsTrigger>
+            <TabsTrigger value="export" className="whitespace-nowrap">导出 <span className="kbd-route ml-1">/export</span></TabsTrigger>
+            <TabsTrigger value="render" className="whitespace-nowrap">渲染上下文 <span className="kbd-route ml-1">/render-context</span></TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="plan" className="space-y-4 mt-4">
           {!latest && (
