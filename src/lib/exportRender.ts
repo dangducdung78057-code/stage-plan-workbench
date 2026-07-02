@@ -7,6 +7,47 @@ const MISSING = "_（本快照缺少此字段）_";
 const HTML_MISSING = "（本快照缺少此字段）";
 const MIN_RENDER_BLOB_SIZE = 1024;
 
+/**
+ * Unified enum localizer used by Markdown / PDF / PNG export chains.
+ * Maps raw StageOS enum tokens to Chinese labels. Never throws.
+ */
+const ENUM_LABELS: Record<string, string> = (() => {
+  const map: Record<string, string> = {
+    // school stage
+    primary: "小学",
+    junior: "初中",
+    senior: "高中",
+    // program type (extra aliases beyond PROGRAM_TYPES)
+    recitation: "朗诵",
+    choir: "合唱",
+    dance: "舞蹈",
+    sports_opening_ceremony: "运动会开幕式",
+    // venue
+    indoor: "室内",
+    outdoor: "露天",
+  };
+  for (const s of SCHOOL_STAGES) map[s.value] = s.label;
+  for (const p of PROGRAM_TYPES) map[p.value] = p.label;
+  return map;
+})();
+
+export function localizeEnum(v: any): any {
+  if (typeof v !== "string") return v;
+  return ENUM_LABELS[v] ?? v;
+}
+
+/** Replace raw enum tokens anywhere in a string. Word-boundary safe for ASCII tokens. */
+export function localizeEnumsInText(text: string): string {
+  if (!text) return text;
+  let out = text;
+  for (const [key, label] of Object.entries(ENUM_LABELS)) {
+    // Only replace tokens surrounded by non-word chars (or string boundary).
+    const rx = new RegExp(`(^|[^A-Za-z0-9_])${key}(?![A-Za-z0-9_])`, "g");
+    out = out.replace(rx, (_m, pre) => `${pre}${label}`);
+  }
+  return out;
+}
+
 export function slug(s: string | undefined | null, fallback = "project"): string {
   if (!s) return fallback;
   const cleaned = s
