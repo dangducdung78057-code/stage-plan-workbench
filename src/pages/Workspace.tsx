@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -13,7 +13,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { PROJECT_STATUSES } from "@/lib/stageos";
-import { Plus, ArrowRight, Package, AlertTriangle, CheckCircle2, FileDown, Presentation, Download } from "lucide-react";
+import { Plus, ArrowRight, Package, AlertTriangle, CheckCircle2, FileDown, Presentation, Download, ChevronUp, ChevronDown } from "lucide-react";
 import { MobileCard, MobileCardList, MobileField } from "@/components/MobileCard";
 
 const SLIDE_OUTLINE: { title: string; desc: string }[] = [
@@ -43,6 +43,23 @@ export default function Workspace() {
   const [rows, setRows] = useState<Row[]>([]);
   const [counts, setCounts] = useState({ total: 0, confirmed: 0, revision: 0, exported: 0 });
   const [loading, setLoading] = useState(true);
+  const [guideOpen, setGuideOpen] = useState(false);
+  const [activeSlide, setActiveSlide] = useState(0);
+  const itemRefs = useRef<Array<HTMLButtonElement | null>>([]);
+
+  useEffect(() => {
+    if (!guideOpen) return;
+    setActiveSlide(0);
+  }, [guideOpen]);
+
+  useEffect(() => {
+    if (!guideOpen) return;
+    itemRefs.current[activeSlide]?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }, [guideOpen, activeSlide]);
+
+  const moveSlide = (delta: number) =>
+    setActiveSlide((i) => Math.min(SLIDE_OUTLINE.length - 1, Math.max(0, i + delta)));
+
 
   useEffect(() => {
     (async () => {
@@ -81,7 +98,7 @@ export default function Workspace() {
         </div>
       </div>
 
-      <Dialog>
+      <Dialog open={guideOpen} onOpenChange={setGuideOpen}>
         <DialogTrigger asChild>
           <button
             type="button"
@@ -110,46 +127,98 @@ export default function Workspace() {
               <Presentation className="h-4 w-4 text-primary" /> StageOS 项目总览 · 幻灯片导读
             </DialogTitle>
             <DialogDescription>
-              先浏览 10 页要点脉络，再下载 .pptx 用于线下汇报。
+              先浏览 10 页要点脉络，再下载 .pptx 用于线下汇报。使用 ↑ / ↓ 快速切换分镜。
             </DialogDescription>
           </DialogHeader>
-          <div className="max-h-[52vh] overflow-y-auto pr-1">
-            <ol className="relative space-y-4">
+          <div
+            className="max-h-[52vh] overflow-y-auto pr-1"
+            onKeyDown={(e) => {
+              if (e.key === "ArrowDown" || e.key === "PageDown") { e.preventDefault(); moveSlide(1); }
+              else if (e.key === "ArrowUp" || e.key === "PageUp") { e.preventDefault(); moveSlide(-1); }
+              else if (e.key === "Home") { e.preventDefault(); setActiveSlide(0); }
+              else if (e.key === "End") { e.preventDefault(); setActiveSlide(SLIDE_OUTLINE.length - 1); }
+            }}
+          >
+            <ol className="relative space-y-4" role="listbox" aria-label="幻灯片分镜列表" aria-activedescendant={`slide-item-${activeSlide}`}>
               <div className="pointer-events-none absolute left-[19px] top-2 bottom-2 w-px bg-border" aria-hidden />
               {SLIDE_OUTLINE.map((s, i) => {
                 const isFirst = i === 0;
                 const isLast = i === SLIDE_OUTLINE.length - 1;
                 const emphasised = isFirst || isLast;
+                const isActive = i === activeSlide;
                 return (
-                  <li key={i} className="relative flex items-stretch gap-3 group">
-                    <div
-                      className={`relative z-10 h-10 w-10 shrink-0 rounded-lg flex items-center justify-center text-xs font-bold font-mono ring-4 ring-background shadow-sm ${
-                        isFirst
-                          ? "bg-primary text-primary-foreground"
-                          : isLast
-                            ? "bg-foreground text-background"
-                            : "bg-background border-2 border-border text-muted-foreground"
-                      }`}
+                  <li key={i}>
+                    <button
+                      ref={(el) => (itemRefs.current[i] = el)}
+                      id={`slide-item-${i}`}
+                      type="button"
+                      role="option"
+                      aria-selected={isActive}
+                      onClick={() => setActiveSlide(i)}
+                      className="relative flex items-stretch gap-3 w-full text-left group focus:outline-none"
                     >
-                      {String(i + 1).padStart(2, "0")}
-                    </div>
-                    <div
-                      className={`flex-1 min-w-0 rounded-xl border px-3 py-2 transition-colors group-hover:border-primary/40 ${
-                        emphasised ? "border-border bg-muted/40" : "border-border/70 bg-background"
-                      }`}
-                    >
-                      <div className={`text-sm ${emphasised ? "font-semibold" : "font-medium"} truncate`}>
-                        {s.title}
+                      <div
+                        className={`relative z-10 h-10 w-10 shrink-0 rounded-lg flex items-center justify-center text-xs font-bold font-mono ring-4 ring-background shadow-sm transition-colors ${
+                          isActive
+                            ? "bg-primary text-primary-foreground"
+                            : isFirst
+                              ? "bg-primary/80 text-primary-foreground"
+                              : isLast
+                                ? "bg-foreground text-background"
+                                : "bg-background border-2 border-border text-muted-foreground group-hover:border-primary/40"
+                        }`}
+                      >
+                        {String(i + 1).padStart(2, "0")}
                       </div>
-                      <div className="text-xs text-muted-foreground mt-0.5 truncate">{s.desc}</div>
-                    </div>
+                      <div
+                        className={`flex-1 min-w-0 rounded-xl border px-3 py-2 transition-all ${
+                          isActive
+                            ? "border-primary/60 bg-primary/5 shadow-sm"
+                            : emphasised
+                              ? "border-border bg-muted/40 group-hover:border-primary/40"
+                              : "border-border/70 bg-background group-hover:border-primary/40"
+                        }`}
+                      >
+                        <div className={`text-sm ${isActive || emphasised ? "font-semibold" : "font-medium"} truncate`}>
+                          {s.title}
+                        </div>
+                        <div className={`text-xs mt-0.5 truncate ${isActive ? "text-foreground/70" : "text-muted-foreground"}`}>
+                          {s.desc}
+                        </div>
+                      </div>
+                    </button>
                   </li>
                 );
               })}
             </ol>
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="sm:justify-between gap-2 items-center">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <div className="inline-flex rounded-md border border-border overflow-hidden">
+                <button
+                  type="button"
+                  onClick={() => moveSlide(-1)}
+                  disabled={activeSlide === 0}
+                  aria-label="上一分镜"
+                  className="p-1.5 hover:bg-accent disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <ChevronUp className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => moveSlide(1)}
+                  disabled={activeSlide === SLIDE_OUTLINE.length - 1}
+                  aria-label="下一分镜"
+                  className="p-1.5 hover:bg-accent border-l border-border disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <ChevronDown className="h-3.5 w-3.5" />
+                </button>
+              </div>
+              <span className="font-mono tabular-nums">
+                {String(activeSlide + 1).padStart(2, "0")} / {String(SLIDE_OUTLINE.length).padStart(2, "0")}
+              </span>
+            </div>
             <Button asChild size="sm">
               <a href="/stageos-overview.pptx" download>
                 <Download className="h-4 w-4 mr-1" /> 下载 .pptx
@@ -158,6 +227,7 @@ export default function Workspace() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
 
 
 
