@@ -197,7 +197,7 @@ export default function ProjectDetail() {
           <div>
             <div className="font-medium text-warning">尚未完成用户/隐私确认</div>
             <div className="mt-1 text-muted-foreground text-xs">
-              请先在「确认 <span className="kbd-route">/confirm</span>」标签页完成确认后再生成排产。错误码:<span className="font-mono">PRIVACY_CONFIRMATION_REQUIRED</span>
+              请先在「确认 <span className="kbd-route">/confirm</span>」标签页完成确认后再生成排产。错误码:<span className="font-mono">CONFIRMATION_REQUIRED</span>
             </div>
           </div>
         </div>
