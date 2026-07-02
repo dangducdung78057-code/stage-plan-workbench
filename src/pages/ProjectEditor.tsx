@@ -102,7 +102,7 @@ export default function ProjectEditor() {
           <h1 className="text-xl font-semibold">{isEdit ? "编辑项目" : "新建项目"}</h1>
           <span className="kbd-route">{isEdit ? "PUT /projects/:id" : "POST /projects"}</span>
         </div>
-        <Button size="sm" onClick={save} disabled={saving}>{saving ? "保存中…" : "保存项目"}</Button>
+        <Button size="sm" onClick={save} disabled={saving || errors.length > 0}>{saving ? "保存中…" : errors.length > 0 ? `修正 ${errors.length} 项错误` : "保存项目"}</Button>
       </div>
 
       {errors.length > 0 && (
