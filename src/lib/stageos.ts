@@ -1,5 +1,5 @@
 // StageOS domain constants and helpers
-export const STAGEOS_VERSION = "stageos-v2.6-acceptance-suite-pass" as const;
+export const STAGEOS_VERSION = "stageos-v3.0-procurement-provider-readonly" as const;
 
 export const SCHOOL_STAGES = [
   { value: "primary", label: "小学" },
