@@ -216,7 +216,7 @@ export function renderMarkdown(
 ): string {
   const data = parsePayload(payload, format);
   const rawPayload = typeof payload === "string" ? payload : "";
-  const directProjectTitle = meta.projectTitle ?? data?.project?.title ?? data?.snapshot?.project?.title ?? "未命名项目";
+  const directProjectTitle = data?.project?.title ?? data?.snapshot?.project?.title ?? meta.projectTitle ?? "未命名项目";
 
   // If it's already Markdown (not JSON), keep original body but localize enums
   // and guarantee the "## 采购搜索建议" section is present.
