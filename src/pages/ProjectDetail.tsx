@@ -6,7 +6,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { StatusBadge, ToneBadge } from "@/components/StatusBadge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  validateStageInput, type StageInputData, PROGRAM_TYPES, SCHOOL_STAGES, CONFIRMATION_STATUSES,
+  validateStageInput, validateStageInputDetailed, appendValidationHistory,
+  type StageInputData, PROGRAM_TYPES, SCHOOL_STAGES, CONFIRMATION_STATUSES,
 } from "@/lib/stageos";
 import { generateMockPlan } from "@/lib/mockPlan";
 import { getFlag, useFlags } from "@/lib/featureFlags";
@@ -205,6 +206,31 @@ export default function ProjectDetail() {
     try {
       const { data: userData } = await supabase.auth.getUser();
       const uid = userData.user?.id;
+
+      // 确认前强制再校验:以数据库中最新 stage_inputs.data 为准,重跑 validateStageInputDetailed,
+      // 结果无论通过与否都会写入 __validationHistory,便于回溯"是否曾在校验失败时确认"。
+      const { data: siRow } = await supabase
+        .from("stage_inputs").select("data").eq("project_id", project.id).maybeSingle();
+      const fresh = (siRow?.data ?? input ?? {}) as StageInputData;
+      const { errors: vErrors, warnings: vWarnings } = validateStageInputDetailed(fresh);
+      const persisted = appendValidationHistory(fresh as never, {
+        checkedAt: new Date().toISOString(),
+        errors: vErrors,
+        warnings: vWarnings,
+      });
+      await supabase.from("stage_inputs").upsert({
+        project_id: project.id, user_id: uid, data: persisted as any,
+      } as any);
+
+      if (newStatus === "confirmed" && vErrors.length > 0) {
+        toast.error(`存在 ${vErrors.length} 项校验错误,无法确认。请先修正。`, {
+          description: vErrors.join("\n"),
+        });
+        setBusy(false);
+        load();
+        return;
+      }
+
       // Privacy/user confirmation can be recorded before a snapshot exists;
       // snapshot-level confirmation attaches the latest snapshot when available.
       await supabase.from("confirmation_records").insert({
@@ -214,12 +240,13 @@ export default function ProjectDetail() {
       } as any);
       const projectStatus = newStatus === "confirmed" ? "confirmed" : newStatus === "needs_revision" ? "needs_revision" : "planning";
       await supabase.from("projects").update({ status: projectStatus }).eq("id", project.id);
-      toast.success("已更新确认状态");
+      toast.success("已更新确认状态" + (vWarnings.length ? ` · ${vWarnings.length} 项提示` : ""));
       setNotes("");
       load();
     } catch (e: any) { toast.error(e.message); }
     finally { setBusy(false); }
   }
+
 
   async function handleExport(format: "json" | "markdown") {
     if (!project || !latest) return;
