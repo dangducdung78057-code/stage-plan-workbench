@@ -730,6 +730,8 @@ export async function renderPdfBlob(html: string): Promise<Blob> {
 export async function renderPngBlob(html: string, opts?: { widthPx?: number; pixelRatio?: number }): Promise<Blob> {
   if (typeof window === "undefined") throw new Error("PNG_UNSUPPORTED");
   if (!validatePrintableHtml(html)) throw new Error("PRINTABLE_HTML_INVALID");
+  const content = validatePrintableContent(html);
+  if (!content.ok) throw new Error("PNG_INCOMPLETE_PAYLOAD:" + content.missing.join(", "));
   const mod: any = await import("html-to-image");
   const toBlob = mod.toBlob ?? mod.default?.toBlob;
   if (!toBlob) throw new Error("PNG_LIB_UNAVAILABLE");
