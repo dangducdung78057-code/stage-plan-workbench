@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Package, LogIn, UserPlus } from "lucide-react";
 import { toast } from "sonner";
+import { FullPageLoader } from "@/components/FullPageLoader";
 
 export default function AuthPage() {
   const { user, loading, signIn, signUp } = useAuth();

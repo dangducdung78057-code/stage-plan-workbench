@@ -19,16 +19,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let done = false;
     const { data: sub } = supabase.auth.onAuthStateChange((_evt, s) => {
       setSession(s);
       setUser(s?.user ?? null);
+      if (!done) { done = true; setLoading(false); }
     });
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session);
       setUser(data.session?.user ?? null);
-      setLoading(false);
-    });
-    return () => sub.subscription.unsubscribe();
+      if (!done) { done = true; setLoading(false); }
+    }).catch(() => { if (!done) { done = true; setLoading(false); } });
+    // Timeout guard: never hang on white screen
+    const t = setTimeout(() => { if (!done) { done = true; setLoading(false); } }, 6000);
+    return () => { clearTimeout(t); sub.subscription.unsubscribe(); };
   }, []);
 
   const signIn: AuthCtx["signIn"] = async (email, password) => {
