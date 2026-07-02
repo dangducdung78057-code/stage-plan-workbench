@@ -155,6 +155,35 @@ export default function Exports() {
     }
   }
 
+  async function handlePng(row: Row) {
+    setBusy(row.id + ":png");
+    try {
+      if (!(await guard(row))) return;
+      const title = projectTitles[row.project_id];
+      const createdAt = new Date(row.created_at).toLocaleString("zh-CN", { hour12: false });
+      const fn = buildFilename("png", title, row.version, row.project_id);
+      const html = renderPrintableHtml(row.payload, row.format, {
+        projectTitle: title,
+        version: row.version,
+        createdAt,
+        filenameTitle: fn.replace(/\.png$/, ""),
+      });
+      const blob = await renderPngBlob(html);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url; a.download = fn;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      toast.success("PNG 已生成并下载");
+      await maybeUploadToStorage(row, "png", blob, "image/png");
+    } catch (e) {
+      console.error(e);
+      toast.error("PNG 生成失败，请改用 Markdown 或稍后重试");
+    } finally {
+      setBusy(null);
+    }
+  }
+
   async function copySignedUrl(path: string) {
     try {
       const url = await getSignedUrl(path, 3600);
@@ -178,6 +207,7 @@ export default function Exports() {
 
   const showMd = flags.markdownDownload;
   const showPdf = flags.pdfExport;
+  const showPng = flags.pngExport;
 
   return (
     <div className="p-4 md:p-6 space-y-4">
