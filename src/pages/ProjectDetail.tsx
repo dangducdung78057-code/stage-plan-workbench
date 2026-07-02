@@ -14,6 +14,7 @@ import {
   ArrowLeft, Sparkles, FileJson, FileText, CheckCircle2, AlertTriangle,
   ExternalLink, Image as ImageIcon, Video, Layers as LayersIcon, Wand2,
 } from "lucide-react";
+import { MobileCard, MobileCardList, MobileField } from "@/components/MobileCard";
 
 type Project = { id: string; title: string; status: string; performance_date: string | null; performer_count: number | null; updated_at: string };
 type Snapshot = {
