@@ -132,9 +132,11 @@ export default function SettingsPage() {
         webhook_enabled: webhook.webhookEnabled,
         webhook_url: webhook.webhookUrl || null,
         webhook_events: webhook.webhookEvents,
-        webhook_secret: webhook.webhookSecret || null,
       } as any);
       if (error) { toast.error(`Webhook 保存失败：${error.message}`); return; }
+      // webhook_secret is admin-only — save via secure RPC. Non-admins get a permission error.
+      const { error: secErr } = await supabase.rpc("set_webhook_secret" as any, { _secret: webhook.webhookSecret || "" });
+      if (secErr) { toast.error(`签名密钥保存失败：${secErr.message}`); return; }
       toast.success("Webhook 设置已保存");
     } finally { setWebhookSaving(false); }
   }
