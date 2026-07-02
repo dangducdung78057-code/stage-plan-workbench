@@ -239,7 +239,7 @@ export default function ProjectEditor() {
           <Field label="演出日期">
             <Input type="date" value={data.performanceDate ?? ""} onChange={(e) => set("performanceDate", e.target.value)} />
           </Field>
-          <Field label="彩排频次(次/周)" hint={hints.rehearsal}>
+          <Field label="彩排频次(次/周)" hint={hints.rehearsal} field="rehearsalFrequencyPerWeek">
             <Select value={String(data.rehearsalFrequencyPerWeek ?? "")} onValueChange={(v) => set("rehearsalFrequencyPerWeek", Number(v) as 2|3|5)}>
               <SelectTrigger><SelectValue placeholder="选择彩排频次" /></SelectTrigger>
               <SelectContent>{REHEARSAL_FREQUENCIES.map((n) => <SelectItem key={n} value={String(n)}>{n} 次/周</SelectItem>)}</SelectContent>
