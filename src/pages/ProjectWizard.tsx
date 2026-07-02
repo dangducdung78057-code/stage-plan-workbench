@@ -262,10 +262,22 @@ export default function ProjectWizard() {
   const allIssues = useMemo(() => collectIssues(title, data), [title, data]);
   const [wizardNavIndex, setWizardNavIndex] = useState<number>(-1);
 
-  // Global keyboard shortcuts: Alt+↑ / Alt+↓ to navigate issues
+  // Global keyboard shortcuts: Alt+↑ / Alt+↓ to navigate issues; Alt+Enter to jump to first issue
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (!e.altKey) return;
+      if (e.key === "Enter") {
+        e.preventDefault();
+        const activeD = drafts.find((d) => d.id === activeId);
+        if (!activeD) return;
+        const issues = collectIssues(activeD.title, activeD.data);
+        const filter = popoverIssueFilter[activeId ?? ""] ?? "all";
+        const filtered = filter === "all" ? issues : issues.filter((i) => i.severity === filter);
+        if (filtered.length === 0) return;
+        setPopoverNavIndex((s) => ({ ...s, [activeId!]: 0 }));
+        jumpToIssue(filtered[0]);
+        return;
+      }
       if (e.key !== "ArrowUp" && e.key !== "ArrowDown") return;
       e.preventDefault();
       if (allIssues.length === 0) return;
