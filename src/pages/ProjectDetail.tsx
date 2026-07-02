@@ -20,6 +20,7 @@ import { renderMarkdown } from "@/lib/exportRender";
 import { ProcurementCandidatesToggle, ProcurementDisclaimer } from "@/components/ProcurementCandidatesRow";
 import type { MatchContext } from "@/lib/procurementMatch";
 import { useProcurementSettings } from "@/lib/procurementSettings";
+import { dispatchWebhook } from "@/lib/webhook";
 
 type Project = { id: string; title: string; status: string; performance_date: string | null; performer_count: number | null; updated_at: string };
 type Snapshot = {
