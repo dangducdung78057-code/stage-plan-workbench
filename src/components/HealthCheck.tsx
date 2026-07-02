@@ -854,6 +854,30 @@ export function HealthCheck() {
           </div>
         )}
 
+        {freeze && (
+          <div className={
+            "rounded border px-3 py-2 text-xs flex items-start gap-2 " +
+            (freeze.status === "frozen"
+              ? "border-success/40 bg-success/5"
+              : freeze.status === "candidate_frozen"
+                ? "border-warning/40 bg-warning/5"
+                : "border-destructive/40 bg-destructive/5")
+          }>
+            <ToneBadge tone={freezeTone(freeze.status) as any}>{freeze.status}</ToneBadge>
+            <div className="min-w-0 flex-1 space-y-0.5">
+              <div className="font-semibold text-sm">Release Freeze · {freeze.status}</div>
+              <div className="font-mono text-[11px] break-words">
+                gate={freeze.gate} · [{freeze.rule}] {freeze.reason}
+              </div>
+              <div className="font-mono text-[10px] text-muted-foreground break-words">
+                baseline={freeze.baseline} (label only) · persisted={String(freeze.persisted)}
+                {freeze.id ? ` · id=${freeze.id}` : ""}
+                {freeze.error ? ` · error=${freeze.error}` : ""}
+              </div>
+            </div>
+          </div>
+        )}
+
         {snapshot && (
           <div className="border rounded bg-surface">
             <div className="px-3 py-1.5 border-b flex items-center gap-2 text-xs flex-wrap">
