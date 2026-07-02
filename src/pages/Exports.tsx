@@ -176,9 +176,13 @@ export default function Exports() {
       setTimeout(() => URL.revokeObjectURL(url), 1000);
       toast.success("PNG 已生成并下载");
       await maybeUploadToStorage(row, "png", blob, "image/png");
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      toast.error("PNG 生成失败，请改用 Markdown 或稍后重试");
+      if (String(e?.message ?? "").includes("PNG_EMPTY_CONTENT")) {
+        toast.error("PNG 渲染失败：导出内容为空，请先下载 Markdown。");
+      } else {
+        toast.error("PNG 生成失败，请改用 Markdown 或稍后重试");
+      }
     } finally {
       setBusy(null);
     }
