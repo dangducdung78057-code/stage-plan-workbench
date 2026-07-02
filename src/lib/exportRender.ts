@@ -608,6 +608,9 @@ function buildPrintableDoc(data: any, rawPayload: unknown, format: string, meta:
   );
   const totalEstimateRaw = value(plan?.totalEstimate, plan?.total_estimate, plan?.total, md.plan?.totalEstimate, "—");
 
+  const procurementCandidates = (data && typeof data === "object" ? (data as any)?.procurement_candidates : undefined)
+    ?? (typeof rawPayload === "object" && rawPayload ? (rawPayload as any).procurement_candidates : undefined);
+
   return {
     projectTitle,
     generatedAt,
@@ -626,6 +629,7 @@ function buildPrintableDoc(data: any, rawPayload: unknown, format: string, meta:
     purchaseStrategy: purchaseStrategy.length ? purchaseStrategy : ["主计划生成后由采购负责人进行人工验样、比价、库存确认和下单复核。"],
     schedule,
     search,
+    procurementCandidates,
   };
 }
 
