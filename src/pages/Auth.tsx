@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Package, LogIn, UserPlus } from "lucide-react";
 import { toast } from "sonner";
+import { FullPageLoader } from "@/components/FullPageLoader";
 
 export default function AuthPage() {
   const { user, loading, signIn, signUp } = useAuth();
@@ -15,7 +16,7 @@ export default function AuthPage() {
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
 
-  if (loading) return <div className="p-6 text-sm text-muted-foreground">加载中…</div>;
+  if (loading) return <FullPageLoader />;
   if (user) {
     const from = (loc.state as any)?.from?.pathname ?? "/";
     return <Navigate to={from} replace />;

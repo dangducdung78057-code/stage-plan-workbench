@@ -1,34 +1,27 @@
-## 目标
+## 现象
+刷新后手机白屏，控制台空白。本地 headless 验证应用能正常渲染到 `/auth`，说明代码没崩，是**兜底 UI 不足**加上**预览域名鉴权**共同造成的观感白屏。
 
-只修 `src/pages/ProjectDetail.tsx` 移动端头部布局，桌面端保留原样。不动后端、确认流程、生成逻辑、快照/导出。
+## 可能原因
+1. Lovable 的 `id-preview--*.lovable.app` 预览链接需要在同一浏览器中登录 Lovable 账号；未登录时会看到接近空白的中间页。这不是应用 bug，请在手机浏览器里先登录一次 Lovable。
+2. `AuthProvider` 首次拉 session 期间，`ProtectedRoute` / `Auth` 只渲染一行「加载中…」的小字，手机上视觉上接近白屏。
+3. 全应用没有顶层 ErrorBoundary，任何渲染期异常直接空 body，控制台里在生产 preview 里也未必看得到。
 
-## 变更点（单文件：`src/pages/ProjectDetail.tsx`）
+## 计划改动（仅前端表现层）
 
-### 1. 外层容器（L184）
-- 把 `p-6 space-y-4 max-w-6xl` 改成 `p-4 md:p-6 space-y-4 max-w-6xl min-w-0`，避免手机端 24px 内边距+按钮溢出。
+1. **顶层加载兜底**：`src/hooks/useAuth.tsx` 保持逻辑不变；在 `src/components/ProtectedRoute.tsx` 与 `src/pages/Auth.tsx` 里把 loading 态换成全屏居中的骨架：StageOS logo + 「正在恢复会话…」+ spinner，覆盖 `min-h-screen bg-background`，避免手机上像白屏。
 
-### 2. 头部布局（L185–L208）重写为响应式
-- 顶层 `flex items-start justify-between` → 改为 `flex flex-col gap-3 md:flex-row md:items-start md:justify-between`。
-- 左侧标题区：
-  - 「返回」按钮单独一行（`md:inline-flex` 保留旧行内），移动端放在标题上方独立一行，避免与标题挤在同一 flex 行导致标题被压成竖列。
-  - 标题行改成 `flex flex-wrap items-center gap-2 min-w-0`；`<h1>` 加 `text-lg md:text-xl font-semibold break-words min-w-0 flex-1 leading-snug`，`StatusBadge` `shrink-0`。这保证中文标题横向换行而非竖排（根因：父 flex 未 `min-w-0`、`h1` 无 `min-w-0/flex-1`，被兄弟按钮挤到极窄宽度触发逐字换行）。
-  - meta 行 `text-xs font-mono` 加 `break-all`。
-- 右侧操作按钮区：`flex items-center gap-2` → `flex flex-col gap-2 w-full md:flex-row md:w-auto md:items-center`；两个 `<Button>` 加 `w-full md:w-auto justify-center`，「需确认」小徽标 `whitespace-nowrap`。这样手机端按钮上下堆叠、占满宽度、不再截断。
+2. **全局错误边界**：新增 `src/components/RootErrorBoundary.tsx`（class 组件），在 `src/App.tsx` 里包住 `<BrowserRouter>`。捕获后展示：错误摘要 + 「刷新」+「清除本地会话并重试」按钮（后者调用 `localStorage.clear()` 再 `location.reload()`，可自救 supabase token 损坏导致的死循环）。
 
-### 3. Meta 信息卡片网格（L254）
-- `grid grid-cols-4 gap-3` → `grid grid-cols-2 md:grid-cols-4 gap-3`。
-- 顺带确认 `MetaCard` 内的 label/value 用 `break-words`，不使用 `whitespace-nowrap`（若当前实现有 nowrap 则去掉，只改这个组件的样式，不改 API）。
+3. **Auth 初始化超时保护**：`useAuth` 里给 `getSession()` 增加 6 秒超时，超时后强制 `setLoading(false)`（视为未登录，让路由跳转到 `/auth`），避免网络抖动时永久停在 loading。
 
-### 4. Tabs（L261–L267）
-- `TabsList` 外包一层 `<div className="overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0">`，并给 `TabsList` 加 `w-max` 类，让手机端整条 tab 横向滚动而不换行/竖排。tab 文字内 `<span className="kbd-route">` 保持 `whitespace-nowrap`（本就 inline 短文本，横向滚动即可解决）。
+4. **`/index` 兼容**：当前 `/index` 会命中 NotFound。加一条 `<Route path="/index" element={<Navigate to="/" replace />} />`，避免旧链接被记住时看到 404 觉得像白屏。
 
-### 5. 不改动
-- 三个警告面板（confirmation / notice / issues）当前已是 flex 行内布局且文字会自然换行，不动。
-- 桌面端所有间距、字号、行内排布保持不变（所有新类均带 `md:` 断点还原原样）。
-- 后端接口、`handleGenerate`/`handleConfirm`/`handleExport`、快照/确认/导出/渲染 tabs 内容，一律不动。
+5. **不改动**：认证/RLS/edge function/数据库结构 —— 保持 v2 后端化不变。
 
-## 验证
+## 用户侧建议（非代码）
+- 手机浏览器先访问 `lovable.dev` 登录一次，再打开预览链接。
+- 若仍白屏，长按刷新或访问 `/auth`，走新的错误边界的「清除本地会话并重试」按钮。
 
-Playwright 在 375 / 430 / 768 三档打开一个真实项目详情：
-- 375px：标题横向单行或多行换行，无逐字竖排；两个按钮上下堆叠且完整可见（未截断）；meta 4 项呈 2×2；tabs 横向可滚动；页面无水平溢出（`document.documentElement.scrollWidth <= innerWidth`）。
-- 768px：与原桌面头部一致（返回+标题+状态同一行、按钮同一行右对齐、meta 4 列）。
+## 验收
+- headless playwright 访问 `/`、`/index`、`/projects`：都能看到 loading 骨架或跳转到 `/auth`，不再有 body 为空的情况。
+- 手动在 localStorage 塞一个坏的 `sb-*-auth-token` 后刷新，应能看到错误边界界面而不是白屏。
