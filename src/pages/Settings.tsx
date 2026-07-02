@@ -342,6 +342,76 @@ export default function SettingsPage() {
       </div>
 
       <div className="panel">
+        <div className="panel-header">
+          <h2 className="text-sm font-semibold">Outbound Webhook (v4.0)</h2>
+          <span className="kbd-route">webhook</span>
+        </div>
+        <div className="panel-body space-y-3">
+          <p className="text-xs text-muted-foreground">
+            关键事件发生时向外部 URL 异步 POST 一份标准 payload。失败不影响主流程，自动 retry 最多 2 次，静默记录到 <span className="font-mono">webhook_delivery_logs</span>。
+          </p>
+          <div className="flex items-center justify-between gap-3 border rounded px-2.5 py-2 bg-surface">
+            <div className="min-w-0 flex-1">
+              <div className="text-sm font-medium font-mono">webhookEnabled</div>
+              <div className="text-xs text-muted-foreground mt-0.5">总开关；关闭时所有事件均跳过并静默记录 skipped。</div>
+            </div>
+            <Switch checked={webhook.webhookEnabled} onCheckedChange={(v) => patchWebhook({ webhookEnabled: v })} />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs text-muted-foreground">webhookUrl</Label>
+            <Input
+              value={webhook.webhookUrl}
+              onChange={(e) => patchWebhook({ webhookUrl: e.target.value })}
+              placeholder="https://example.com/hooks/stageos"
+            />
+            <p className="text-xs text-muted-foreground">留空视为未配置；出站请求带 <span className="font-mono">x-stageos-event</span> / <span className="font-mono">x-stageos-version</span> 头。</p>
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs text-muted-foreground">webhookEvents</Label>
+            <div className="grid grid-cols-1 gap-1.5">
+              {WEBHOOK_EVENTS.map((ev) => {
+                const meta = WEBHOOK_EVENT_META[ev];
+                const on = webhook.webhookEvents.includes(ev);
+                return (
+                  <label key={ev} className="flex items-center gap-2 border rounded px-2.5 py-1.5 bg-surface cursor-pointer">
+                    <input
+                      type="checkbox"
+                      className="h-3.5 w-3.5"
+                      checked={on}
+                      onChange={(e) => toggleWebhookEvent(ev, e.target.checked)}
+                    />
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm font-mono">{meta.label}</div>
+                      <div className="text-[11px] text-muted-foreground">{meta.desc}</div>
+                    </div>
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <KV k="webhookEnabled" v={String(webhook.webhookEnabled)} mono />
+            <KV k="webhookUrl" v={webhook.webhookUrl || "—"} mono />
+            <KV k="webhookEvents" v={webhook.webhookEvents.join(",") || "—"} mono />
+            <KV k="baseline" v={STAGEOS_VERSION} mono />
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" onClick={saveWebhook} disabled={webhookSaving}>
+              {webhookSaving ? "保存中…" : "保存 Webhook 设置"}
+            </Button>
+            <Button size="sm" variant="outline" onClick={testWebhook} disabled={webhookTesting}>
+              发送测试事件 (audit.completed)
+            </Button>
+          </div>
+          <p className="text-[11px] text-muted-foreground">
+            v4.0 范围仅限 outbound：不做 inbound API、不做 token 认证、不引入外部 provider 系统。
+          </p>
+        </div>
+      </div>
+
+
+
+      <div className="panel">
         <div className="panel-header"><h2 className="text-sm font-semibold">数据与隐私</h2></div>
         <div className="panel-body text-sm space-y-2 text-muted-foreground">
           <p>· v2 已启用邮箱注册/登录，所有项目、阶段输入、快照、确认与导出记录都按 <span className="font-mono">user_id</span> 隔离。</p>
