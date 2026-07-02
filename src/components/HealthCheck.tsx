@@ -230,11 +230,9 @@ export function HealthCheck() {
           push({ id: "pdf", label: "PDF 导出（实验版）", status: "pass", detail: `PDF success — bytes=${bytes}`, ms });
         } else {
           pdfDetail = { status: "warn", reason: "PDF generation failed", detail: `bytes=${bytes}` };
-          push({ id: "pdf", label: "PDF 导出（实验版）", status: "warn", detail: `PDF generation failed — bytes=${bytes}`, ms });
         }
       } catch (e: any) {
         pdfDetail = { status: "warn", reason: "PDF generation failed", detail: e?.message ?? "unknown error" };
-        push({ id: "pdf", label: "PDF 导出（实验版）", status: "warn", detail: `PDF generation failed — ${e?.message ?? "unknown error"}` });
       }
     }
     if (pdfDetail.status !== "pass") {
@@ -246,6 +244,7 @@ export function HealthCheck() {
       });
     }
     (checks as any).__pdfDetail = pdfDetail;
+
 
 
     // 11b. PNG 导出：实际渲染一次非空 blob 且 printable HTML 内容完整（项目标题/方案表格/风险/隐私声明）才 pass
