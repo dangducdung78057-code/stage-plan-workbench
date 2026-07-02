@@ -19,7 +19,7 @@ export function stamp(d: Date = new Date()): string {
 }
 
 export function buildFilename(
-  ext: "md" | "pdf",
+  ext: "md" | "pdf" | "png",
   projectTitle: string | undefined,
   version: number,
   projectId: string,
