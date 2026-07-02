@@ -435,19 +435,37 @@ function PlanView({ snapshot }: { snapshot: Snapshot }) {
           <div className="text-xs text-muted-foreground">
             以下为搜索关键词与链接,不代表真实 SKU、库存、价格或采购承诺。所有商品与商务信息需人工核验后才能作为采购依据。
           </div>
-          <table className="ops-table">
-            <thead><tr><th className="w-24">平台</th><th>关键词</th><th className="w-24">链接</th><th>说明</th></tr></thead>
-            <tbody>
-              {search.map((s, i) => (
-                <tr key={i}>
-                  <td>{s.platform}</td>
-                  <td className="font-mono text-xs">{s.query}</td>
-                  <td><a href={s.url} target="_blank" rel="noreferrer" className="text-primary text-xs hover:underline inline-flex items-center gap-1">打开 <ExternalLink className="h-3 w-3" /></a></td>
-                  <td className="text-xs text-muted-foreground">{s.note}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div className="hidden md:block">
+            <table className="ops-table">
+              <thead><tr><th className="w-24">平台</th><th>关键词</th><th className="w-24">链接</th><th>说明</th></tr></thead>
+              <tbody>
+                {search.map((s, i) => (
+                  <tr key={i}>
+                    <td>{s.platform}</td>
+                    <td className="font-mono text-xs">{s.query}</td>
+                    <td><a href={s.url} target="_blank" rel="noreferrer" className="text-primary text-xs hover:underline inline-flex items-center gap-1">打开 <ExternalLink className="h-3 w-3" /></a></td>
+                    <td className="text-xs text-muted-foreground">{s.note}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <MobileCardList className="p-0 pt-2">
+            {search.map((s, i) => (
+              <MobileCard
+                key={i}
+                title={s.platform}
+                right={
+                  <a href={s.url} target="_blank" rel="noreferrer" className="text-primary text-xs hover:underline inline-flex items-center gap-1">
+                    打开 <ExternalLink className="h-3 w-3" />
+                  </a>
+                }
+              >
+                <MobileField label="关键词" value={<span className="font-mono">{s.query}</span>} stack />
+                <MobileField label="说明" value={<span className="text-muted-foreground">{s.note}</span>} stack />
+              </MobileCard>
+            ))}
+          </MobileCardList>
         </div>
       </div>
     </>
