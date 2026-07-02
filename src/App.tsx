@@ -8,6 +8,7 @@ import { AppShell } from "@/components/AppShell";
 import { AuthProvider } from "@/hooks/useAuth";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { RootErrorBoundary } from "@/components/RootErrorBoundary";
+import { RouteHead } from "@/components/RouteHead";
 import Workspace from "./pages/Workspace";
 import Projects from "./pages/Projects";
 import ProjectEditor from "./pages/ProjectEditor";
@@ -30,6 +31,7 @@ const App = () => (
         <BrowserRouter>
           <RootErrorBoundary>
             <AuthProvider>
+              <RouteHead />
               <Routes>
                 <Route path="/auth" element={<AuthPage />} />
                 <Route path="/index" element={<Navigate to="/" replace />} />
