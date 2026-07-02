@@ -37,18 +37,57 @@ export default function ProjectEditor() {
   const { errors, warnings } = validateStageInputDetailed(data);
 
   // 字段级联动提示:根据关键字把整体 errors/warnings 分派到对应输入下方。
-  const pickHints = (keywords: string[]) => ({
-    errors: errors.filter((m) => keywords.some((k) => m.includes(k))),
-    warnings: warnings.filter((m) => keywords.some((k) => m.includes(k))),
-  });
-  const hints = {
-    performerCount: pickHints(["performerCount", "总人数", "人数校验", "学生行数"]),
-    maleCount: pickHints(["maleCount", "男生", "人数校验", "性别分布"]),
-    femaleCount: pickHints(["femaleCount", "女生", "人数校验", "性别分布"]),
-    perPersonBudget: pickHints(["人均预算", "perPersonBudget"]),
-    rehearsal: pickHints(["彩排频次", "rehearsalFrequency"]),
-    students: pickHints(["studentId", "heightCm", "学生行数", "性别分布"]),
+  const FIELD_KEYWORDS: Record<string, string[]> = {
+    performerCount: ["performerCount", "总人数", "人数校验", "学生行数"],
+    maleCount: ["maleCount", "男生", "人数校验", "性别分布"],
+    femaleCount: ["femaleCount", "女生", "人数校验", "性别分布"],
+    perPersonBudget: ["人均预算", "perPersonBudget"],
+    rehearsal: ["彩排频次", "rehearsalFrequency"],
+    students: ["studentId", "heightCm", "学生行数", "性别分布"],
   };
+  const pickHints = (keywords: string[]) => {
+    const matchedBy = (m: string) => keywords.filter((k) => m.includes(k));
+    return {
+      errors: errors.filter((m) => matchedBy(m).length > 0),
+      warnings: warnings.filter((m) => matchedBy(m).length > 0),
+    };
+  };
+  const hints = Object.fromEntries(
+    Object.entries(FIELD_KEYWORDS).map(([k, kws]) => [k, pickHints(kws)]),
+  ) as Record<keyof typeof FIELD_KEYWORDS, { errors: string[]; warnings: string[] }>;
+
+  // 调试模式:URL ?debug=hints 或 localStorage 键 "stageos:debug-hints" = "1"
+  const debugHints =
+    typeof window !== "undefined" &&
+    (new URLSearchParams(window.location.search).get("debug") === "hints" ||
+      window.localStorage.getItem("stageos:debug-hints") === "1");
+
+  // 未匹配到任何字段的 error/warning(便于发现关键词覆盖缺口)
+  const allKeywords = Object.values(FIELD_KEYWORDS).flat();
+  const unmatched = {
+    errors: errors.filter((m) => !allKeywords.some((k) => m.includes(k))),
+    warnings: warnings.filter((m) => !allKeywords.some((k) => m.includes(k))),
+  };
+
+  useEffect(() => {
+    if (!debugHints) return;
+    // eslint-disable-next-line no-console
+    console.groupCollapsed(
+      `[StageOS hints] errors=${errors.length} warnings=${warnings.length} unmatched=${unmatched.errors.length + unmatched.warnings.length}`,
+    );
+    console.table(
+      Object.entries(hints).map(([field, h]) => ({
+        field,
+        errors: h.errors.length,
+        warnings: h.warnings.length,
+      })),
+    );
+    if (unmatched.errors.length || unmatched.warnings.length) {
+      console.warn("[StageOS hints] unmatched", unmatched);
+    }
+    console.groupEnd();
+  }, [debugHints, errors, warnings]);
+
 
   const set = <K extends keyof StageInputData>(k: K, v: StageInputData[K]) =>
     setData((d) => ({ ...d, [k]: v }));
@@ -152,6 +191,45 @@ export default function ProjectEditor() {
           </div>
         </div>
       )}
+
+      {debugHints && (
+        <div className="panel border-info/40 bg-info/5">
+          <div className="panel-header">
+            <h2 className="text-sm font-semibold text-info">联动提示调试</h2>
+            <span className="text-[11px] text-muted-foreground font-mono">
+              ?debug=hints · errors={errors.length} warnings={warnings.length}
+            </span>
+          </div>
+          <div className="panel-body space-y-2 text-xs">
+            <table className="ops-table">
+              <thead>
+                <tr><th>字段</th><th className="w-16 text-right">errors</th><th className="w-16 text-right">warnings</th><th>关键词</th></tr>
+              </thead>
+              <tbody>
+                {Object.entries(hints).map(([field, h]) => (
+                  <tr key={field}>
+                    <td className="font-mono">{field}</td>
+                    <td className="text-right font-mono">{h.errors.length}</td>
+                    <td className="text-right font-mono">{h.warnings.length}</td>
+                    <td className="font-mono text-[11px] text-muted-foreground">{FIELD_KEYWORDS[field].join(" | ")}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {(unmatched.errors.length > 0 || unmatched.warnings.length > 0) && (
+              <div className="rounded border border-destructive/40 bg-destructive/5 p-2">
+                <div className="font-medium text-destructive mb-1">未匹配到任何字段的信息(需扩充关键词)</div>
+                <ul className="list-disc list-inside space-y-0.5">
+                  {unmatched.errors.map((m) => <li key={`ue-${m}`} className="text-destructive">错误:{m}</li>)}
+                  {unmatched.warnings.map((m) => <li key={`uw-${m}`} className="text-warning">提示:{m}</li>)}
+                </ul>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+
 
       <div className="panel">
         <div className="panel-header"><h2 className="text-sm font-semibold">基本信息</h2></div>
