@@ -14,7 +14,7 @@ export default function Modules() {
 
   useEffect(() => {
     (async () => {
-      const { data } = await supabase.from("settings").select(SETTINGS_SAFE_COLUMNS).eq("id", "global").maybeSingle();
+      const { data } = await supabase.from("settings").select(SETTINGS_SAFE_COLUMNS).eq("id", "global").maybeSingle<{ api_mode: string; api_base_url: string | null }>();
       if (data) { setApiMode(data.api_mode); setApiBaseUrl(data.api_base_url ?? ""); }
     })();
   }, []);
