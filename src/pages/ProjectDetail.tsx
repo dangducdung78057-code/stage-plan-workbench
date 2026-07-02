@@ -225,7 +225,7 @@ export default function ProjectDetail() {
       const uid = userData.user?.id;
       await supabase.from("export_records").insert({
         project_id: project.id, user_id: uid, snapshot_id: latest.id,
-        version: latest.version, format, payload,
+        version: latest.version, format, payload: JSON.stringify(payload),
       } as any);
       await supabase.from("projects").update({ status: "exported" }).eq("id", project.id);
       const isJson = format === "json";
