@@ -9,6 +9,7 @@ import { searchWithFallback, type ProviderDisplayId, type ProviderWarningCode } 
 const PROVIDER_BADGE: Record<ProviderDisplayId, { label: string; tone: "success" | "info" | "warning" }> = {
   local: { label: "本地目录", tone: "success" },
   http: { label: "HTTP", tone: "info" },
+  "http-mock": { label: "http-mock", tone: "info" },
   "fallback-local": { label: "fallback-local", tone: "warning" },
 };
 
