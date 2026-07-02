@@ -618,11 +618,21 @@ export function HealthCheck() {
   function buildSummaryText(): string {
     const lines: string[] = [];
     lines.push("StageOS 一键验收摘要");
-    lines.push(`baseline: ${STAGEOS_VERSION}`);
+    lines.push(`baseline: ${STAGEOS_VERSION}  (仅标签，不参与 Gate 判定)`);
     lines.push(`route: ${typeof window !== "undefined" ? window.location.pathname : "-"}`);
     lines.push(`userAgent: ${typeof navigator !== "undefined" ? navigator.userAgent : "-"}`);
     lines.push(`时间: ${startedAt ?? new Date().toLocaleString()}`);
     lines.push(`登录状态: ${user?.email ?? user?.id ?? "未登录"}`);
+    if (gate) {
+      lines.push("");
+      lines.push(`Release Gate: ${gate.gate}  [rule ${gate.rule}]`);
+      lines.push(`reason: ${gate.reason}`);
+      if (gate.triggers.length > 0) lines.push(`triggers: ${gate.triggers.join(", ")}`);
+    }
+    if (snapshot && !snapshot.error && snapshot.rows.length > 0) {
+      const c = snapshot.counts;
+      lines.push(`capability_counts: L0=${c.L0} L1=${c.L1} L2=${c.L2} · PASS=${c.PASS} WARN=${c.WARN} FAIL=${c.FAIL} SKIP=${c.SKIP}`);
+    }
     lines.push("");
     lines.push("检查项:");
     for (const c of checks) {
