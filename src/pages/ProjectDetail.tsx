@@ -161,10 +161,12 @@ export default function ProjectDetail() {
     setBusy(true);
     try {
       const payload = format === "json" ? buildJsonExport(project, input, latest) : buildMarkdownExport(project, input, latest);
+      const { data: userData } = await supabase.auth.getUser();
+      const uid = userData.user?.id;
       await supabase.from("export_records").insert({
-        project_id: project.id, snapshot_id: latest.id,
+        project_id: project.id, user_id: uid, snapshot_id: latest.id,
         version: latest.version, format, payload,
-      });
+      } as any);
       await supabase.from("projects").update({ status: "exported" }).eq("id", project.id);
       const blob = new Blob([payload], { type: format === "json" ? "application/json" : "text/markdown" });
       const url = URL.createObjectURL(blob);
