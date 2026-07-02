@@ -307,7 +307,15 @@ export default function ProjectWizard() {
         status: "draft",
       });
 
-      localStorage.removeItem(DRAFT_KEY);
+      // remove the active draft slot once the project is created
+      if (activeId) {
+        const list = drafts.filter((d) => d.id !== activeId);
+        setDrafts(list); writeDrafts(list);
+        localStorage.removeItem(ACTIVE_KEY);
+        setActiveId(null);
+      }
+      localStorage.removeItem(LEGACY_KEY);
+
       toast.success("项目已创建,mock 计划已生成");
       navigate(`/projects/${projectId}`);
     } catch (e: any) {
