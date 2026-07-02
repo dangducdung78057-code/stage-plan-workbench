@@ -329,6 +329,40 @@ export function HealthCheck() {
       }
     }
 
+    // 15. 采购 provider 抽象层 v3.0
+    if (!getFlag("procurement")) {
+      push({ id: "procurementProvider", label: "采购 provider (v3.0 抽象层)", status: "skip", detail: "flag off" });
+    } else {
+      try {
+        const { getProviderMode, getHttpUrl, searchWithFallback } = await import("@/lib/procurementProvider");
+        const mode = getProviderMode();
+        const url = getHttpUrl();
+        const r = await searchWithFallback(
+          { category: "上装", description: "白衬衫" },
+          { programType: "chorus", schoolStage: "primary" },
+        );
+        if (mode === "local") {
+          push({
+            id: "procurementProvider",
+            label: "采购 provider (local)",
+            status: r.candidates.length ? "pass" : "warn",
+            detail: `mode=local, providerId=${r.providerId}, candidates=${r.candidates.length}`,
+          });
+        } else if (mode === "http") {
+          if (!url) {
+            push({ id: "procurementProvider", label: "采购 provider (http)", status: "warn", detail: "HTTP URL 未配置，已 fallback local" });
+          } else if (r.usedFallback) {
+            push({ id: "procurementProvider", label: "采购 provider (http)", status: "warn", detail: r.warning ?? "HTTP 不可用，已 fallback local" });
+          } else {
+            push({ id: "procurementProvider", label: "采购 provider (http)", status: "pass", detail: `mode=http, candidates=${r.candidates.length}` });
+          }
+        }
+      } catch (e: any) {
+        push({ id: "procurementProvider", label: "采购 provider (v3.0 抽象层)", status: "warn", detail: `provider 异常: ${e?.message ?? "unknown"}` });
+      }
+    }
+
+
 
     // persist run history (best-effort; RLS scopes to current user)
     const summaryLocal = out.reduce(
