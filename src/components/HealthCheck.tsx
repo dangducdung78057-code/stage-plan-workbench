@@ -10,8 +10,8 @@ import { renderMarkdown, renderPrintableHtml, renderPdfBlob, renderPngBlob, vali
 import { CheckCircle2, XCircle, Loader2, AlertTriangle, Copy, Download as DownloadIcon, History } from "lucide-react";
 import { toast } from "sonner";
 import {
-  loadCapabilitySnapshot, computeReleaseGate,
-  type CapabilitySnapshot,
+  loadCapabilitySnapshot, computeReleaseGate, gateTone,
+  type CapabilitySnapshot, type GateResult,
 } from "@/lib/capabilitySnapshot";
 
 
