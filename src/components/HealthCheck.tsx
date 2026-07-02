@@ -262,6 +262,38 @@ export function HealthCheck() {
       }
     }
 
+    // 14. 采购候选商品 v1 · 本地目录
+    if (!getFlag("procurement")) {
+      push({ id: "procurement", label: "采购候选商品 v1 (本地目录)", status: "skip", detail: "flag off" });
+    } else {
+      try {
+        const { PROCUREMENT_CATALOG } = await import("@/lib/procurementCatalog");
+        const { matchCandidates } = await import("@/lib/procurementMatch");
+        if (!Array.isArray(PROCUREMENT_CATALOG) || PROCUREMENT_CATALOG.length === 0) {
+          push({ id: "procurement", label: "采购候选商品 v1 (本地目录)", status: "warn", detail: "本地目录为空" });
+        } else {
+          const sample = matchCandidates(
+            { category: "上装", description: "白衬衫" },
+            { programType: "chorus", schoolStage: "primary" },
+          );
+          if (!Array.isArray(sample) || sample.length === 0) {
+            push({ id: "procurement", label: "采购候选商品 v1 (本地目录)", status: "warn", detail: "匹配返回空结果" });
+          } else {
+            const c = sample[0];
+            const ok = !!(c.platform && c.title && c.keyword && typeof c.estimatedPrice === "number" && c.matchReason && c.riskNote);
+            push({
+              id: "procurement",
+              label: "采购候选商品 v1 (本地目录)",
+              status: ok ? "pass" : "warn",
+              detail: ok ? `entries=${PROCUREMENT_CATALOG.length}, sample=${sample.length}` : "候选字段缺失",
+            });
+          }
+        }
+      } catch (e: any) {
+        push({ id: "procurement", label: "采购候选商品 v1 (本地目录)", status: "warn", detail: `匹配异常: ${e?.message ?? "unknown"}` });
+      }
+    }
+
 
     setRunning(false);
   }
