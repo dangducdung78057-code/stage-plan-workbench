@@ -39,15 +39,15 @@ export default function Workspace() {
   }, []);
 
   return (
-    <div className="p-6 space-y-5">
-      <div className="flex items-start justify-between">
+    <div className="p-4 md:p-6 space-y-5">
+      <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
         <div>
           <h1 className="text-xl font-semibold tracking-tight">运营工作台</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
             学校演出服装排产循环:项目输入 → 服装总表 → 风险与倒排 → 用户确认 → 导出。
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <Button asChild variant="outline" size="sm">
             <Link to="/projects/new">经典表单</Link>
           </Button>
@@ -57,7 +57,7 @@ export default function Workspace() {
         </div>
       </div>
 
-      <div className="grid grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <StatCard icon={<Package className="h-4 w-4" />} label="项目总数" value={counts.total} route="/api/stageos/costume-master-plan" />
         <StatCard icon={<AlertTriangle className="h-4 w-4 text-warning" />} label="待修订" value={counts.revision} route="/self-check" />
         <StatCard icon={<CheckCircle2 className="h-4 w-4 text-success" />} label="已确认" value={counts.confirmed} route="/confirm" />
