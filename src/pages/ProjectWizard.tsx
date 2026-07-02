@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -16,7 +16,17 @@ import { generateMockPlan } from "@/lib/mockPlan";
 import { toast } from "sonner";
 import {
   ArrowLeft, ArrowRight, Check, AlertTriangle, Plus, Trash2, Wand2, CheckCircle2, Circle,
+  Save, RotateCcw,
 } from "lucide-react";
+
+const DRAFT_KEY = "stageos:wizard:draft:v1";
+
+type WizardDraft = {
+  step: number;
+  title: string;
+  data: StageInputData;
+  savedAt: string;
+};
 
 type Student = NonNullable<StageInputData["students"]>[number];
 
