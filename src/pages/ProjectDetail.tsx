@@ -360,7 +360,7 @@ export default function ProjectDetail() {
               <span className="text-xs">流程:compile-prompt → costume-master-plan → gated-output → confirm → export</span>
             </div>
           )}
-          {latest && <PlanView snapshot={latest} />}
+          {latest && <PlanView snapshot={latest} ctx={{ programType: input?.programType, schoolStage: input?.schoolStage }} procurementOn={flags.procurement} />}
           {snapshots.length > 1 && (
             <div className="panel">
               <div className="panel-header"><h3 className="text-sm font-semibold">历史快照</h3></div>
