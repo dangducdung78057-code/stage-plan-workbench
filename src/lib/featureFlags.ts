@@ -36,7 +36,7 @@ function read(): Record<FeatureFlag, boolean> {
   try {
     const raw = localStorage.getItem(KEY);
     if (!raw) return { ...DEFAULTS };
-    return { ...DEFAULTS, ...JSON.parse(raw), pdfExport: false };
+    return { ...DEFAULTS, ...JSON.parse(raw) };
   } catch {
     return { ...DEFAULTS };
   }
@@ -47,7 +47,7 @@ export function getFlag(f: FeatureFlag): boolean {
 }
 
 export function setFlag(f: FeatureFlag, v: boolean) {
-  const next = { ...read(), [f]: f === "pdfExport" ? false : v };
+  const next = { ...read(), [f]: v };
   localStorage.setItem(KEY, JSON.stringify(next));
   window.dispatchEvent(new CustomEvent("stageos:flags"));
 }
