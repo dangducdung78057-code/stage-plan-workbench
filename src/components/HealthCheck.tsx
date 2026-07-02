@@ -146,6 +146,26 @@ export function HealthCheck() {
       detail: getFlag("pdfExport") ? "html2pdf.js 光栅化 · 中文原样输出" : "flag off",
     });
 
+    // 12. Storage 副本可达性（bucket 存在且当前 user 前缀可 list）
+    if (!getFlag("storageUpload")) {
+      push({ id: "storage", label: "Storage 副本 (stageos-exports)", status: "skip", detail: "flag off" });
+    } else if (!user?.id) {
+      push({ id: "storage", label: "Storage 副本 (stageos-exports)", status: "skip", detail: "未登录" });
+    } else {
+      try {
+        const { result, ms } = await timed(async () => await (
+          supabase.storage.from("stageos-exports").list(user.id, { limit: 1 }))
+        );
+        if (result.error) {
+          push({ id: "storage", label: "Storage 副本 (stageos-exports)", status: "fail", detail: result.error.message, ms });
+        } else {
+          push({ id: "storage", label: "Storage 副本 (stageos-exports)", status: "pass", detail: `列出成功 (items=${result.data?.length ?? 0})`, ms });
+        }
+      } catch (e: any) {
+        push({ id: "storage", label: "Storage 副本 (stageos-exports)", status: "fail", detail: e?.message });
+      }
+    }
+
     setRunning(false);
   }
 
