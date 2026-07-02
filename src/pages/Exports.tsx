@@ -323,6 +323,10 @@ export default function Exports() {
       setTimeout(() => URL.revokeObjectURL(url), 1000);
       toast.success("PNG 已生成并下载");
       await maybeUploadToStorage(row, "png", blob, "image/png");
+      dispatchWebhook("export.created", {
+        project_id: row.project_id,
+        summary: { format: "png", version: row.version, snapshot_id: row.snapshot_id, bytes: blob.size, export_id: row.id },
+      });
     } catch (e: any) {
       console.error(e);
       const msg = String(e?.message ?? "");
