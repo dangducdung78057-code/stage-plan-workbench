@@ -23,11 +23,12 @@ export function HealthCheck() {
     setStartedAt(new Date().toLocaleString());
     const out: Check[] = [];
     const push = (c: Check) => { out.push(c); setChecks([...out]); };
-    const time = async <T,>(fn: () => Promise<T>): Promise<[T, number]> => {
+    const time = async <T,>(fn: () => Promise<T>): Promise<{ result: T; ms: number }> => {
       const t0 = performance.now();
       const r = await fn();
-      return [r, Math.round(performance.now() - t0)];
+      return { result: r, ms: Math.round(performance.now() - t0) };
     };
+
 
     // 1. version tag
     push({
