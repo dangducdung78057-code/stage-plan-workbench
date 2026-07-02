@@ -28,7 +28,7 @@ export const FLAG_META: Record<FeatureFlag, { label: string; desc: string; wired
   storageUpload: { label: "Storage 文件存储", desc: "私有 bucket 持久化导出的 MD / PDF，按 user_id 前缀隔离，生成签名 URL。", wired: true },
   aiProvider: { label: "AI 生成 provider", desc: "启用 Lovable AI 生成服装总表；失败时自动回退至 mock，不破坏主流程。", wired: true },
   payments: { label: "支付与会员", desc: "计划中：Stripe / Paddle。", wired: false },
-  procurement: { label: "采购 API", desc: "计划中：真实/半自动采购清单。", wired: false },
+  procurement: { label: "采购候选商品 v1", desc: "在服装方案每行内嵌只读候选清单（本地模拟目录，非实时库存价格，需人工核验）。不落库、不改导出、不自动下单。", wired: true },
 };
 
 function read(): Record<FeatureFlag, boolean> {
