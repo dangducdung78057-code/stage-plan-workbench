@@ -32,7 +32,11 @@ export function decideFreeze(gate: GateResult): FreezeDecision {
     gate.gate === "G3" ? "frozen" :
     gate.gate === "G2" ? "candidate_frozen" :
     "rejected";
-  return { gate: gate.gate, status, rule: gate.rule, reason: gate.reason };
+  let reason = gate.reason;
+  if (gate.rule === "R5" && gate.isolatedExperimentalWarnings.length > 0) {
+    reason = `L2 isolated experimental warning: ${gate.isolatedExperimentalWarnings.map((w) => w.module).join(", ")}`;
+  }
+  return { gate: gate.gate, status, rule: gate.rule, reason };
 }
 
 export function freezeTone(s: FreezeStatus): "success" | "warning" | "destructive" {
