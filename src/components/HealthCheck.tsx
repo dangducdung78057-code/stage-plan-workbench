@@ -146,6 +146,14 @@ export function HealthCheck() {
       detail: getFlag("pdfExport") ? "html2pdf.js 光栅化 · 中文原样输出" : "flag off",
     });
 
+    // 11b. PNG 导出：html-to-image 光栅化
+    push({
+      id: "png",
+      label: "PNG 导出（长图分享）",
+      status: getFlag("pngExport") ? "pass" : "skip",
+      detail: getFlag("pngExport") ? "html-to-image 光栅化 · 中文原样输出" : "flag off",
+    });
+
     // 12. Storage 副本可达性（bucket 存在且当前 user 前缀可 list）
     if (!getFlag("storageUpload")) {
       push({ id: "storage", label: "Storage 副本 (stageos-exports)", status: "skip", detail: "flag off" });

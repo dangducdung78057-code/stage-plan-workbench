@@ -19,7 +19,7 @@ export function stamp(d: Date = new Date()): string {
 }
 
 export function buildFilename(
-  ext: "md" | "pdf",
+  ext: "md" | "pdf" | "png",
   projectTitle: string | undefined,
   version: number,
   projectId: string,
@@ -354,6 +354,51 @@ export async function renderPdfBlob(html: string): Promise<Blob> {
         pagebreak: { mode: ["css", "legacy"] },
       })
       .outputPdf("blob");
+    return blob;
+  } finally {
+    try { host.remove(); } catch { /* noop */ }
+  }
+}
+
+/**
+ * Render the printable HTML into a PNG Blob (long-image, share-friendly).
+ * Uses html-to-image on an off-screen host so Chinese renders via the browser font stack.
+ * Never mutates or replaces the Markdown / Storage export chains.
+ */
+export async function renderPngBlob(html: string, opts?: { widthPx?: number; pixelRatio?: number }): Promise<Blob> {
+  if (typeof window === "undefined") throw new Error("PNG_UNSUPPORTED");
+  const mod: any = await import("html-to-image");
+  const toBlob = mod.toBlob ?? mod.default?.toBlob;
+  if (!toBlob) throw new Error("PNG_LIB_UNAVAILABLE");
+
+  const width = opts?.widthPx ?? 794; // ~A4 @96dpi
+  const host = document.createElement("div");
+  host.style.position = "fixed";
+  host.style.left = "-10000px";
+  host.style.top = "0";
+  host.style.width = `${width}px`;
+  host.style.background = "#ffffff";
+  const bodyMatch = /<body[^>]*>([\s\S]*?)<\/body>/i.exec(html);
+  const styleMatch = /<style[^>]*>([\s\S]*?)<\/style>/i.exec(html);
+  host.innerHTML =
+    (styleMatch ? `<style>${styleMatch[1]}</style>` : "") +
+    `<div style="padding:24px 20px;">${bodyMatch ? bodyMatch[1] : html}</div>`;
+  document.body.appendChild(host);
+
+  try {
+    // Let fonts & layout settle
+    if ((document as any).fonts?.ready) {
+      try { await (document as any).fonts.ready; } catch { /* noop */ }
+    }
+    await new Promise((r) => requestAnimationFrame(() => r(null)));
+
+    const blob: Blob | null = await toBlob(host, {
+      pixelRatio: opts?.pixelRatio ?? 2,
+      backgroundColor: "#ffffff",
+      cacheBust: true,
+      style: { transform: "none" },
+    });
+    if (!blob) throw new Error("PNG_EMPTY");
     return blob;
   } finally {
     try { host.remove(); } catch { /* noop */ }

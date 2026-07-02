@@ -11,6 +11,7 @@ import {
   renderPrintableHtml,
   downloadBlob,
   renderPdfBlob,
+  renderPngBlob,
 } from "@/lib/exportRender";
 import {
   buildStoragePath,
@@ -22,7 +23,7 @@ import {
 } from "@/lib/exportStorage";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
-import { FileDown, Eye, Loader2, FileText, Cloud, Link2, Trash2, RefreshCcw } from "lucide-react";
+import { FileDown, Eye, Loader2, FileText, Cloud, Link2, Trash2, RefreshCcw, Image as ImageIcon } from "lucide-react";
 
 type Row = {
   id: string; project_id: string; version: number; format: string;
@@ -87,7 +88,7 @@ export default function Exports() {
     return true;
   }
 
-  async function maybeUploadToStorage(row: Row, ext: "md" | "pdf", blob: Blob, contentType: string) {
+  async function maybeUploadToStorage(row: Row, ext: "md" | "pdf" | "png", blob: Blob, contentType: string) {
     if (!storageOn || !user?.id) return;
     try {
       const path = buildStoragePath({
@@ -154,6 +155,35 @@ export default function Exports() {
     }
   }
 
+  async function handlePng(row: Row) {
+    setBusy(row.id + ":png");
+    try {
+      if (!(await guard(row))) return;
+      const title = projectTitles[row.project_id];
+      const createdAt = new Date(row.created_at).toLocaleString("zh-CN", { hour12: false });
+      const fn = buildFilename("png", title, row.version, row.project_id);
+      const html = renderPrintableHtml(row.payload, row.format, {
+        projectTitle: title,
+        version: row.version,
+        createdAt,
+        filenameTitle: fn.replace(/\.png$/, ""),
+      });
+      const blob = await renderPngBlob(html);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url; a.download = fn;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      toast.success("PNG 已生成并下载");
+      await maybeUploadToStorage(row, "png", blob, "image/png");
+    } catch (e) {
+      console.error(e);
+      toast.error("PNG 生成失败，请改用 Markdown 或稍后重试");
+    } finally {
+      setBusy(null);
+    }
+  }
+
   async function copySignedUrl(path: string) {
     try {
       const url = await getSignedUrl(path, 3600);
@@ -177,6 +207,7 @@ export default function Exports() {
 
   const showMd = flags.markdownDownload;
   const showPdf = flags.pdfExport;
+  const showPng = flags.pngExport;
 
   return (
     <div className="p-4 md:p-6 space-y-4">
@@ -191,9 +222,12 @@ export default function Exports() {
         {showPdf && (
           <p className="text-xs text-muted-foreground mt-1">PDF 采用 html2pdf 光栅化渲染，中文原样输出。</p>
         )}
+        {showPng && (
+          <p className="text-xs text-muted-foreground mt-1">PNG 长图采用 html-to-image 光栅化，适合分享。</p>
+        )}
         {storageOn && (
           <p className="text-xs text-muted-foreground mt-1">
-            Storage 同步已开启：下载的 MD / PDF 会同时写入私有 bucket <span className="font-mono">stageos-exports</span>，按 <span className="font-mono">user_id</span> 前缀隔离。
+            Storage 同步已开启：下载的 MD / PDF / PNG 会同时写入私有 bucket <span className="font-mono">stageos-exports</span>，按 <span className="font-mono">user_id</span> 前缀隔离。
           </p>
         )}
       </div>
@@ -237,6 +271,13 @@ export default function Exports() {
                           : <><FileText className="h-3.5 w-3.5 mr-1" />PDF</>}
                       </Button>
                     )}
+                    {showPng && (
+                      <Button variant="outline" size="sm" disabled={busy === r.id + ":png"} onClick={() => handlePng(r)}>
+                        {busy === r.id + ":png"
+                          ? <><Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />生成中…</>
+                          : <><ImageIcon className="h-3.5 w-3.5 mr-1" />PNG</>}
+                      </Button>
+                    )}
                   </div>
                 </td>
               </tr>
@@ -266,6 +307,13 @@ export default function Exports() {
                       {busy === r.id + ":pdf"
                         ? <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />生成中…</>
                         : <><FileText className="h-3.5 w-3.5 mr-1.5" />下载 PDF</>}
+                    </Button>
+                  )}
+                  {showPng && (
+                    <Button variant="outline" size="sm" className="w-full justify-center" disabled={busy === r.id + ":png"} onClick={() => handlePng(r)}>
+                      {busy === r.id + ":png"
+                        ? <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />生成中…</>
+                        : <><ImageIcon className="h-3.5 w-3.5 mr-1.5" />下载 PNG 长图</>}
                     </Button>
                   )}
                 </div>

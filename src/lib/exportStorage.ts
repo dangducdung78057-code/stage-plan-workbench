@@ -16,7 +16,7 @@ export function buildStoragePath(opts: {
   projectId: string;
   exportId: string;
   version: number;
-  ext: "md" | "pdf" | "json";
+  ext: "md" | "pdf" | "png" | "json";
 }) {
   return `${opts.userId}/${safeSegment(opts.projectId)}/v${opts.version}-${safeSegment(opts.exportId)}.${opts.ext}`;
 }
