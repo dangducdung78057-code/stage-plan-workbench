@@ -16,7 +16,7 @@ import { generateMockPlan } from "@/lib/mockPlan";
 import { toast } from "sonner";
 import {
   ArrowLeft, ArrowRight, Check, AlertTriangle, Plus, Trash2, Wand2, CheckCircle2, Circle,
-  Save, RotateCcw, FolderOpen, Copy, FilePlus2, Pencil,
+  Save, RotateCcw, FolderOpen, Copy, FilePlus2, Pencil, ChevronDown, ChevronUp,
 } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
@@ -86,6 +86,7 @@ export default function ProjectWizard() {
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
   const autosaveRef = useRef<number | null>(null);
+  const [expandedIssueDrafts, setExpandedIssueDrafts] = useState<Set<string>>(new Set());
 
   // Restore drafts on mount
   useEffect(() => {
@@ -389,10 +390,19 @@ export default function ProjectWizard() {
                   const warnCount = issues.filter((i) => i.severity === "warning").length;
                   const firstErr = issues.find((i) => i.severity === "error");
                   const firstWarn = issues.find((i) => i.severity === "warning");
+                  const expanded = expandedIssueDrafts.has(d.id);
+                  const top5 = issues.slice(0, 5);
                   const jumpTo = (issue: WizardIssue) => {
                     if (d.id !== activeId) switchDraft(d.id);
-                    // Give state a tick, then jump — reuse existing jumpToIssue for focus + highlight
                     setTimeout(() => jumpToIssue(issue), d.id !== activeId ? 40 : 0);
+                  };
+                  const toggleExpand = () => {
+                    setExpandedIssueDrafts((prev) => {
+                      const next = new Set(prev);
+                      if (next.has(d.id)) next.delete(d.id);
+                      else next.add(d.id);
+                      return next;
+                    });
                   };
                   return (
                     <li key={d.id} className={`px-3 py-2 text-sm ${isActive ? "bg-primary/5" : ""}`}>
@@ -452,6 +462,53 @@ export default function ProjectWizard() {
                           step {(d.step ?? 0) + 1}/{STEPS.length}
                         </span>
                       </div>
+
+                      {/* Issue summary expand / collapse */}
+                      <button
+                        type="button"
+                        onClick={toggleExpand}
+                        className="mt-1.5 w-full flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        {expanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                        <span>{expanded ? "收起问题摘要" : `展开问题摘要 · 共 ${issues.length} 项`}</span>
+                      </button>
+                      {expanded && (
+                        <div className="mt-1.5 rounded-md border border-border/60 bg-muted/40 divide-y divide-border/40">
+                          {issues.length === 0 ? (
+                            <div className="px-2 py-2 text-[11px] text-success flex items-center gap-1">
+                              <Check className="h-3 w-3" />所有校验通过
+                            </div>
+                          ) : (
+                            top5.map((it, idx) => (
+                              <button
+                                key={idx}
+                                type="button"
+                                onClick={() => jumpTo(it)}
+                                className="w-full flex items-center gap-2 px-2 py-1.5 text-left hover:bg-muted/60 transition-colors"
+                                title="点击定位到对应字段"
+                              >
+                                <span
+                                  className={[
+                                    "text-[10px] font-mono px-1 py-0.5 rounded shrink-0",
+                                    it.severity === "error"
+                                      ? "bg-destructive/10 text-destructive"
+                                      : "bg-warning/15 text-warning",
+                                  ].join(" ")}
+                                >
+                                  step {it.step + 1}
+                                </span>
+                                <span className="text-xs font-medium shrink-0">{it.label}</span>
+                                <span className="text-[11px] text-muted-foreground truncate">{it.message}</span>
+                              </button>
+                            ))
+                          )}
+                          {issues.length > 5 && (
+                            <div className="px-2 py-1 text-[10px] text-muted-foreground font-mono">
+                              还有 {issues.length - 5} 项未列出 · 进入向导查看全部
+                            </div>
+                          )}
+                        </div>
+                      )}
 
                       <div className="mt-1 flex items-center justify-between text-[11px] text-muted-foreground">
                         <span className="font-mono">{new Date(d.savedAt).toLocaleString()}</span>
