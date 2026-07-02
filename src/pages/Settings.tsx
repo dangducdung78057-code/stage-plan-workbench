@@ -11,6 +11,10 @@ import { CheckCircle2, XCircle } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { FLAG_META, useFlags, setFlag, type FeatureFlag } from "@/lib/featureFlags";
 import { HealthCheck } from "@/components/HealthCheck";
+import {
+  getProviderMode, setProviderMode, getHttpUrl, setHttpUrl,
+  type ProcurementProviderId,
+} from "@/lib/procurementProvider";
 
 export default function SettingsPage() {
   const { user, signOut } = useAuth();
@@ -18,6 +22,8 @@ export default function SettingsPage() {
   const [apiMode, setApiMode] = useState("mock");
   const [apiBaseUrl, setApiBaseUrl] = useState("");
   const [counts, setCounts] = useState({ projects: 0, snapshots: 0, exports: 0, confirmations: 0 });
+  const [procProvider, setProcProvider] = useState<ProcurementProviderId>(() => getProviderMode());
+  const [procHttpUrl, setProcHttpUrl] = useState<string>(() => getHttpUrl());
 
   useEffect(() => {
     (async () => {
@@ -117,6 +123,47 @@ export default function SettingsPage() {
           })}
         </div>
       </div>
+
+      <div className="panel">
+        <div className="panel-header">
+          <h2 className="text-sm font-semibold">采购 provider (v3.0 只读)</h2>
+          <span className="kbd-route">procurement</span>
+        </div>
+        <div className="panel-body space-y-3">
+          <p className="text-xs text-muted-foreground">
+            provider 抽象层：默认 <span className="font-mono">local</span>（本地目录）。切换到 <span className="font-mono">http</span> 时会走通用 HTTP 壳，失败自动回退 local 并标记 warn。仅只读检索，不下单不承诺库存。
+          </p>
+          <div className="space-y-1.5">
+            <Label className="text-xs text-muted-foreground">procurementProvider</Label>
+            <select
+              className="h-9 w-full rounded border bg-background px-2 text-sm"
+              value={procProvider}
+              onChange={(e) => {
+                const v = e.target.value as ProcurementProviderId;
+                setProcProvider(v); setProviderMode(v);
+                toast.success(`provider 已切换：${v}`);
+              }}
+            >
+              <option value="local">local (本地目录, 推荐)</option>
+              <option value="http">http (通用壳, 预留)</option>
+            </select>
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs text-muted-foreground">procurementHttpUrl</Label>
+            <Input
+              value={procHttpUrl}
+              onChange={(e) => setProcHttpUrl(e.target.value)}
+              onBlur={() => { setHttpUrl(procHttpUrl); }}
+              placeholder="https://example.com/procurement/search"
+              disabled={procProvider !== "http"}
+            />
+            <p className="text-xs text-muted-foreground">
+              留空或不可达时自动回退 local。需先开启「采购候选商品 v1」flag。
+            </p>
+          </div>
+        </div>
+      </div>
+
 
       <div className="panel">
         <div className="panel-header"><h2 className="text-sm font-semibold">StageOS 后端</h2></div>
