@@ -255,28 +255,122 @@ export function renderMarkdown(
     return localizeEnumsInText(out);
   }
 
+  // Use the SAME normalized doc as PNG/PDF exports so all three chains stay in sync.
+  const doc = buildPrintableDoc(data, payload, format, { ...meta, projectTitle: directProjectTitle });
+
   const header = [
-    `# StageOS 服装总表导出 · ${directProjectTitle}`,
-    `> 版本 v${meta.version} · 生成于 ${meta.createdAt}`,
+    `# StageOS 服装总表导出 · ${doc.projectTitle || directProjectTitle}`,
+    `> 版本 v${meta.version} · 生成于 ${meta.createdAt} · 模式 ${doc.mode}`,
     "",
   ].join("\n");
 
-  const risks = data?.risks ?? data?.plan?.risks;
-  const planB = data?.planB ?? data?.plan?.planB;
-
   const md = [
     header,
-    section("项目信息", fmtProject(data)),
-    section("匿名学生数据", fmtRoster(data)),
-    section("服装方案", fmtCostume(data)),
-    section("风险列表", fmtList(risks, (r) => (typeof r === "string" ? r : `${r.level ?? ""} ${r.message ?? r.text ?? JSON.stringify(r)}`))),
-    section("Plan B", fmtList(planB, (r) => (typeof r === "string" ? r : r.description ?? JSON.stringify(r)))),
-    section("倒排时间表", fmtSchedule(data)),
-    section("采购搜索建议", fmtSearch(data)),
+    section("项目信息", fmtProjectFromDoc(doc)),
+    section("匿名学生数据", "本导出不包含学生明细，仅保留人数与尺码分档。"),
+    "## 服装方案\n",
+    planTableMd("女生方案", doc.femalePlan),
+    planTableMd("男生方案", doc.malePlan),
+    planTableMd("配饰", doc.accessories),
+    `**合计估算**：${doc.totalEstimate}\n`,
+    section("风险列表", fmtRisksMd(doc.risks)),
+    section("Plan B", fmtListMd(doc.planB)),
+    section("采购策略", fmtListMd(doc.purchaseStrategy)),
+    section("倒排时间表", scheduleTableMd(doc.schedule)),
+    section("采购搜索建议", searchListMd(doc.search)),
     section("mock / 非真实库存价格声明", "本导出所含所有价格、库存、供货商与平台链接均为 mock 或搜索建议，需人工核验，不构成采购承诺。"),
     section("隐私声明摘要", "本文件仅包含匿名 studentId、性别、身高、可选角色标签；不含真实姓名或联系方式。"),
   ].join("\n");
   return localizeEnumsInText(md);
+}
+
+function fmtProjectFromDoc(doc: ReturnType<typeof buildPrintableDoc>): string {
+  const rows: Array<[string, any]> = [
+    ["项目标题", doc.projectTitle],
+    ["学段", doc.schoolStage],
+    ["节目类型", doc.programType],
+    ["演出日期", doc.performanceDate],
+    ["总人数", doc.performerSummary],
+    ["预算", doc.budget],
+    ["生成时间", doc.generatedAt],
+    ["模式", doc.mode],
+  ];
+  return rows
+    .filter(([, v]) => v !== undefined && v !== null && v !== "" && v !== "—")
+    .map(([k, v]) => `- **${k}**：${v}`)
+    .join("\n") || MISSING;
+}
+
+function mdCell(v: any): string {
+  if (v === undefined || v === null || v === "") return "-";
+  const s = String(v).replace(/\|/g, "\\|").replace(/\n/g, " ");
+  return s || "-";
+}
+
+function planTableMd(title: string, rows: any[]): string {
+  const head = `### ${title}\n\n| 类别 | 描述 | 数量 | 单价估算 | 小计 | 尺码/备注 |\n|---|---|---|---|---|---|`;
+  if (!Array.isArray(rows) || rows.length === 0) {
+    return `${head}\n| - | 本快照该分类暂无条目 | - | - | - | - |\n`;
+  }
+  const body = rows.map((r) => {
+    if (typeof r === "string") return `| - | ${mdCell(r)} | - | - | - | - |`;
+    const category = value(r.category, "-");
+    const desc = value(r.description, r.name, r.title, r.item, "-");
+    const qty = value(r.qty, r.quantity, r.count, "-");
+    const unit = value(r.unitEstimate, r.unit_estimate, r.price, r.estimatedPrice, "-");
+    const subtotal = value(r.subtotal, r.total, "-");
+    const note = value(r.sizing, r.note, "-");
+    const unitStr = unit === "-" || unit === "—" ? "-" : `¥${unit}`;
+    const subStr = subtotal === "-" || subtotal === "—" ? "-" : `¥${subtotal}`;
+    return `| ${mdCell(category)} | ${mdCell(desc)} | ${mdCell(qty)} | ${mdCell(unitStr)} | ${mdCell(subStr)} | ${mdCell(note)} |`;
+  }).join("\n");
+  return `${head}\n${body}\n`;
+}
+
+function fmtRisksMd(items: any[]): string {
+  if (!Array.isArray(items) || items.length === 0) return MISSING;
+  return items.map((r) => {
+    if (typeof r === "string") return `- ${r}`;
+    const level = r.level ?? r.severity ?? "info";
+    const title = r.title ?? r.name ?? r.message ?? r.text ?? "风险";
+    const detail = r.detail ?? r.description ?? r.message ?? r.text ?? "";
+    return `- **[${level}] ${title}**${detail ? ` — ${detail}` : ""}`;
+  }).join("\n");
+}
+
+function fmtListMd(items: any[]): string {
+  if (!Array.isArray(items) || items.length === 0) return MISSING;
+  return items.map((r) => {
+    if (typeof r === "string") return `- ${r}`;
+    return `- ${value(r.description, r.text, r.message, r.title, r.name, JSON.stringify(r))}`;
+  }).join("\n");
+}
+
+function scheduleTableMd(rows: any[]): string {
+  const head = `| 节点 | 日期/D-Day | 任务 | 负责人 |\n|---|---|---|---|`;
+  if (!Array.isArray(rows) || rows.length === 0) return MISSING;
+  const body = rows.map((r, i) => {
+    if (typeof r === "string") return `| ${i + 1} | - | ${mdCell(r)} | - |`;
+    const day = r.date
+      ? `${r.date}${r.daysBefore !== undefined ? ` · D-${r.daysBefore}` : ""}`
+      : (r.daysBefore !== undefined ? `D-${r.daysBefore}` : value(r.deadline, "-"));
+    const task = value(r.task, r.milestone, r.name, "-");
+    const owner = value(r.owner, "-");
+    return `| ${i + 1} | ${mdCell(day)} | ${mdCell(task)} | ${mdCell(owner)} |`;
+  }).join("\n");
+  return `${head}\n${body}`;
+}
+
+function searchListMd(rows: any[]): string {
+  if (!Array.isArray(rows) || rows.length === 0) return SEARCH_EMPTY_MSG;
+  return rows.map((r) => {
+    if (typeof r === "string") return `- ${r}`;
+    const q = r.query ?? r.keyword ?? r.q ?? "";
+    const platform = r.platform ?? "";
+    const note = r.note ?? r.url ?? "";
+    const tail = note ? ` — ${note}` : "";
+    return `- ${platform ? `**${platform}**：` : ""}${q}${tail}`;
+  }).join("\n") + `\n\n> 平台搜索建议仅供人工核验，非实时库存价格。`;
 }
 
 // Minimal Markdown -> HTML for print (headings, lists, tables, bold, blockquote, code)
