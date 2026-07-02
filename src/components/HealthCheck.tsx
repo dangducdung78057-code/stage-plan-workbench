@@ -109,13 +109,29 @@ export function HealthCheck() {
       userId: user?.id ?? null,
     });
     setFreeze(frozen);
+    // Freeze 验收语义（治理）：
+    //   G3→frozen · G2→candidate_frozen · G1/G0→rejected 均为"符合 Gate 规则的预期结果"
+    //   只要 stored=true 且 freeze_id 存在 且 判定与 Gate 一致 → PASS
+    //   FAIL 只在：判定与 Gate 不一致 / stored=false / 写入失败 / freeze_id 缺失 / runtime error
+    const expectedStatus =
+      gateResult.gate === "G3" ? "frozen"
+        : gateResult.gate === "G2" ? "candidate_frozen"
+        : "rejected";
+    const consistent = frozen.status === expectedStatus;
+    const hasId = !!frozen.id;
+    const freezeOk = frozen.persisted && consistent && hasId && !frozen.error;
     push({
       id: "release_freeze",
-      label: `Release Freeze · ${frozen.status}`,
-      status: frozen.status === "frozen" ? "pass" : frozen.status === "candidate_frozen" ? "warn" : "fail",
-      detail:
-        `gate=${frozen.gate} [${frozen.rule}] · ` +
-        (frozen.persisted ? `persisted id=${frozen.id ?? "-"}` : `not persisted${frozen.error ? `: ${frozen.error}` : ""}`),
+      label: `Release Freeze · ${frozen.status}(expected)`,
+      status: freezeOk ? "pass" : "fail",
+      detail: freezeOk
+        ? `gate=${frozen.gate} [${frozen.rule}] · persisted id=${frozen.id}`
+        : `gate=${frozen.gate} [${frozen.rule}] · ` + [
+            !consistent ? `inconsistent(expected=${expectedStatus},actual=${frozen.status})` : null,
+            !frozen.persisted ? "stored=false" : null,
+            !hasId ? "missing freeze_id" : null,
+            frozen.error ? `error=${frozen.error}` : null,
+          ].filter(Boolean).join(" · "),
     });
 
 
