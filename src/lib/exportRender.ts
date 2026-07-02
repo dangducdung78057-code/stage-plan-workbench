@@ -7,6 +7,47 @@ const MISSING = "_（本快照缺少此字段）_";
 const HTML_MISSING = "（本快照缺少此字段）";
 const MIN_RENDER_BLOB_SIZE = 1024;
 
+/**
+ * Unified enum localizer used by Markdown / PDF / PNG export chains.
+ * Maps raw StageOS enum tokens to Chinese labels. Never throws.
+ */
+const ENUM_LABELS: Record<string, string> = (() => {
+  const map: Record<string, string> = {
+    // school stage
+    primary: "小学",
+    junior: "初中",
+    senior: "高中",
+    // program type (extra aliases beyond PROGRAM_TYPES)
+    recitation: "朗诵",
+    choir: "合唱",
+    dance: "舞蹈",
+    sports_opening_ceremony: "运动会开幕式",
+    // venue
+    indoor: "室内",
+    outdoor: "露天",
+  };
+  for (const s of SCHOOL_STAGES) map[s.value] = s.label;
+  for (const p of PROGRAM_TYPES) map[p.value] = p.label;
+  return map;
+})();
+
+export function localizeEnum(v: any): any {
+  if (typeof v !== "string") return v;
+  return ENUM_LABELS[v] ?? v;
+}
+
+/** Replace raw enum tokens anywhere in a string. Word-boundary safe for ASCII tokens. */
+export function localizeEnumsInText(text: string): string {
+  if (!text) return text;
+  let out = text;
+  for (const [key, label] of Object.entries(ENUM_LABELS)) {
+    // Only replace tokens surrounded by non-word chars (or string boundary).
+    const rx = new RegExp(`(^|[^A-Za-z0-9_])${key}(?![A-Za-z0-9_])`, "g");
+    out = out.replace(rx, (_m, pre) => `${pre}${label}`);
+  }
+  return out;
+}
+
 export function slug(s: string | undefined | null, fallback = "project"): string {
   if (!s) return fallback;
   const cleaned = s
@@ -170,13 +211,30 @@ export function renderMarkdown(
 ): string {
   const data = parsePayload(payload, format);
 
-  // If it's already Markdown and not JSON, prepend header and return as-is with disclaimers appended.
+  // If it's already Markdown (not JSON), keep original body but localize enums
+  // and guarantee the "## 采购搜索建议" section is present.
   if (format === "markdown" && data === null) {
-    return [
+    let body = payload;
+    if (!/^##\s+采购搜索建议\s*$/m.test(body)) {
+      const md = parseMarkdownPayload(payload);
+      const recs = md.search ?? [];
+      const searchMd = recs.length
+        ? recs.map((r: any) => {
+            if (typeof r === "string") return `- ${r}`;
+            const q = r.query ?? r.keyword ?? r.q ?? "";
+            const platform = r.platform ?? "";
+            const note = r.note ?? r.url ?? "";
+            const tail = note ? ` — ${note}` : "";
+            return `- ${platform ? `**${platform}**：` : ""}${q}${tail}`;
+          }).join("\n") + `\n\n> 平台搜索建议仅供人工核验，非实时库存价格。`
+        : SEARCH_EMPTY_MSG;
+      body = body.replace(/\s*$/, "") + `\n\n## 采购搜索建议\n\n${searchMd}\n`;
+    }
+    const out = [
       `# StageOS 排产导出 · ${meta.projectTitle ?? "未命名项目"}`,
       `> 版本 v${meta.version} · 生成于 ${meta.createdAt}`,
       "",
-      payload,
+      body,
       "",
       "---",
       "## mock / 非真实库存价格声明",
@@ -187,6 +245,7 @@ export function renderMarkdown(
       "",
       "本文件仅包含匿名 studentId、性别、身高、可选角色标签；不含真实姓名或联系方式。",
     ].join("\n");
+    return localizeEnumsInText(out);
   }
 
   const header = [
@@ -198,7 +257,7 @@ export function renderMarkdown(
   const risks = data?.risks ?? data?.plan?.risks;
   const planB = data?.planB ?? data?.plan?.planB;
 
-  return [
+  const md = [
     header,
     section("项目信息", fmtProject(data)),
     section("匿名学生数据", fmtRoster(data)),
@@ -210,6 +269,7 @@ export function renderMarkdown(
     section("mock / 非真实库存价格声明", "本导出所含所有价格、库存、供货商与平台链接均为 mock 或搜索建议，需人工核验，不构成采购承诺。"),
     section("隐私声明摘要", "本文件仅包含匿名 studentId、性别、身高、可选角色标签；不含真实姓名或联系方式。"),
   ].join("\n");
+  return localizeEnumsInText(md);
 }
 
 // Minimal Markdown -> HTML for print (headings, lists, tables, bold, blockquote, code)
