@@ -235,22 +235,46 @@ export default function ProjectWizard() {
         {STEPS.map((s, i) => {
           const done = i < step;
           const active = i === step;
+          const stepErrors = allIssues.filter((it) => it.step === i && it.severity === "error").length;
+          const stepWarns = allIssues.filter((it) => it.step === i && it.severity === "warning").length;
           return (
             <li key={s.key}>
               <button
                 type="button"
-                onClick={() => i <= step && setStep(i)}
+                onClick={() => setStep(i)}
                 className={[
-                  "w-full text-left rounded-md border px-3 py-2 transition-colors",
+                  "w-full text-left rounded-md border px-3 py-2 transition-colors relative",
                   active ? "border-primary bg-primary/5"
                     : done ? "border-success/40 bg-success/5"
-                    : "border-border bg-muted/30 cursor-not-allowed opacity-70",
+                    : "border-border bg-muted/30 hover:bg-muted/50",
                 ].join(" ")}
               >
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  {done ? <CheckCircle2 className="h-3.5 w-3.5 text-success" />
+                  {done && stepErrors === 0 ? <CheckCircle2 className="h-3.5 w-3.5 text-success" />
                     : <Circle className={`h-3.5 w-3.5 ${active ? "text-primary" : ""}`} />}
                   <span className="font-mono">step {i + 1}/{STEPS.length}</span>
+                  <div className="ml-auto flex items-center gap-1">
+                    {stepErrors > 0 && (
+                      <span
+                        role="button"
+                        title={`${stepErrors} 项错误 · 点击跳转`}
+                        onClick={(e) => { e.stopPropagation(); setStep(i); }}
+                        className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-destructive/15 text-destructive hover:bg-destructive/25"
+                      >
+                        {stepErrors} 错
+                      </span>
+                    )}
+                    {stepWarns > 0 && (
+                      <span
+                        role="button"
+                        title={`${stepWarns} 项警告 · 点击跳转`}
+                        onClick={(e) => { e.stopPropagation(); setStep(i); }}
+                        className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-warning/15 text-warning hover:bg-warning/25"
+                      >
+                        {stepWarns} 警
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <div className={`text-sm font-medium mt-0.5 ${active ? "text-foreground" : ""}`}>
                   {s.title}
@@ -261,6 +285,7 @@ export default function ProjectWizard() {
           );
         })}
       </ol>
+
 
       {/* Validation summary — click any issue to jump straight to the field */}
       {allIssues.length > 0 && (
