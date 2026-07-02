@@ -36,7 +36,7 @@ export default function AuthPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background grid place-items-center p-4">
+    <div className="min-h-dvh bg-background grid place-items-center p-4">
       <main className="w-full max-w-sm panel">
         <h1 className="sr-only">登录 StageOS 演出服装排产工作台</h1>
         <div className="panel-header">

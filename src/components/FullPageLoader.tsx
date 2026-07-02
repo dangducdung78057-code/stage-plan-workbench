@@ -2,7 +2,7 @@ import { Package, Loader2 } from "lucide-react";
 
 export function FullPageLoader({ label = "正在恢复会话…" }: { label?: string }) {
   return (
-    <div className="min-h-screen bg-background text-foreground grid place-items-center p-6">
+    <div className="min-h-dvh bg-background text-foreground grid place-items-center p-6">
       <div className="flex flex-col items-center gap-3">
         <div className="h-10 w-10 rounded bg-primary grid place-items-center text-primary-foreground">
           <Package className="h-5 w-5" />

@@ -67,7 +67,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     toast.success("已退出登录");
   }
   return (
-    <div className="min-h-screen flex bg-background text-foreground w-full">
+    <div className="min-h-dvh flex bg-background text-foreground w-full">
       <aside className="hidden md:flex md:w-56 shrink-0 border-r border-sidebar-border flex-col">
         <SidebarInner />
       </aside>
