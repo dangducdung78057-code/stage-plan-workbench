@@ -163,21 +163,21 @@ export function HealthCheck() {
 
     // 11. PDF 导出：flag off 时 skip；开启时必须 HTML 校验通过且生成非空 blob
     if (!getFlag("pdfExport")) {
-      push({ id: "pdf", label: "PDF 导出（真实下载）", status: "skip", detail: "flag off" });
+      push({ id: "pdf", label: "PDF 导出（实验版）", status: "skip", detail: "flag off" });
     } else if (!validatePrintableHtml(sampleHtml)) {
-      push({ id: "pdf", label: "PDF 导出（真实下载）", status: "fail", detail: "printable html invalid" });
+      push({ id: "pdf", label: "PDF 导出（实验版）", status: "fail", detail: "printable html invalid" });
     } else {
       try {
         const { result, ms } = await timed(async () => await renderPdfBlob(sampleHtml));
         push({
           id: "pdf",
-          label: "PDF 导出（真实下载）",
+          label: "PDF 导出（实验版）",
           status: result && result.size > 1024 ? "pass" : "fail",
           detail: `bytes=${result?.size ?? 0}`,
           ms,
         });
       } catch (e: any) {
-        push({ id: "pdf", label: "PDF 导出（真实下载）", status: "fail", detail: e?.message });
+        push({ id: "pdf", label: "PDF 导出（实验版）", status: "fail", detail: e?.message });
       }
     }
 

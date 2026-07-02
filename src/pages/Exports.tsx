@@ -141,7 +141,7 @@ export default function Exports() {
         filenameTitle: fn.replace(/\.pdf$/, ""),
       });
       if (!validatePrintableHtml(html)) {
-        toast.error("PDF 渲染失败：导出内容为空，请先下载 Markdown。");
+        toast.error("PDF 导出暂未完成，请先下载 Markdown 或 PNG。");
         return;
       }
       const blob = await renderPdfBlob(html);
@@ -151,14 +151,15 @@ export default function Exports() {
       a.href = url; a.download = fn;
       document.body.appendChild(a); a.click(); a.remove();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
-      toast.success("PDF 已生成并下载");
+      toast.success("PDF 已生成并下载（实验版）");
       await maybeUploadToStorage(row, "pdf", blob, "application/pdf");
     } catch (e: any) {
       console.error(e);
-      if (String(e?.message ?? "").includes("PRINTABLE_HTML_INVALID") || String(e?.message ?? "").includes("PDF_EMPTY_CONTENT")) {
-        toast.error("PDF 渲染失败：导出内容为空，请先下载 Markdown。");
+      const msg = String(e?.message ?? "");
+      if (/PRINTABLE_HTML_INVALID|PDF_EMPTY_CONTENT|PDF_BLANK_PIXELS|PDF_RASTERIZE_FAILED|PNG_/.test(msg)) {
+        toast.error("PDF 导出暂未完成，请先下载 Markdown 或 PNG。", { description: msg });
       } else {
-        toast.error("PDF 生成失败，请改用 Markdown 或稍后重试");
+        toast.error("PDF 导出暂未完成，请先下载 Markdown 或 PNG。", { description: msg || "未知错误" });
       }
     } finally {
       setBusy(null);
@@ -250,7 +251,7 @@ export default function Exports() {
           </p>
         )}
         {showPdf && (
-          <p className="text-xs text-muted-foreground mt-1">PDF 采用 html2pdf 光栅化渲染，中文原样输出。</p>
+          <p className="text-xs text-muted-foreground mt-1">PDF 实验版：基于 PNG 光栅化嵌入 A4，若渲染结果为空白将被拦截，推荐使用 Markdown 或 PNG。</p>
         )}
         {showPng && (
           <p className="text-xs text-muted-foreground mt-1">PNG 长图采用 html-to-image 光栅化，适合分享。</p>
@@ -298,7 +299,7 @@ export default function Exports() {
                       <Button variant="outline" size="sm" disabled={busy === r.id + ":pdf"} onClick={() => handlePdf(r)}>
                         {busy === r.id + ":pdf"
                           ? <><Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />生成中…</>
-                          : <><FileText className="h-3.5 w-3.5 mr-1" />PDF</>}
+                          : <><FileText className="h-3.5 w-3.5 mr-1" />PDF 实验版</>}
                       </Button>
                     )}
                     {showPng && (
@@ -336,7 +337,7 @@ export default function Exports() {
                     <Button variant="outline" size="sm" className="w-full justify-center" disabled={busy === r.id + ":pdf"} onClick={() => handlePdf(r)}>
                       {busy === r.id + ":pdf"
                         ? <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />生成中…</>
-                        : <><FileText className="h-3.5 w-3.5 mr-1.5" />下载 PDF</>}
+                        : <><FileText className="h-3.5 w-3.5 mr-1.5" />PDF 实验版</>}
                     </Button>
                   )}
                   {showPng && (
