@@ -126,7 +126,13 @@ export default function Workspace() {
             </span>
           </button>
         </DialogTrigger>
-        <DialogContent className="max-w-lg">
+        <DialogContent
+          className="max-w-lg"
+          onOpenAutoFocus={(e) => {
+            e.preventDefault();
+            itemRefs.current[0]?.focus();
+          }}
+        >
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Presentation className="h-4 w-4 text-primary" /> StageOS 项目总览 · 幻灯片导读
