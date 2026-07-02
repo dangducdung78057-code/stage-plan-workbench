@@ -831,11 +831,11 @@ export function HealthCheck() {
               ] as const).map(([k, a, b]) => {
                 const diff = String(a) !== String(b);
                 return (
-                  <>
-                    <div key={`${k}-k`} className="text-muted-foreground">{k}</div>
-                    <div key={`${k}-a`} className={diff ? "text-warning" : ""}>{String(a)}</div>
-                    <div key={`${k}-b`} className={diff ? "text-warning" : ""}>{String(b)}</div>
-                  </>
+                  <Fragment key={k}>
+                    <div className="text-muted-foreground">{k}</div>
+                    <div className={diff ? "text-warning" : ""}>{String(a)}</div>
+                    <div className={diff ? "text-warning" : ""}>{String(b)}</div>
+                  </Fragment>
                 );
               })}
             </div>
