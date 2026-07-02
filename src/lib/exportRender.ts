@@ -255,6 +255,9 @@ export function renderMarkdown(
       "## 隐私声明摘要",
       "",
       "本文件仅包含匿名 studentId、性别、身高、可选角色标签；不含真实姓名或联系方式。",
+      "",
+      "---",
+      `<sub>${watermarkLine()}</sub>`,
     ].join("\n");
     return localizeEnumsInText(out);
   }
