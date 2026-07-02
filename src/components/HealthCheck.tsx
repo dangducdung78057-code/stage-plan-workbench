@@ -10,7 +10,7 @@ import { renderMarkdown, renderPrintableHtml, renderPdfBlob, renderPngBlob, vali
 import { CheckCircle2, XCircle, Loader2, AlertTriangle, Copy, Download as DownloadIcon, History } from "lucide-react";
 import { toast } from "sonner";
 
-const STABLE_BASELINE = "stageos-v3.4-pdf-tri-state-pass";
+const STABLE_BASELINE = "stageos-v3.5-audit-layer-pass";
 
 type Status = "pass" | "fail" | "warn" | "skip";
 type Check = { id: string; label: string; status: Status; detail?: string; ms?: number };
@@ -23,6 +23,8 @@ type RunRow = {
   fail_count: number;
   skip_count: number;
   created_at: string;
+  is_release?: boolean | null;
+  release_note?: string | null;
 };
 
 async function timed<T>(fn: () => Promise<T>): Promise<{ result: T; ms: number }> {
