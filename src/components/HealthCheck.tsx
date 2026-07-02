@@ -675,8 +675,12 @@ export function HealthCheck() {
     }
     if (freeze) {
       lines.push("");
-      lines.push(`Release Freeze: ${freeze.status}  (gate=${freeze.gate}, rule ${freeze.rule})`);
-      lines.push(`  persisted: ${freeze.persisted}${freeze.id ? ` · id=${freeze.id}` : ""}${freeze.error ? ` · error=${freeze.error}` : ""}`);
+      lines.push(`Release Freeze: ${freeze.status}`);
+      lines.push(`  gate: ${freeze.gate}  [rule ${freeze.rule}]`);
+      lines.push(`  reason: ${freeze.reason}`);
+      lines.push(`  freeze_id: ${freeze.id ?? "(none)"}`);
+      lines.push(`  run_id: ${lastRunId ?? "(pending)"}`);
+      lines.push(`  stored: ${freeze.persisted}${freeze.error ? ` (error: ${freeze.error})` : ""}`);
     }
     if (snapshot && !snapshot.error && snapshot.rows.length > 0) {
       const c = snapshot.counts;
