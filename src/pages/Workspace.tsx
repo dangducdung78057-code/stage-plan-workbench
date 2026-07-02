@@ -3,9 +3,32 @@ import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { PROJECT_STATUSES } from "@/lib/stageos";
 import { Plus, ArrowRight, Package, AlertTriangle, CheckCircle2, FileDown, Presentation, Download } from "lucide-react";
 import { MobileCard, MobileCardList, MobileField } from "@/components/MobileCard";
+
+const SLIDE_OUTLINE: { title: string; desc: string }[] = [
+  { title: "封面 · StageOS 项目总览", desc: "能力驱动而非版本驱动的治理理念" },
+  { title: "能力分层 L0/L1/L2", desc: "生产 / 有限 / 实验 三档成熟度定义" },
+  { title: "当前能力矩阵", desc: "AI · Markdown · PNG · PDF · 采购各自所处层级" },
+  { title: "Release Gate G0–G3", desc: "从原型到生产的四道闸门与放行条件" },
+  { title: "一键验收模型", desc: "PASS / WARN / FAIL / SKIP 的唯一状态语义" },
+  { title: "近期流程强化", desc: "确认前强校验 · 解密预览 · 字段跳转闭环" },
+  { title: "Webhook 契约", desc: "outbound-only · 失败不阻塞主流程" },
+  { title: "AI Gateway 与采购回退", desc: "统一网关 · 本地/HTTP 采购 fallback" },
+  { title: "强约束清单", desc: "禁止跨层升级 · 禁止隐藏 FAIL · 禁止版本驱动" },
+  { title: "落地节奏", desc: "以能力层 + Gate 组织路线图" },
+];
+
 
 type Row = {
   id: string;
