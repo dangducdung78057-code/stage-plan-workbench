@@ -639,7 +639,7 @@ function scheduleTable(rows: any[]) {
 
 function searchTable(rows: any[]) {
   if (!Array.isArray(rows) || rows.length === 0) {
-    return `<p>暂无采购搜索建议，需人工检索与核验。</p>`;
+    return `<p>${SEARCH_EMPTY_MSG}</p>`;
   }
   return `<table><thead><tr><th>平台</th><th>关键词</th><th>链接/备注</th></tr></thead><tbody>${rows.map((r) => {
     if (typeof r === "string") return `<tr><td>—</td><td>${escapeHtml(r)}</td><td>人工核验</td></tr>`;
