@@ -377,7 +377,7 @@ export function HealthCheck() {
           } else {
             push({
               id: "procurementProvider",
-              label: "采购 provider (http)",
+              label: r.providerId === "http-mock" ? "采购 provider (http-mock)" : "采购 provider (http)",
               status: r.candidates.length > 0 ? "pass" : "warn",
               detail: base,
             });
@@ -385,7 +385,7 @@ export function HealthCheck() {
         }
       } catch (e: any) {
         // 抽象层理论上不抛，兜底 warn
-        push({ id: "procurementProvider", label: "采购 provider (v3.1 抽象层)", status: "warn", detail: `provider 异常: ${e?.message ?? "unknown"}` });
+        push({ id: "procurementProvider", label: "采购 provider (v3.2 抽象层)", status: "warn", detail: `provider 异常: ${e?.message ?? "unknown"}` });
       }
     }
     // 暴露给 summary 文本使用
