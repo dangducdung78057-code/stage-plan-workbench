@@ -243,18 +243,33 @@ export type Database = {
           api_base_url: string | null
           api_mode: string
           id: string
+          procurement_api_base_url: string | null
+          procurement_candidates_enabled: boolean
+          procurement_export_attachment_enabled: boolean
+          procurement_provider: string
+          procurement_provider_enabled: boolean
           updated_at: string
         }
         Insert: {
           api_base_url?: string | null
           api_mode?: string
           id: string
+          procurement_api_base_url?: string | null
+          procurement_candidates_enabled?: boolean
+          procurement_export_attachment_enabled?: boolean
+          procurement_provider?: string
+          procurement_provider_enabled?: boolean
           updated_at?: string
         }
         Update: {
           api_base_url?: string | null
           api_mode?: string
           id?: string
+          procurement_api_base_url?: string | null
+          procurement_candidates_enabled?: boolean
+          procurement_export_attachment_enabled?: boolean
+          procurement_provider?: string
+          procurement_provider_enabled?: boolean
           updated_at?: string
         }
         Relationships: []
