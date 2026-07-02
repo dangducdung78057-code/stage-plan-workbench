@@ -8,10 +8,12 @@ import { useFlags } from "@/lib/featureFlags";
 import {
   buildFilename,
   renderMarkdown,
+  renderPrintableHtml,
   downloadBlob,
+  downloadPdf,
 } from "@/lib/exportRender";
 import { toast } from "sonner";
-import { FileDown, Eye, Loader2 } from "lucide-react";
+import { FileDown, Eye, Loader2, FileText } from "lucide-react";
 
 type Row = {
   id: string; project_id: string; version: number; format: string;
@@ -77,7 +79,31 @@ export default function Exports() {
     }
   }
 
+  async function handlePdf(row: Row) {
+    setBusy(row.id + ":pdf");
+    try {
+      if (!(await guard(row))) return;
+      const title = projectTitles[row.project_id];
+      const createdAt = new Date(row.created_at).toLocaleString("zh-CN", { hour12: false });
+      const fn = buildFilename("pdf", title, row.version, row.project_id);
+      const html = renderPrintableHtml(row.payload, row.format, {
+        projectTitle: title,
+        version: row.version,
+        createdAt,
+        filenameTitle: fn.replace(/\.pdf$/, ""),
+      });
+      await downloadPdf(html, fn);
+      toast.success("PDF 已生成并下载");
+    } catch (e) {
+      console.error(e);
+      toast.error("PDF 生成失败，请改用 Markdown 或稍后重试");
+    } finally {
+      setBusy(null);
+    }
+  }
+
   const showMd = flags.markdownDownload;
+  const showPdf = flags.pdfExport;
 
   return (
     <div className="p-4 md:p-6 space-y-4">
@@ -89,7 +115,9 @@ export default function Exports() {
             在 <span className="font-mono">设置 → 分支能力开关</span> 中开启 Markdown 下载。
           </p>
         )}
-        <p className="text-xs text-muted-foreground mt-1">PDF 导出暂未完成，请先下载 Markdown。</p>
+        {showPdf && (
+          <p className="text-xs text-muted-foreground mt-1">PDF 采用 html2pdf 光栅化渲染，中文原样输出。</p>
+        )}
       </div>
       <div className="panel">
         <div className="panel-header">
@@ -123,6 +151,13 @@ export default function Exports() {
                           : <><FileDown className="h-3.5 w-3.5 mr-1" />MD</>}
                       </Button>
                     )}
+                    {showPdf && (
+                      <Button variant="outline" size="sm" disabled={busy === r.id + ":pdf"} onClick={() => handlePdf(r)}>
+                        {busy === r.id + ":pdf"
+                          ? <><Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />生成中…</>
+                          : <><FileText className="h-3.5 w-3.5 mr-1" />PDF</>}
+                      </Button>
+                    )}
                   </div>
                 </td>
               </tr>
@@ -145,6 +180,13 @@ export default function Exports() {
                       {busy === r.id + ":md"
                         ? <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />生成中…</>
                         : <><FileDown className="h-3.5 w-3.5 mr-1.5" />下载 Markdown</>}
+                    </Button>
+                  )}
+                  {showPdf && (
+                    <Button variant="outline" size="sm" className="w-full justify-center" disabled={busy === r.id + ":pdf"} onClick={() => handlePdf(r)}>
+                      {busy === r.id + ":pdf"
+                        ? <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />生成中…</>
+                        : <><FileText className="h-3.5 w-3.5 mr-1.5" />下载 PDF</>}
                     </Button>
                   )}
                 </div>

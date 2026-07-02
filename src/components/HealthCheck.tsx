@@ -138,12 +138,12 @@ export function HealthCheck() {
       push({ id: "md", label: "Markdown 导出能力", status: "fail", detail: e?.message });
     }
 
-    // 11. PDF 已明确降级：未启用视为 skip（计划中），意外开启才 warn
+    // 11. PDF 导出：已启用 html2pdf 光栅化真实下载
     push({
       id: "pdf",
-      label: "PDF 导出（已降级 / 计划中）",
-      status: getFlag("pdfExport") === false ? "skip" : "warn",
-      detail: getFlag("pdfExport") ? "flag 意外开启" : "planned / disabled — 不计入失败",
+      label: "PDF 导出（真实下载）",
+      status: getFlag("pdfExport") ? "pass" : "skip",
+      detail: getFlag("pdfExport") ? "html2pdf.js 光栅化 · 中文原样输出" : "flag off",
     });
 
     setRunning(false);
