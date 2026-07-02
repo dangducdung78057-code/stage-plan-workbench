@@ -31,6 +31,12 @@ type Row = {
   payload: unknown; snapshot_id: string | null; created_at: string;
 };
 
+function latestFileFirst(a: StorageFileEntry, b: StorageFileEntry) {
+  const at = a.updatedAt ?? a.createdAt ?? a.name;
+  const bt = b.updatedAt ?? b.createdAt ?? b.name;
+  return bt.localeCompare(at);
+}
+
 function payloadSize(payload: unknown) {
   if (typeof payload === "string") return payload.length;
   if (payload == null) return 0;
@@ -65,7 +71,7 @@ export default function Exports() {
     setFilesLoading(true);
     try {
       const f = await listMyExportFiles(user.id);
-      setFiles(f);
+      setFiles([...f].sort(latestFileFirst));
     } catch (e: any) {
       console.error(e);
       toast.error(`Storage 列表失败：${e?.message ?? "unknown"}`);
@@ -137,7 +143,7 @@ export default function Exports() {
       const { data } = await supabase.storage.from("stageos-exports").list(prefix, { limit: 100 });
       const stale = (data ?? [])
         .filter((f: any) => f?.id && typeof f.name === "string")
-        .filter((f: any) => f.name.endsWith(`.${ext}`) && f.name.includes(`-${row.id}`))
+        .filter((f: any) => f.name.endsWith(`.${ext}`) && (ext === "md" || f.name.includes(`-${row.id}`)))
         .map((f: any) => `${prefix}/${f.name}`);
       if (stale.length) {
         await supabase.storage.from("stageos-exports").remove(stale);
@@ -151,11 +157,13 @@ export default function Exports() {
     if (!storageOn || !user?.id) return;
     try {
       await purgeStaleReplicas(row, ext);
+      const timestamp = Date.now();
       const path = buildStoragePath({
         userId: user.id, projectId: row.project_id, exportId: row.id, version: row.version, ext,
-        timestamp: Date.now(),
+        timestamp,
       });
       await uploadExportFile({ path, data: blob, contentType });
+      console.info("[StageOS Storage Debug] uploaded.path", path);
       toast.success(`已同步到 Storage · ${ext.toUpperCase()}`);
       await refreshFiles();
     } catch (e: any) {
@@ -193,7 +201,24 @@ export default function Exports() {
       setTimeout(() => URL.revokeObjectURL(url), 1000);
       toast.success("Markdown 已开始下载");
 
-      await maybeUploadToStorage(row, "md", utf8Blob, "text/markdown;charset=utf-8");
+      const { data: userData } = await supabase.auth.getUser();
+      const { data: freshRecord, error: insertError } = await supabase
+        .from("export_records")
+        .insert({
+          project_id: row.project_id,
+          user_id: userData.user?.id,
+          snapshot_id: row.snapshot_id,
+          version: row.version,
+          format: "markdown",
+          payload: JSON.stringify(source.payload),
+        } as any)
+        .select("*")
+        .single();
+      if (insertError) throw insertError;
+      const freshRow = freshRecord as Row;
+      setRows((prev) => [freshRow, ...prev.filter((item) => item.id !== freshRow.id)]);
+      console.info("[StageOS Storage Debug] fresh.export_id", freshRow.id);
+      await maybeUploadToStorage(freshRow, "md", utf8Blob, "text/markdown;charset=utf-8");
     } catch (e) {
       console.error(e);
       toast.error("下载失败，请稍后重试");
@@ -299,8 +324,18 @@ export default function Exports() {
     }
   }
 
-  async function copySignedUrl(path: string) {
+  async function copySignedUrl(file: StorageFileEntry) {
     try {
+      let path = file.path;
+      if (file.name.endsWith(".md") && user?.id) {
+        const parts = file.path.split("/");
+        const projectId = parts[1];
+        const freshFiles = (await listMyExportFiles(user.id)).sort(latestFileFirst);
+        const latestMd = freshFiles.find((candidate) => candidate.path.startsWith(`${user.id}/${projectId}/`) && candidate.name.endsWith(".md"));
+        path = latestMd?.path ?? path;
+        setFiles(freshFiles);
+      }
+      console.info("[StageOS Storage Debug] signed.path", path);
       const url = await getSignedUrl(path, 3600);
       await navigator.clipboard.writeText(url);
       toast.success("签名链接已复制（1 小时内有效）");
@@ -314,7 +349,7 @@ export default function Exports() {
     try {
       await deleteExportFile(path);
       toast.success("已删除");
-      refreshFiles();
+      await refreshFiles();
     } catch (e: any) {
       toast.error(`删除失败：${e?.message ?? "unknown"}`);
     }
@@ -478,7 +513,7 @@ export default function Exports() {
                       </div>
                     </div>
                     <div className="flex gap-1 shrink-0">
-                      <Button variant="outline" size="sm" onClick={() => copySignedUrl(f.path)}>
+                      <Button variant="outline" size="sm" onClick={() => copySignedUrl(f)}>
                         <Link2 className="h-3.5 w-3.5 mr-1" />复制链接
                       </Button>
                       <Button variant="ghost" size="sm" onClick={() => removeFile(f.path)}>
