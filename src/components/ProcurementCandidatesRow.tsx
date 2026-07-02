@@ -1,15 +1,36 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ChevronDown, ChevronRight, ExternalLink, ShoppingBag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ToneBadge } from "@/components/StatusBadge";
-import { matchCandidates, type PlanItem, type MatchContext } from "@/lib/procurementMatch";
-import { PLATFORM_LABELS } from "@/lib/procurementCatalog";
+import { type PlanItem, type MatchContext } from "@/lib/procurementMatch";
+import { PLATFORM_LABELS, type Candidate } from "@/lib/procurementCatalog";
+import { searchWithFallback, type ProcurementProviderId } from "@/lib/procurementProvider";
 
 export function ProcurementCandidatesToggle({
   item, ctx,
 }: { item: PlanItem; ctx: MatchContext }) {
   const [open, setOpen] = useState(false);
-  const candidates = open ? matchCandidates(item, ctx) : [];
+  const [loading, setLoading] = useState(false);
+  const [candidates, setCandidates] = useState<Candidate[]>([]);
+  const [providerId, setProviderId] = useState<ProcurementProviderId>("local");
+  const [usedFallback, setUsedFallback] = useState(false);
+  const [warning, setWarning] = useState<string | undefined>();
+
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    setLoading(true);
+    searchWithFallback(item, ctx).then((r) => {
+      if (cancelled) return;
+      setCandidates(r.candidates);
+      setProviderId(r.providerId);
+      setUsedFallback(r.usedFallback);
+      setWarning(r.warning);
+      setLoading(false);
+    });
+    return () => { cancelled = true; };
+  }, [open]);
+
   return (
     <>
       <Button
@@ -25,6 +46,17 @@ export function ProcurementCandidatesToggle({
       </Button>
       {open && (
         <div className="mt-2 space-y-2 rounded-md border border-dashed border-border bg-muted/30 p-2">
+          <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+            <span>来源</span>
+            <ToneBadge tone={providerId === "http" ? "info" : "success"}>
+              {providerId === "http" ? "HTTP" : "本地目录"}
+            </ToneBadge>
+            {usedFallback && <ToneBadge tone="warning">已回退</ToneBadge>}
+            {loading && <span>加载中…</span>}
+          </div>
+          {warning && (
+            <div className="text-[11px] text-amber-600 dark:text-amber-400">{warning}</div>
+          )}
           {candidates.map((c, i) => (
             <div key={i} className="rounded border border-border bg-background p-2 text-xs">
               <div className="flex items-center justify-between gap-2">
@@ -63,7 +95,7 @@ export function ProcurementDisclaimer() {
       <div className="panel-body flex items-start gap-2 text-xs">
         <ShoppingBag className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
         <div className="text-muted-foreground">
-          <strong className="text-foreground">采购候选 v1 · 只读</strong>：候选商品为模拟/检索建议，非实时库存价格，需人工核验。不自动下单、不承诺库存或价格。
+          <strong className="text-foreground">采购候选 v3.0 · 只读</strong>：候选商品为模拟/检索建议，非实时库存价格，需人工核验。不自动下单、不承诺库存或价格。
         </div>
       </div>
     </div>
