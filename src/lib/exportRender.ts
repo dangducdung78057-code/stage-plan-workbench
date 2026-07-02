@@ -587,24 +587,30 @@ export async function renderPngBlob(html: string, opts?: { widthPx?: number; pix
   try {
     const { height } = await waitForRenderableHost(host, 100);
 
-    const blob: Blob | null = await toBlob(host, {
-      backgroundColor: "#ffffff",
-      width,
-      height,
-      pixelRatio: opts?.pixelRatio ?? 2,
-      cacheBust: true,
-      style: {
-        position: "relative",
-        left: "0",
-        top: "0",
-        right: "auto",
-        bottom: "auto",
-        transform: "none",
-        zIndex: "0",
-      },
-    });
-    if (!blob || blob.size < MIN_RENDER_BLOB_SIZE) throw new Error("PNG_EMPTY_CONTENT");
-    if (!(await pngHasVisibleInk(blob))) throw new Error("PNG_EMPTY_CONTENT");
+    let blob: Blob | null = null;
+    try {
+      blob = await toBlob(host, {
+        backgroundColor: "#ffffff",
+        width,
+        height,
+        pixelRatio: opts?.pixelRatio ?? 2,
+        cacheBust: true,
+        style: {
+          position: "relative",
+          left: "0",
+          top: "0",
+          right: "auto",
+          bottom: "auto",
+          transform: "none",
+          zIndex: "0",
+        },
+      });
+    } catch (e: any) {
+      throw new Error("PNG_RASTERIZE_FAILED:" + (e?.message || "toBlob threw"));
+    }
+    if (!blob) throw new Error("PNG_RASTERIZE_FAILED:toBlob returned null");
+    if (blob.size < MIN_RENDER_BLOB_SIZE) throw new Error("PNG_BLOB_TOO_SMALL:" + blob.size + "B");
+    if (!(await pngHasVisibleInk(blob))) throw new Error("PNG_BLANK_PIXELS:no visible ink detected");
     return blob;
   } finally {
     try { host.remove(); } catch { /* noop */ }
@@ -612,8 +618,9 @@ export async function renderPngBlob(html: string, opts?: { widthPx?: number; pix
 }
 
 async function waitForRenderableHost(host: HTMLElement, minTextLength: number) {
+  let fontsReady = true;
   if ((document as any).fonts?.ready) {
-    try { await (document as any).fonts.ready; } catch { /* noop */ }
+    try { await (document as any).fonts.ready; } catch { fontsReady = false; }
   }
   await new Promise((r) => requestAnimationFrame(() => r(null)));
   await new Promise((r) => requestAnimationFrame(() => r(null)));
@@ -621,8 +628,14 @@ async function waitForRenderableHost(host: HTMLElement, minTextLength: number) {
   const width = host.offsetWidth;
   const height = host.scrollHeight;
   const textLength = (host.innerText || "").trim().length;
-  if (!(width > 0) || !(height > 0) || textLength <= minTextLength) {
-    throw new Error("PNG_EMPTY_CONTENT");
+  if (!fontsReady) {
+    throw new Error("PNG_FONTS_NOT_READY:document.fonts.ready rejected");
+  }
+  if (!(width > 0) || !(height > 0)) {
+    throw new Error(`PNG_NODE_SIZE_INVALID:width=${width}px height=${height}px`);
+  }
+  if (textLength <= minTextLength) {
+    throw new Error(`PNG_EMPTY_CONTENT:text length ${textLength} <= ${minTextLength}`);
   }
   return { width, height, textLength };
 }

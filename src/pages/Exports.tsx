@@ -179,11 +179,10 @@ export default function Exports() {
         filenameTitle: fn.replace(/\.png$/, ""),
       });
       if (!validatePrintableHtml(html)) {
-        toast.error("PNG 渲染失败：导出内容为空，请先下载 Markdown。");
+        toast.error("PNG 渲染失败", { description: "printable HTML 校验未通过（内容为空或缺字段），请先下载 Markdown。" });
         return;
       }
       const blob = await renderPngBlob(html);
-      if (!blob || blob.size < 1024) throw new Error("PNG_EMPTY_CONTENT");
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url; a.download = fn;
@@ -193,11 +192,23 @@ export default function Exports() {
       await maybeUploadToStorage(row, "png", blob, "image/png");
     } catch (e: any) {
       console.error(e);
-      if (String(e?.message ?? "").includes("PNG_EMPTY_CONTENT") || String(e?.message ?? "").includes("PRINTABLE_HTML_INVALID")) {
-        toast.error("PNG 渲染失败：导出内容为空，请先下载 Markdown。");
-      } else {
-        toast.error("PNG 生成失败，请改用 Markdown 或稍后重试");
-      }
+      const msg = String(e?.message ?? "");
+      const [code, detail] = msg.split(":");
+      const reasonMap: Record<string, string> = {
+        PRINTABLE_HTML_INVALID: "printable HTML 校验未通过（内容为空或字段缺失）",
+        PNG_FONTS_NOT_READY: "字体未就绪（document.fonts.ready 失败）",
+        PNG_NODE_SIZE_INVALID: "节点尺寸异常（宽/高为 0，可能被样式隐藏）",
+        PNG_EMPTY_CONTENT: "内容为空（渲染后文本长度不足）",
+        PNG_RASTERIZE_FAILED: "html-to-image 光栅化失败",
+        PNG_BLOB_TOO_SMALL: "生成的 PNG 体积过小（疑似空白图）",
+        PNG_BLANK_PIXELS: "像素为纯白（未检测到可见内容）",
+        PNG_LIB_UNAVAILABLE: "html-to-image 未加载",
+        PNG_UNSUPPORTED: "当前环境不支持 PNG 导出",
+      };
+      const reason = reasonMap[code] || "未知错误";
+      const description = detail ? `${reason}｜${detail.trim()}` : reason;
+      toast.error("PNG 生成失败", { description });
+
     } finally {
       setBusy(null);
     }
