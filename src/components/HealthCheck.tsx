@@ -306,6 +306,32 @@ export function HealthCheck() {
   const failed = (summary.fail ?? 0) > 0;
   const done = checks.length > 0 && !running;
 
+  async function copySummary() {
+    const lines: string[] = [];
+    lines.push("StageOS 一键验收摘要");
+    lines.push(`版本标记: ${STAGEOS_VERSION}`);
+    lines.push(`时间: ${startedAt ?? new Date().toLocaleString()}`);
+    lines.push(`登录状态: ${user?.email ?? user?.id ?? "未登录"}`);
+    lines.push("");
+    lines.push("检查项:");
+    for (const c of checks) {
+      lines.push(`- [${c.status.toUpperCase()}] ${c.label}${c.detail ? ` — ${c.detail}` : ""}`);
+    }
+    lines.push("");
+    lines.push(
+      `汇总: pass=${summary.pass ?? 0} warn=${summary.warn ?? 0} fail=${summary.fail ?? 0} skip=${summary.skip ?? 0}`,
+    );
+    const text = lines.join("\n");
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.success("验收摘要已复制到剪贴板");
+    } catch {
+      toast.error("复制失败，请手动选择文本");
+      // eslint-disable-next-line no-console
+      console.log(text);
+    }
+  }
+
   return (
     <div className="panel">
       <div className="panel-header">
