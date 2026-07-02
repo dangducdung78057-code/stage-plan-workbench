@@ -1,9 +1,12 @@
 import { useState } from "react";
 import { NavLink } from "react-router-dom";
-import { LayoutDashboard, FolderKanban, Package, Download, Settings as SettingsIcon, Layers, Menu } from "lucide-react";
+import { LayoutDashboard, FolderKanban, Package, Download, Settings as SettingsIcon, Layers, Menu, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/hooks/useAuth";
+import { toast } from "sonner";
+
 
 const nav = [
   { to: "/", label: "工作台", icon: LayoutDashboard, route: "/workspace" },
@@ -57,6 +60,11 @@ function SidebarInner({ onNavigate }: { onNavigate?: () => void }) {
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
+  const { user, signOut } = useAuth();
+  async function doSignOut() {
+    await signOut();
+    toast.success("已退出登录");
+  }
   return (
     <div className="min-h-screen flex bg-background text-foreground w-full">
       <aside className="hidden md:flex md:w-56 shrink-0 border-r border-sidebar-border flex-col">
@@ -77,12 +85,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <span className="text-muted-foreground hidden sm:inline">StageOS</span>
           <span className="text-muted-foreground hidden sm:inline">/</span>
           <span className="font-medium truncate">运营工作台</span>
-          <div className="ml-auto hidden md:flex items-center gap-2 text-muted-foreground text-xs">
-            <span className="kbd-route">mode: mock</span>
-            <span className="kbd-route">tenant: single</span>
-            <span className="kbd-route">auth: none</span>
+          <div className="ml-auto flex items-center gap-2 text-muted-foreground text-xs">
+            <span className="kbd-route hidden md:inline">mode: mock</span>
+            <span className="kbd-route hidden lg:inline">auth: enabled</span>
+            <span className="hidden sm:inline font-mono truncate max-w-[160px]" title={user?.email ?? ""}>{user?.email}</span>
+            <Button variant="ghost" size="sm" className="h-7 px-2" onClick={doSignOut} title="退出登录">
+              <LogOut className="h-3.5 w-3.5 sm:mr-1" />
+              <span className="hidden sm:inline">退出</span>
+            </Button>
           </div>
-          <span className="kbd-route ml-auto md:hidden">mock</span>
         </header>
         <div className="flex-1 min-h-0 overflow-auto">{children}</div>
       </main>

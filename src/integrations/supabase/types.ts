@@ -23,6 +23,7 @@ export type Database = {
           project_id: string
           snapshot_id: string | null
           status: string
+          user_id: string | null
         }
         Insert: {
           confirmed_at?: string | null
@@ -32,6 +33,7 @@ export type Database = {
           project_id: string
           snapshot_id?: string | null
           status?: string
+          user_id?: string | null
         }
         Update: {
           confirmed_at?: string | null
@@ -41,6 +43,7 @@ export type Database = {
           project_id?: string
           snapshot_id?: string | null
           status?: string
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -67,6 +70,7 @@ export type Database = {
           payload: string
           project_id: string
           snapshot_id: string | null
+          user_id: string | null
           version: number
         }
         Insert: {
@@ -76,6 +80,7 @@ export type Database = {
           payload: string
           project_id: string
           snapshot_id?: string | null
+          user_id?: string | null
           version?: number
         }
         Update: {
@@ -85,6 +90,7 @@ export type Database = {
           payload?: string
           project_id?: string
           snapshot_id?: string | null
+          user_id?: string | null
           version?: number
         }
         Relationships: [
@@ -114,6 +120,7 @@ export type Database = {
           project_id: string
           reverse_schedule: Json
           risks: Json
+          user_id: string | null
           version: number
         }
         Insert: {
@@ -125,6 +132,7 @@ export type Database = {
           project_id: string
           reverse_schedule?: Json
           risks?: Json
+          user_id?: string | null
           version?: number
         }
         Update: {
@@ -136,6 +144,7 @@ export type Database = {
           project_id?: string
           reverse_schedule?: Json
           risks?: Json
+          user_id?: string | null
           version?: number
         }
         Relationships: [
@@ -157,6 +166,7 @@ export type Database = {
           status: string
           title: string
           updated_at: string
+          user_id: string | null
         }
         Insert: {
           created_at?: string
@@ -166,6 +176,7 @@ export type Database = {
           status?: string
           title: string
           updated_at?: string
+          user_id?: string | null
         }
         Update: {
           created_at?: string
@@ -175,6 +186,7 @@ export type Database = {
           status?: string
           title?: string
           updated_at?: string
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -204,16 +216,19 @@ export type Database = {
           data: Json
           project_id: string
           updated_at: string
+          user_id: string | null
         }
         Insert: {
           data?: Json
           project_id: string
           updated_at?: string
+          user_id?: string | null
         }
         Update: {
           data?: Json
           project_id?: string
           updated_at?: string
+          user_id?: string | null
         }
         Relationships: [
           {

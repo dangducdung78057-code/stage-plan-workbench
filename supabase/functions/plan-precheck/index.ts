@@ -50,25 +50,39 @@ Deno.serve(async (req) => {
       return reject("BAD_REQUEST", "projectId 必填。", 400);
     }
 
-    const supabase = createClient(
+    // 1) Auth check: require Bearer JWT and validate the caller.
+    const authHeader = req.headers.get("Authorization") ?? "";
+    if (!authHeader.startsWith("Bearer ")) {
+      return reject("UNAUTHORIZED", "请先登录后再生成排产。", 401);
+    }
+    const jwt = authHeader.slice("Bearer ".length);
+
+    const anon = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_ANON_KEY")!,
+    );
+    const { data: userData, error: uErr } = await anon.auth.getUser(jwt);
+    if (uErr || !userData?.user) {
+      return reject("UNAUTHORIZED", "登录已失效，请重新登录。", 401);
+    }
+    const uid = userData.user.id;
+
+    // Service-role client to read data while enforcing ownership manually.
+    const svc = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
-    // 1) Auth check. V1 has no authentication; stub as system principal.
-    const principal = { id: "system", authenticated: true };
-    if (!principal.authenticated) {
-      return reject("UNAUTHORIZED", "请先登录后再生成排产。", 401);
+    // 2) Permission check: project must exist and belong to the caller.
+    const { data: project, error: pErr } = await svc
+      .from("projects").select("id, user_id").eq("id", projectId).maybeSingle();
+    if (pErr) throw pErr;
+    if (!project || project.user_id !== uid) {
+      return reject("FORBIDDEN", "无权访问该项目。", 403);
     }
 
-    // 2) Permission check (V1: single-tenant, always allowed if project exists).
-    const { data: project, error: pErr } = await supabase
-      .from("projects").select("id, title").eq("id", projectId).maybeSingle();
-    if (pErr) throw pErr;
-    if (!project) return reject("FORBIDDEN", "无权访问该项目。", 403);
-
     // 3) Privacy / user confirmation gate.
-    const { data: confirmed, error: cErr } = await supabase
+    const { data: confirmed, error: cErr } = await svc
       .from("confirmation_records")
       .select("id, status, confirmed_at")
       .eq("project_id", projectId)
@@ -85,7 +99,7 @@ Deno.serve(async (req) => {
     }
 
     // 4) Data validation (only after confirmation passes).
-    const { data: si, error: siErr } = await supabase
+    const { data: si, error: siErr } = await svc
       .from("stage_inputs").select("data").eq("project_id", projectId).maybeSingle();
     if (siErr) throw siErr;
     const issues = validateStageInput((si?.data ?? {}) as StageInputData);
@@ -100,7 +114,6 @@ Deno.serve(async (req) => {
 
     return jsonResponse({ ok: true });
   } catch (e) {
-    // System errors keep a non-2xx status so client can treat them differently.
     return jsonResponse(
       { ok: false, code: "INTERNAL", message: (e as Error).message ?? "internal error" },
       500,
