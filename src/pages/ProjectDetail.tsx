@@ -112,6 +112,9 @@ export default function ProjectDetail() {
       const fresh = (siRow?.data ?? input ?? {}) as StageInputData;
       const { errors, warnings } = validateStageInputDetailed(fresh);
       setConfirmPreview({ errors, warnings, checkedAt: new Date().toISOString(), snapshot: fresh });
+      const delta = errors.length + warnings.length;
+      if (delta === 0) toast.success("校验已通过,可继续确认。");
+      else toast.info(`重新校验:${errors.length} 错误 / ${warnings.length} 提示`);
       // 清掉 query 参数,避免刷新反复弹出。
       params.delete("confirm");
       const qs = params.toString();

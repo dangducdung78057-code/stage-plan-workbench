@@ -19,6 +19,7 @@ import Exports from "./pages/Exports";
 import SettingsPage from "./pages/Settings";
 import AuthPage from "./pages/Auth";
 import NotFound from "./pages/NotFound";
+import ScrollToTop from "./components/ScrollToTop";
 
 const queryClient = new QueryClient();
 
@@ -32,6 +33,7 @@ const App = () => (
           <RootErrorBoundary>
             <AuthProvider>
               <RouteHead />
+              <ScrollToTop />
               <Routes>
                 <Route path="/auth" element={<AuthPage />} />
                 <Route path="/index" element={<Navigate to="/" replace />} />

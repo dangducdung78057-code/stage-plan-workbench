@@ -37,6 +37,14 @@ export default function ProjectEditor() {
     })();
   }, [id]);
 
+  // 从确认弹窗跳转过来时,给一次性引导 toast。
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("from") !== "confirm") return;
+    toast.info("已定位到问题字段,修正后点右上「返回确认」重新校验。", { duration: 4000 });
+  }, []);
+
   const { errors, warnings } = validateStageInputDetailed(data);
 
   // 字段级联动提示:关键词配置集中在 @/lib/validationHintKeywords。
