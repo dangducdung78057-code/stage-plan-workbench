@@ -141,7 +141,7 @@ export default function Exports() {
         filenameTitle: fn.replace(/\.pdf$/, ""),
       });
       if (!validatePrintableHtml(html)) {
-        toast.error("PDF 渲染失败：导出内容为空，请先下载 Markdown。");
+        toast.error("PDF 导出暂未完成，请先下载 Markdown 或 PNG。");
         return;
       }
       const blob = await renderPdfBlob(html);
@@ -151,14 +151,15 @@ export default function Exports() {
       a.href = url; a.download = fn;
       document.body.appendChild(a); a.click(); a.remove();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
-      toast.success("PDF 已生成并下载");
+      toast.success("PDF 已生成并下载（实验版）");
       await maybeUploadToStorage(row, "pdf", blob, "application/pdf");
     } catch (e: any) {
       console.error(e);
-      if (String(e?.message ?? "").includes("PRINTABLE_HTML_INVALID") || String(e?.message ?? "").includes("PDF_EMPTY_CONTENT")) {
-        toast.error("PDF 渲染失败：导出内容为空，请先下载 Markdown。");
+      const msg = String(e?.message ?? "");
+      if (/PRINTABLE_HTML_INVALID|PDF_EMPTY_CONTENT|PDF_BLANK_PIXELS|PDF_RASTERIZE_FAILED|PNG_/.test(msg)) {
+        toast.error("PDF 导出暂未完成，请先下载 Markdown 或 PNG。", { description: msg });
       } else {
-        toast.error("PDF 生成失败，请改用 Markdown 或稍后重试");
+        toast.error("PDF 导出暂未完成，请先下载 Markdown 或 PNG。", { description: msg || "未知错误" });
       }
     } finally {
       setBusy(null);
