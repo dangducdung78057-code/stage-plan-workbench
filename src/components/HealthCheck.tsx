@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ToneBadge } from "@/components/StatusBadge";
 import { supabase } from "@/integrations/supabase/client";
@@ -6,11 +6,23 @@ import { useAuth } from "@/hooks/useAuth";
 import { STAGEOS_VERSION } from "@/lib/stageos";
 import { getFlag } from "@/lib/featureFlags";
 import { renderMarkdown, renderPrintableHtml, renderPdfBlob, renderPngBlob, validatePrintableHtml, validatePrintableContent } from "@/lib/exportRender";
-import { CheckCircle2, XCircle, Loader2, AlertTriangle, Copy } from "lucide-react";
+import { CheckCircle2, XCircle, Loader2, AlertTriangle, Copy, Download as DownloadIcon, History } from "lucide-react";
 import { toast } from "sonner";
+
+const STABLE_BASELINE = "stageos-v2.6-acceptance-suite-pass";
 
 type Status = "pass" | "fail" | "warn" | "skip";
 type Check = { id: string; label: string; status: Status; detail?: string; ms?: number };
+type RunRow = {
+  id: string;
+  baseline: string;
+  route: string | null;
+  pass_count: number;
+  warn_count: number;
+  fail_count: number;
+  skip_count: number;
+  created_at: string;
+};
 
 async function timed<T>(fn: () => Promise<T>): Promise<{ result: T; ms: number }> {
   const t0 = performance.now();
@@ -23,6 +35,18 @@ export function HealthCheck() {
   const [running, setRunning] = useState(false);
   const [checks, setChecks] = useState<Check[]>([]);
   const [startedAt, setStartedAt] = useState<string | null>(null);
+  const [recent, setRecent] = useState<RunRow[]>([]);
+
+  async function loadRecent() {
+    if (!user?.id) { setRecent([]); return; }
+    const { data } = await supabase
+      .from("health_check_runs")
+      .select("id,baseline,route,pass_count,warn_count,fail_count,skip_count,created_at")
+      .order("created_at", { ascending: false })
+      .limit(10);
+    setRecent((data ?? []) as RunRow[]);
+  }
+  useEffect(() => { void loadRecent(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [user?.id]);
 
   async function run() {
     setRunning(true);
@@ -35,7 +59,7 @@ export function HealthCheck() {
     push({
       id: "version",
       label: "版本标记 (STAGEOS_VERSION)",
-      status: STAGEOS_VERSION === "stageos-v2.2-export-suite-pass" ? "pass" : "warn",
+      status: STAGEOS_VERSION === STABLE_BASELINE ? "pass" : "warn",
       detail: STAGEOS_VERSION,
     });
 
