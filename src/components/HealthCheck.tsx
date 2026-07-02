@@ -242,17 +242,17 @@ export function HealthCheck() {
     } else {
       try {
         const { result, ms } = await timed(async () => await (
-          supabase.functions.invoke("ai-generate-plan", { body: { projectId: "__healthcheck__" } }))
+          supabase.functions.invoke("ai-generate-plan", { body: { healthcheck: true } }))
         );
         const data: any = result.data;
         const code: string | undefined = data?.code;
-        const reachableCodes = new Set(["UNAUTHORIZED", "FORBIDDEN", "CONFIRMATION_REQUIRED", "VALIDATION_REQUIRED", "BAD_REQUEST"]);
-        if (code && reachableCodes.has(code)) {
+        const reachableCodes = new Set(["AI_HEALTHCHECK_OK", "UNAUTHORIZED", "FORBIDDEN", "CONFIRMATION_REQUIRED", "VALIDATION_REQUIRED", "BAD_REQUEST"]);
+        if (code === "AI_HEALTHCHECK_OK" || data?.ok === true) {
+          push({ id: "ai", label: "AI provider (ai-generate-plan)", status: "pass", detail: code ? `可达 (${code})` : "AI 可达", ms });
+        } else if (code && reachableCodes.has(code)) {
           push({ id: "ai", label: "AI provider (ai-generate-plan)", status: "pass", detail: `可达 (业务拒绝: ${code})`, ms });
         } else if (code && code.startsWith("AI_")) {
           push({ id: "ai", label: "AI provider (ai-generate-plan)", status: "warn", detail: `AI 不可用，将 fallback mock (${code})`, ms });
-        } else if (data?.ok) {
-          push({ id: "ai", label: "AI provider (ai-generate-plan)", status: "pass", detail: "AI 可达", ms });
         } else if (result.error) {
           push({ id: "ai", label: "AI provider (ai-generate-plan)", status: "warn", detail: `边缘函数异常，将 fallback mock (${String(result.error.message ?? "").slice(0, 80)})`, ms });
         } else {
