@@ -16,17 +16,50 @@ import { generateMockPlan } from "@/lib/mockPlan";
 import { toast } from "sonner";
 import {
   ArrowLeft, ArrowRight, Check, AlertTriangle, Plus, Trash2, Wand2, CheckCircle2, Circle,
-  Save, RotateCcw,
+  Save, RotateCcw, FolderOpen, Copy, FilePlus2, Pencil,
 } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
-const DRAFT_KEY = "stageos:wizard:draft:v1";
+const LEGACY_KEY = "stageos:wizard:draft:v1";
+const DRAFTS_KEY = "stageos:wizard:drafts:v2";
+const ACTIVE_KEY = "stageos:wizard:active:v2";
 
 type WizardDraft = {
+  id: string;
+  name: string;
   step: number;
   title: string;
   data: StageInputData;
   savedAt: string;
 };
+
+function loadDrafts(): WizardDraft[] {
+  try {
+    const raw = localStorage.getItem(DRAFTS_KEY);
+    if (raw) return JSON.parse(raw) as WizardDraft[];
+    // migrate legacy single-draft
+    const legacy = localStorage.getItem(LEGACY_KEY);
+    if (legacy) {
+      const d = JSON.parse(legacy);
+      const migrated: WizardDraft = {
+        id: crypto.randomUUID(),
+        name: d.title?.trim() || "默认草稿",
+        step: d.step ?? 0,
+        title: d.title ?? "",
+        data: d.data ?? { rehearsalFrequencyPerWeek: 3 },
+        savedAt: d.savedAt ?? new Date().toISOString(),
+      };
+      localStorage.setItem(DRAFTS_KEY, JSON.stringify([migrated]));
+      localStorage.setItem(ACTIVE_KEY, migrated.id);
+      localStorage.removeItem(LEGACY_KEY);
+      return [migrated];
+    }
+  } catch { /* ignore */ }
+  return [];
+}
+function writeDrafts(list: WizardDraft[]) {
+  localStorage.setItem(DRAFTS_KEY, JSON.stringify(list));
+}
 
 type Student = NonNullable<StageInputData["students"]>[number];
 
@@ -48,42 +81,57 @@ export default function ProjectWizard() {
   const [submitting, setSubmitting] = useState(false);
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [hydrated, setHydrated] = useState(false);
+  const [drafts, setDrafts] = useState<WizardDraft[]>([]);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState("");
   const autosaveRef = useRef<number | null>(null);
 
-  // Restore draft on mount
+  // Restore drafts on mount
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(DRAFT_KEY);
-      if (raw) {
-        const d = JSON.parse(raw) as WizardDraft;
-        setStep(d.step ?? 0);
-        setTitle(d.title ?? "");
-        setData(d.data ?? { rehearsalFrequencyPerWeek: 3 });
-        setSavedAt(d.savedAt ?? null);
-        toast.success("已恢复上次草稿", {
-          description: `保存于 ${d.savedAt ? new Date(d.savedAt).toLocaleString() : "未知时间"} · step ${(d.step ?? 0) + 1}/${STEPS.length}`,
-        });
-      }
-    } catch { /* ignore */ }
+    const list = loadDrafts();
+    setDrafts(list);
+    const storedActive = localStorage.getItem(ACTIVE_KEY);
+    const target = list.find((d) => d.id === storedActive) ?? list[0];
+    if (target) {
+      setActiveId(target.id);
+      setStep(target.step ?? 0);
+      setTitle(target.title ?? "");
+      setData(target.data ?? { rehearsalFrequencyPerWeek: 3 });
+      setSavedAt(target.savedAt ?? null);
+      toast.success(`已恢复草稿 · ${target.name}`, {
+        description: `保存于 ${new Date(target.savedAt).toLocaleString()} · step ${(target.step ?? 0) + 1}/${STEPS.length}`,
+      });
+    }
     setHydrated(true);
   }, []);
 
-  // Autosave (debounced) after hydration
+  // Autosave (debounced) to active draft slot; auto-create on first meaningful edit
   useEffect(() => {
     if (!hydrated) return;
     if (autosaveRef.current) window.clearTimeout(autosaveRef.current);
     autosaveRef.current = window.setTimeout(() => {
       const isEmpty = !title.trim() && Object.keys(data).length <= 1;
-      if (isEmpty) return;
+      if (isEmpty && !activeId) return;
       const now = new Date().toISOString();
-      const draft: WizardDraft = { step, title, data, savedAt: now };
-      try {
-        localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
-        setSavedAt(now);
-      } catch { /* quota */ }
+      setDrafts((prev) => {
+        let list = [...prev];
+        let id = activeId;
+        if (!id) {
+          id = crypto.randomUUID();
+          const name = title.trim() || `草稿 ${list.length + 1}`;
+          list.unshift({ id, name, step, title, data, savedAt: now });
+          setActiveId(id);
+          localStorage.setItem(ACTIVE_KEY, id);
+        } else {
+          list = list.map((d) => d.id === id ? { ...d, step, title, data, savedAt: now } : d);
+        }
+        try { writeDrafts(list); setSavedAt(now); } catch { /* quota */ }
+        return list;
+      });
     }, 600);
     return () => { if (autosaveRef.current) window.clearTimeout(autosaveRef.current); };
-  }, [hydrated, step, title, data]);
+  }, [hydrated, step, title, data, activeId]);
 
   const set = <K extends keyof StageInputData>(k: K, v: StageInputData[K]) =>
     setData((d) => ({ ...d, [k]: v }));
@@ -92,11 +140,30 @@ export default function ProjectWizard() {
   const globalIssues = useMemo(() => validateStageInput(data), [data]);
   const canNext = stepIssues.blockers.length === 0;
 
-  const saveDraftAndExit = () => {
+  const persistNow = (): string => {
     const now = new Date().toISOString();
-    const draft: WizardDraft = { step, title, data, savedAt: now };
+    setDrafts((prev) => {
+      let list = [...prev];
+      let id = activeId;
+      if (!id) {
+        id = crypto.randomUUID();
+        const name = title.trim() || `草稿 ${list.length + 1}`;
+        list.unshift({ id, name, step, title, data, savedAt: now });
+        setActiveId(id);
+        localStorage.setItem(ACTIVE_KEY, id);
+      } else {
+        list = list.map((d) => d.id === id ? { ...d, step, title, data, savedAt: now } : d);
+      }
+      writeDrafts(list);
+      return list;
+    });
+    setSavedAt(now);
+    return now;
+  };
+
+  const saveDraftAndExit = () => {
     try {
-      localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+      persistNow();
       toast.success("草稿已保存,下次进入向导可继续。");
       navigate("/projects");
     } catch {
@@ -104,14 +171,79 @@ export default function ProjectWizard() {
     }
   };
 
-  const discardDraft = () => {
-    localStorage.removeItem(DRAFT_KEY);
+  const clearForm = () => {
     setStep(0);
     setTitle("");
     setData({ rehearsalFrequencyPerWeek: 3 });
     setSavedAt(null);
-    toast.success("已清空草稿,重新开始。");
   };
+
+  const newDraft = () => {
+    // ensure current is persisted first
+    if (title.trim() || Object.keys(data).length > 1) persistNow();
+    setActiveId(null);
+    localStorage.removeItem(ACTIVE_KEY);
+    clearForm();
+    toast.success("已开始一份新草稿");
+  };
+
+  const switchDraft = (id: string) => {
+    if (id === activeId) return;
+    // persist current before switching
+    if (activeId && (title.trim() || Object.keys(data).length > 1)) persistNow();
+    const target = drafts.find((d) => d.id === id);
+    if (!target) return;
+    setActiveId(id);
+    localStorage.setItem(ACTIVE_KEY, id);
+    setStep(target.step ?? 0);
+    setTitle(target.title ?? "");
+    setData(target.data ?? { rehearsalFrequencyPerWeek: 3 });
+    setSavedAt(target.savedAt ?? null);
+    toast.success(`已切换到草稿 · ${target.name}`);
+  };
+
+  const duplicateDraft = (id: string) => {
+    const src = drafts.find((d) => d.id === id);
+    if (!src) return;
+    const now = new Date().toISOString();
+    const copy: WizardDraft = { ...src, id: crypto.randomUUID(), name: `${src.name} · 副本`, savedAt: now };
+    const list = [copy, ...drafts];
+    setDrafts(list); writeDrafts(list);
+    setActiveId(copy.id); localStorage.setItem(ACTIVE_KEY, copy.id);
+    setStep(copy.step); setTitle(copy.title); setData(copy.data); setSavedAt(now);
+    toast.success(`已复制为新草稿 · ${copy.name}`);
+  };
+
+  const renameDraft = (id: string, name: string) => {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    const list = drafts.map((d) => d.id === id ? { ...d, name: trimmed } : d);
+    setDrafts(list); writeDrafts(list);
+  };
+
+  const deleteDraft = (id: string) => {
+    const list = drafts.filter((d) => d.id !== id);
+    setDrafts(list); writeDrafts(list);
+    if (id === activeId) {
+      const next = list[0];
+      if (next) {
+        setActiveId(next.id); localStorage.setItem(ACTIVE_KEY, next.id);
+        setStep(next.step); setTitle(next.title); setData(next.data); setSavedAt(next.savedAt);
+      } else {
+        setActiveId(null); localStorage.removeItem(ACTIVE_KEY);
+        clearForm();
+      }
+    }
+    toast.success("草稿已删除");
+  };
+
+  const discardActive = () => {
+    if (activeId) deleteDraft(activeId);
+    else clearForm();
+  };
+
+  const activeDraft = drafts.find((d) => d.id === activeId);
+
 
 
 
