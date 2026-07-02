@@ -25,7 +25,7 @@ export const FLAG_META: Record<FeatureFlag, { label: string; desc: string; wired
   markdownDownload: { label: "Markdown 真实下载", desc: "导出页启用 .md 文件浏览器下载。", wired: true },
   pdfExport: { label: "真实 PDF 下载", desc: "html2pdf 光栅化渲染，中文原样输出，无需系统打印对话框。", wired: true },
   pngExport: { label: "PNG 图片导出", desc: "计划中：排产快照渲染为 PNG。", wired: false },
-  storageUpload: { label: "Storage 文件存储", desc: "计划中：Supabase Storage 持久化导出物。", wired: false },
+  storageUpload: { label: "Storage 文件存储", desc: "私有 bucket 持久化导出的 MD / PDF，按 user_id 前缀隔离，生成签名 URL。", wired: true },
   aiProvider: { label: "AI 生成 provider", desc: "计划中：替换 mockPlan.ts 为真实模型。", wired: false },
   payments: { label: "支付与会员", desc: "计划中：Stripe / Paddle。", wired: false },
   procurement: { label: "采购 API", desc: "计划中：真实/半自动采购清单。", wired: false },
