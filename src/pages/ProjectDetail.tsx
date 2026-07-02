@@ -119,26 +119,52 @@ export default function ProjectDetail() {
         return;
       }
 
-      // AI 生成 provider（feature flag，失败自动回退到 mock）
+      // AI 生成 provider（feature flag，任何失败必须自动回退到 mock，绝不抛 Runtime Error）
       let costumePlan: any, risks: any, reverseSchedule: any, platformSearch: any;
       let mode: "ai" | "mock" = "mock";
+      let providerStatus: string | null = null;
       const useAi = getFlag("aiProvider");
+      const validateAiPlan = (p: any): string[] => {
+        const miss: string[] = [];
+        if (!p || typeof p !== "object") return ["plan"];
+        const cp = p.costumePlan;
+        if (!cp) miss.push("costumePlan");
+        else {
+          if (!Array.isArray(cp.femalePlan) || cp.femalePlan.length === 0) miss.push("女生方案");
+          if (!Array.isArray(cp.malePlan) || cp.malePlan.length === 0) miss.push("男生方案");
+          if (!Array.isArray(cp.accessories) || cp.accessories.length === 0) miss.push("配饰");
+        }
+        if (!Array.isArray(p.risks) || p.risks.length === 0) miss.push("风险");
+        if (!Array.isArray(p.reverseSchedule) || p.reverseSchedule.length === 0) miss.push("倒排");
+        if (!Array.isArray(p.platformSearch) || p.platformSearch.length === 0) miss.push("采购建议");
+        return miss;
+      };
       if (useAi) {
         try {
           const res = await supabase.functions.invoke("ai-generate-plan", { body: { projectId: project.id } });
           const data: any = res.data;
           if (data?.ok && data.plan) {
-            costumePlan = data.plan.costumePlan;
-            risks = data.plan.risks;
-            reverseSchedule = data.plan.reverseSchedule;
-            platformSearch = data.plan.platformSearch;
-            mode = "ai";
+            const miss = validateAiPlan(data.plan);
+            if (miss.length === 0) {
+              costumePlan = data.plan.costumePlan;
+              risks = data.plan.risks;
+              reverseSchedule = data.plan.reverseSchedule;
+              platformSearch = data.plan.platformSearch;
+              mode = "ai";
+              providerStatus = "ai";
+            } else {
+              toast.warning("AI provider 不可用，已使用 mock fallback。", { description: `缺少字段：${miss.join("、")}` });
+              providerStatus = "fallback";
+            }
           } else {
-            const code = data?.code ?? (res.error?.message ?? "AI_UNKNOWN");
-            toast.warning(`AI 生成失败(${code})，已回退到 mock。`);
+            toast.warning("AI provider 不可用，已使用 mock fallback。", {
+              description: data?.code ?? res.error?.message ?? "AI 返回异常",
+            });
+            providerStatus = "fallback";
           }
         } catch (aiErr: any) {
-          toast.warning(`AI 生成异常，已回退到 mock:${aiErr?.message ?? "unknown"}`);
+          toast.warning("AI provider 不可用，已使用 mock fallback。", { description: aiErr?.message });
+          providerStatus = "fallback";
         }
       }
       if (mode === "mock") {
@@ -153,12 +179,14 @@ export default function ProjectDetail() {
       const uid = userData.user?.id;
       const { error } = await supabase.from("plan_snapshots").insert({
         project_id: project.id, user_id: uid, version: nextVersion, mode,
+        provider_status: providerStatus,
         costume_plan: costumePlan as any, risks: risks as any,
         reverse_schedule: reverseSchedule as any, platform_search: platformSearch as any,
       } as any);
       if (error) throw error;
       await supabase.from("projects").update({ status: "planning" }).eq("id", project.id);
-      toast.success(`已生成 v${nextVersion} 服装总表(${mode})`);
+      const label = mode === "ai" ? "AI" : providerStatus === "fallback" ? "mock (fallback)" : "mock";
+      toast.success(`已生成 v${nextVersion} 服装总表(${label})`);
       setGenerationNotice(null);
       load();
     } catch (e: any) { toast.error("生成失败:" + e.message); }

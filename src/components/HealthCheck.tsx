@@ -231,7 +231,11 @@ export function HealthCheck() {
       }
     }
 
-    // 13. AI provider 可达性（flag off 时 skip；flag on 时业务拒绝也算可达）
+    // 13. AI provider 可达性
+    //   flag off        → skip
+    //   reachable       → pass（业务拒绝 UNAUTHORIZED/FORBIDDEN/CONFIRMATION_REQUIRED/VALIDATION_REQUIRED 均视为可达）
+    //   AI_* 错误码     → warn（会走 fallback，不污染 baseline）
+    //   完全不可达/异常 → warn（fallback 仍可用，不判 fail）
     if (!getFlag("aiProvider")) {
       push({ id: "ai", label: "AI provider (ai-generate-plan)", status: "skip", detail: "flag off (mock 主流程生效)" });
     } else {
@@ -240,20 +244,21 @@ export function HealthCheck() {
           supabase.functions.invoke("ai-generate-plan", { body: { projectId: "__healthcheck__" } }))
         );
         const data: any = result.data;
-        const reachable = !!data || !!result.error;
-        push({
-          id: "ai",
-          label: "AI provider (ai-generate-plan)",
-          status: reachable ? "pass" : "fail",
-          detail: data?.code
-            ? `可达 (业务拒绝: ${data.code})`
-            : result.error
-              ? `可达 (${String(result.error.message ?? "").slice(0, 60)})`
-              : "可达",
-          ms,
-        });
+        const code: string | undefined = data?.code;
+        const reachableCodes = new Set(["UNAUTHORIZED", "FORBIDDEN", "CONFIRMATION_REQUIRED", "VALIDATION_REQUIRED", "BAD_REQUEST"]);
+        if (code && reachableCodes.has(code)) {
+          push({ id: "ai", label: "AI provider (ai-generate-plan)", status: "pass", detail: `可达 (业务拒绝: ${code})`, ms });
+        } else if (code && code.startsWith("AI_")) {
+          push({ id: "ai", label: "AI provider (ai-generate-plan)", status: "warn", detail: `AI 不可用，将 fallback mock (${code})`, ms });
+        } else if (data?.ok) {
+          push({ id: "ai", label: "AI provider (ai-generate-plan)", status: "pass", detail: "AI 可达", ms });
+        } else if (result.error) {
+          push({ id: "ai", label: "AI provider (ai-generate-plan)", status: "warn", detail: `边缘函数异常，将 fallback mock (${String(result.error.message ?? "").slice(0, 80)})`, ms });
+        } else {
+          push({ id: "ai", label: "AI provider (ai-generate-plan)", status: "warn", detail: "响应异常，将 fallback mock", ms });
+        }
       } catch (e: any) {
-        push({ id: "ai", label: "AI provider (ai-generate-plan)", status: "fail", detail: e?.message });
+        push({ id: "ai", label: "AI provider (ai-generate-plan)", status: "warn", detail: `调用异常，将 fallback mock: ${e?.message ?? "unknown"}` });
       }
     }
 
