@@ -84,6 +84,10 @@ export default function Exports() {
     setBusy(row.id + ":pdf");
     try {
       if (!(await guard(row))) return;
+      if (!canPrint()) {
+        toast.error("当前浏览器不支持直接打印，请先下载 Markdown。");
+        return;
+      }
       const title = projectTitles[row.project_id];
       const fn = buildFilename("pdf", title, row.version, row.project_id);
       const html = renderPrintableHtml(row.payload, row.format, {
@@ -92,7 +96,16 @@ export default function Exports() {
         createdAt: new Date(row.created_at).toLocaleString("zh-CN", { hour12: false }),
         filenameTitle: fn.replace(/\.pdf$/, ""),
       });
-      await openPrintWindow(html);
+      toast.info("正在打开打印对话框，请选择“另存为 PDF”。");
+      try {
+        await openPrintWindow(html);
+      } catch (err: any) {
+        if (err?.message === "PRINT_UNSUPPORTED") {
+          toast.error("当前浏览器不支持直接打印，请先下载 Markdown。");
+        } else {
+          throw err;
+        }
+      }
     } catch (e) {
       console.error(e);
       toast.error("PDF 生成失败，请先下载 Markdown。");
