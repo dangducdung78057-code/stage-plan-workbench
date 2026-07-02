@@ -520,13 +520,14 @@ function ReviewSummary({ title, data }: { title: string; data: StageInputData })
   );
 }
 
-function Field({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
+function Field({ label, required, htmlFor, children }: { label: string; required?: boolean; htmlFor?: string; children: React.ReactNode }) {
   return (
-    <div className="space-y-1.5">
-      <Label className="text-xs text-muted-foreground">
+    <div className="space-y-1.5" data-field-wrapper={htmlFor}>
+      <Label htmlFor={htmlFor} className="text-xs text-muted-foreground">
         {label}{required && <span className="text-destructive ml-0.5">*</span>}
       </Label>
       {children}
     </div>
   );
 }
+
