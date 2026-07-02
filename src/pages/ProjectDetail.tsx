@@ -461,7 +461,7 @@ export default function ProjectDetail() {
                     .from("stage_inputs").select("data").eq("project_id", project.id).maybeSingle();
                   const fresh = (siRow?.data ?? input ?? {}) as StageInputData;
                   const { errors, warnings } = validateStageInputDetailed(fresh);
-                  setConfirmPreview({ errors, warnings, checkedAt: new Date().toISOString() });
+                  setConfirmPreview({ errors, warnings, checkedAt: new Date().toISOString(), snapshot: fresh });
                 }} disabled={busy}>
                   <CheckCircle2 className="h-4 w-4 mr-1" />确认(隐私/用户)
                 </Button>
