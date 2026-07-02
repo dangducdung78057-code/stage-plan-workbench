@@ -337,7 +337,7 @@ export default function Exports() {
                     <Button variant="outline" size="sm" className="w-full justify-center" disabled={busy === r.id + ":pdf"} onClick={() => handlePdf(r)}>
                       {busy === r.id + ":pdf"
                         ? <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />生成中…</>
-                        : <><FileText className="h-3.5 w-3.5 mr-1.5" />下载 PDF</>}
+                        : <><FileText className="h-3.5 w-3.5 mr-1.5" />PDF 实验版</>}
                     </Button>
                   )}
                   {showPng && (
