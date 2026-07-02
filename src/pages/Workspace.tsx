@@ -198,7 +198,11 @@ export default function Workspace() {
               })}
 
             </ol>
+            <div className="sr-only" aria-live="polite" aria-atomic="true">
+              第 {activeSlide + 1} 页，共 {SLIDE_OUTLINE.length} 页：{SLIDE_OUTLINE[activeSlide].title}
+            </div>
           </div>
+
 
           <DialogFooter className="sm:justify-between gap-2 items-center">
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
