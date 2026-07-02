@@ -241,6 +241,10 @@ export default function Exports() {
       setRows((prev) => [freshRow, ...prev.filter((item) => item.id !== freshRow.id)]);
       console.info("[StageOS Storage Debug] fresh.export_id", freshRow.id);
       await maybeUploadToStorage(freshRow, "md", utf8Blob, "text/markdown;charset=utf-8");
+      dispatchWebhook("export.created", {
+        project_id: row.project_id,
+        summary: { format: "markdown", version: row.version, snapshot_id: row.snapshot_id, bytes: utf8Blob.size, export_id: freshRow.id },
+      });
     } catch (e) {
       console.error(e);
       toast.error("下载失败，请稍后重试");
