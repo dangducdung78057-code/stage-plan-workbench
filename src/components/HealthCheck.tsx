@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { STAGEOS_VERSION } from "@/lib/stageos";
 import { getFlag } from "@/lib/featureFlags";
-import { renderMarkdown } from "@/lib/exportRender";
+import { renderMarkdown, renderPrintableHtml, renderPngBlob } from "@/lib/exportRender";
 import { CheckCircle2, XCircle, Loader2, AlertTriangle } from "lucide-react";
 
 type Status = "pass" | "fail" | "warn" | "skip";
@@ -146,13 +146,37 @@ export function HealthCheck() {
       detail: getFlag("pdfExport") ? "html2pdf.js 光栅化 · 中文原样输出" : "flag off",
     });
 
-    // 11b. PNG 导出：html-to-image 光栅化
-    push({
-      id: "png",
-      label: "PNG 导出（长图分享）",
-      status: getFlag("pngExport") ? "pass" : "skip",
-      detail: getFlag("pngExport") ? "html-to-image 光栅化 · 中文原样输出" : "flag off",
-    });
+    // 11b. PNG 导出：实际渲染一次非空 blob 才 pass
+    if (!getFlag("pngExport")) {
+      push({ id: "png", label: "PNG 导出（长图分享）", status: "skip", detail: "flag off" });
+    } else {
+      try {
+        const samplePayload = JSON.stringify({
+          project: { title: "健康检查样本", schoolStage: "小学", programType: "合唱", performerCount: 2, femaleCount: 1, maleCount: 1 },
+          plan: { femalePlan: ["白衬衫"], malePlan: ["西装背心"], accessories: ["蝴蝶结"], totalEstimate: 100 },
+          risks: ["面料缺货"], planB: ["改用替代面料"],
+          reverseSchedule: [{ milestone: "面料到货", date: "2026-06-01" }],
+          searchRecommendations: [{ platform: "淘宝", query: "儿童合唱服" }],
+        });
+        const html = renderPrintableHtml(samplePayload, "json", {
+          projectTitle: "健康检查样本", version: 0, createdAt: new Date().toISOString(), filenameTitle: "healthcheck",
+        });
+        const { result, ms } = await timed(async () => await renderPngBlob(html));
+        if (result && result.size > 0) {
+          push({ id: "png", label: "PNG 导出（长图分享）", status: "pass", detail: `bytes=${result.size}`, ms });
+        } else {
+          push({ id: "png", label: "PNG 导出（长图分享）", status: "fail", detail: "empty blob", ms });
+        }
+      } catch (e: any) {
+        const msg = String(e?.message ?? "unknown");
+        push({
+          id: "png",
+          label: "PNG 导出（长图分享）",
+          status: msg.includes("PNG_EMPTY_CONTENT") ? "warn" : "fail",
+          detail: msg,
+        });
+      }
+    }
 
     // 12. Storage 副本可达性（bucket 存在且当前 user 前缀可 list）
     if (!getFlag("storageUpload")) {
