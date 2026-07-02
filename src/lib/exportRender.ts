@@ -241,11 +241,15 @@ export function renderMarkdown(
         : SEARCH_EMPTY_MSG;
       body = body.replace(/\s*$/, "") + `\n\n## 采购搜索建议\n\n${searchMd}\n`;
     }
+    const procurement = (data && typeof data === "object" ? (data as any)?.procurement_candidates : undefined)
+      ?? (typeof payload === "object" && payload ? (payload as any).procurement_candidates : undefined);
     const out = [
       `# StageOS 服装总表导出 · ${directProjectTitle}`,
       `> 版本 v${meta.version} · 生成于 ${meta.createdAt}`,
       "",
       body,
+      "",
+      procurementSectionMd(procurement),
       "",
       "---",
       "## mock / 非真实库存价格声明",
