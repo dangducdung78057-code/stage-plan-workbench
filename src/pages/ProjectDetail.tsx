@@ -219,6 +219,26 @@ export default function ProjectDetail() {
         </div>
       )}
 
+      {generationNotice && !generationNotice.ok && (
+        <div className="panel border-warning/40 bg-warning/5 panel-body flex items-start gap-2 text-sm">
+          <AlertTriangle className="h-4 w-4 text-warning mt-0.5" />
+          <div className="min-w-0">
+            <div className="font-medium text-warning">
+              {generationNotice.code === "CONFIRMATION_REQUIRED"
+                ? "请先完成用户确认/隐私确认后再生成排产。"
+                : generationNotice.code === "VALIDATION_REQUIRED"
+                  ? "请先解决数据校验提示，再生成排产。"
+                  : generationNotice.message ?? "生成前置校验未通过"}
+            </div>
+            {generationNotice.issues && generationNotice.issues.length > 0 && (
+              <ul className="mt-1 list-disc list-inside text-muted-foreground text-xs space-y-0.5">
+                {generationNotice.issues.map((issue) => <li key={issue}>{issue}</li>)}
+              </ul>
+            )}
+          </div>
+        </div>
+      )}
+
       {issues.length > 0 && (
         <div className="panel border-warning/40 bg-warning/5 panel-body flex items-start gap-2 text-sm">
           <AlertTriangle className="h-4 w-4 text-warning mt-0.5" />
