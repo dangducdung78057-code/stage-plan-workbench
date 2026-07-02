@@ -47,9 +47,14 @@ export default function Workspace() {
             学校演出服装排产循环:项目输入 → 服装总表 → 风险与倒排 → 用户确认 → 导出。
           </p>
         </div>
-        <Button asChild size="sm">
-          <Link to="/projects/new"><Plus className="h-4 w-4 mr-1" />新建项目</Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button asChild variant="outline" size="sm">
+            <Link to="/projects/new">经典表单</Link>
+          </Button>
+          <Button asChild size="sm">
+            <Link to="/projects/new/wizard"><Plus className="h-4 w-4 mr-1" />新建项目 · 向导</Link>
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-4 gap-3">
