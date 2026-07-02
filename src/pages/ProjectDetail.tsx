@@ -65,28 +65,39 @@ export default function ProjectDetail() {
     try {
       // Precheck order: auth -> permission -> confirmation -> validation.
       // Backend enforces the same order via the plan-precheck edge function.
-      const { data: pre, error: preErr } = await supabase.functions.invoke("plan-precheck", {
-        body: { projectId: project.id },
-      });
-      if (preErr || !pre?.ok) {
-        const code = pre?.code ?? "INTERNAL";
-        if (code === "AUTH_REQUIRED") {
+      // Business rejections come back as status 200 with { ok:false, errorCode }
+      // so supabase-js never throws for expected gating outcomes.
+      let pre: any = null;
+      try {
+        const res = await supabase.functions.invoke("plan-precheck", {
+          body: { projectId: project.id },
+        });
+        pre = res.data;
+        // If a system error slipped through (non-2xx), try to read the body.
+        if (res.error && !pre) {
+          const ctx: any = (res.error as any)?.context;
+          if (ctx && typeof ctx.json === "function") {
+            try { pre = await ctx.json(); } catch { /* ignore */ }
+          }
+          if (!pre) pre = { ok: false, errorCode: "INTERNAL", message: res.error.message };
+        }
+      } catch (netErr: any) {
+        pre = { ok: false, errorCode: "INTERNAL", message: netErr?.message ?? "network error" };
+      }
+
+      if (!pre?.ok) {
+        const errorCode = pre?.errorCode ?? "INTERNAL";
+        if (errorCode === "UNAUTHORIZED") {
           toast.error("请先登录后再生成排产。");
-          return;
-        }
-        if (code === "FORBIDDEN") {
+        } else if (errorCode === "FORBIDDEN") {
           toast.error("无权访问该项目。");
-          return;
-        }
-        if (code === "PRIVACY_CONFIRMATION_REQUIRED") {
+        } else if (errorCode === "CONFIRMATION_REQUIRED") {
           toast.warning("请先完成用户确认/隐私确认后再生成排产。");
-          return;
-        }
-        if (code === "VALIDATION_REQUIRED") {
+        } else if (errorCode === "VALIDATION_REQUIRED") {
           toast.warning("请先解决数据校验提示,再生成排产。");
-          return;
+        } else {
+          toast.error("生成前置校验失败:" + (pre?.message ?? errorCode));
         }
-        toast.error("生成前置校验失败:" + (pre?.message ?? preErr?.message ?? code));
         return;
       }
 
