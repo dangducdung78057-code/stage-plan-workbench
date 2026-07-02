@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { ToneBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { MobileCard, MobileCardList, MobileField } from "@/components/MobileCard";
 
 type Row = {
   id: string; project_id: string; version: number; format: string;
