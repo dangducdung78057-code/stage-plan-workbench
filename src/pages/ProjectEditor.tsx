@@ -10,6 +10,9 @@ import {
   SCHOOL_STAGES, PROGRAM_TYPES, REHEARSAL_FREQUENCIES,
   validateStageInputDetailed, appendValidationHistory, type StageInputData,
 } from "@/lib/stageos";
+import {
+  FIELD_HINT_KEYWORDS, buildFieldHints, findUnmatched,
+} from "@/lib/validationHintKeywords";
 import { toast } from "sonner";
 import { Plus, Trash2, ArrowLeft, AlertTriangle, AlertCircle } from "lucide-react";
 
@@ -36,25 +39,8 @@ export default function ProjectEditor() {
 
   const { errors, warnings } = validateStageInputDetailed(data);
 
-  // 字段级联动提示:根据关键字把整体 errors/warnings 分派到对应输入下方。
-  const FIELD_KEYWORDS: Record<string, string[]> = {
-    performerCount: ["performerCount", "总人数", "人数校验", "学生行数"],
-    maleCount: ["maleCount", "男生", "人数校验", "性别分布"],
-    femaleCount: ["femaleCount", "女生", "人数校验", "性别分布"],
-    perPersonBudget: ["人均预算", "perPersonBudget"],
-    rehearsal: ["彩排频次", "rehearsalFrequency"],
-    students: ["studentId", "heightCm", "学生行数", "性别分布"],
-  };
-  const pickHints = (keywords: string[]) => {
-    const matchedBy = (m: string) => keywords.filter((k) => m.includes(k));
-    return {
-      errors: errors.filter((m) => matchedBy(m).length > 0),
-      warnings: warnings.filter((m) => matchedBy(m).length > 0),
-    };
-  };
-  const hints = Object.fromEntries(
-    Object.entries(FIELD_KEYWORDS).map(([k, kws]) => [k, pickHints(kws)]),
-  ) as Record<keyof typeof FIELD_KEYWORDS, { errors: string[]; warnings: string[] }>;
+  // 字段级联动提示:关键词配置集中在 @/lib/validationHintKeywords。
+  const hints = buildFieldHints({ errors, warnings });
 
   // 调试模式:URL ?debug=hints 或 localStorage 键 "stageos:debug-hints" = "1"
   const debugHints =
@@ -62,12 +48,7 @@ export default function ProjectEditor() {
     (new URLSearchParams(window.location.search).get("debug") === "hints" ||
       window.localStorage.getItem("stageos:debug-hints") === "1");
 
-  // 未匹配到任何字段的 error/warning(便于发现关键词覆盖缺口)
-  const allKeywords = Object.values(FIELD_KEYWORDS).flat();
-  const unmatched = {
-    errors: errors.filter((m) => !allKeywords.some((k) => m.includes(k))),
-    warnings: warnings.filter((m) => !allKeywords.some((k) => m.includes(k))),
-  };
+  const unmatched = findUnmatched({ errors, warnings });
 
   useEffect(() => {
     if (!debugHints) return;
@@ -211,7 +192,7 @@ export default function ProjectEditor() {
                     <td className="font-mono">{field}</td>
                     <td className="text-right font-mono">{h.errors.length}</td>
                     <td className="text-right font-mono">{h.warnings.length}</td>
-                    <td className="font-mono text-[11px] text-muted-foreground">{FIELD_KEYWORDS[field].join(" | ")}</td>
+                    <td className="font-mono text-[11px] text-muted-foreground">{(FIELD_HINT_KEYWORDS as Record<string, readonly string[]>)[field].join(" | ")}</td>
                   </tr>
                 ))}
               </tbody>
