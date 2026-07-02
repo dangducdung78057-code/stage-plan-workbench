@@ -11,6 +11,12 @@ import { CheckCircle2, XCircle, Loader2, AlertTriangle } from "lucide-react";
 type Status = "pass" | "fail" | "warn" | "skip";
 type Check = { id: string; label: string; status: Status; detail?: string; ms?: number };
 
+async function timed<T>(fn: () => Promise<T>): Promise<{ result: T; ms: number }> {
+  const t0 = performance.now();
+  const result = await fn();
+  return { result, ms: Math.round(performance.now() - t0) };
+}
+
 export function HealthCheck() {
   const { user } = useAuth();
   const [running, setRunning] = useState(false);
@@ -23,12 +29,6 @@ export function HealthCheck() {
     setStartedAt(new Date().toLocaleString());
     const out: Check[] = [];
     const push = (c: Check) => { out.push(c); setChecks([...out]); };
-    const time = async <T,>(fn: () => Promise<T>): Promise<{ result: T; ms: number }> => {
-      const t0 = performance.now();
-      const r = await fn();
-      return { result: r, ms: Math.round(performance.now() - t0) };
-    };
-
 
     // 1. version tag
     push({
@@ -40,9 +40,10 @@ export function HealthCheck() {
 
     // 2. auth session
     try {
-      const [{ data }, ms] = await time(() => supabase.auth.getSession());
-      if (data.session?.user) {
-        push({ id: "auth", label: "登录会话 (auth.session)", status: "pass", detail: data.session.user.email ?? data.session.user.id, ms });
+      const { result, ms } = await timed(() => supabase.auth.getSession());
+      const s = result.data.session;
+      if (s?.user) {
+        push({ id: "auth", label: "登录会话 (auth.session)", status: "pass", detail: s.user.email ?? s.user.id, ms });
       } else {
         push({ id: "auth", label: "登录会话 (auth.session)", status: "fail", detail: "no session", ms });
       }
@@ -50,17 +51,17 @@ export function HealthCheck() {
       push({ id: "auth", label: "登录会话 (auth.session)", status: "fail", detail: e?.message });
     }
 
-    // 3-6. table reachability + user isolation
+    // 3-6. table reachability
     const tables = ["projects", "plan_snapshots", "confirmation_records", "export_records"] as const;
     for (const t of tables) {
       try {
-        const [{ count, error }, ms] = await time(() =>
-          supabase.from(t).select("id", { count: "exact", head: true }) as any
+        const { result, ms } = await timed(() =>
+          supabase.from(t).select("id", { count: "exact", head: true })
         );
-        if (error) {
-          push({ id: `tbl-${t}`, label: `表读取 ${t}`, status: "fail", detail: error.message, ms });
+        if (result.error) {
+          push({ id: `tbl-${t}`, label: `表读取 ${t}`, status: "fail", detail: result.error.message, ms });
         } else {
-          push({ id: `tbl-${t}`, label: `表读取 ${t}`, status: "pass", detail: `rows=${count ?? 0}`, ms });
+          push({ id: `tbl-${t}`, label: `表读取 ${t}`, status: "pass", detail: `rows=${result.count ?? 0}`, ms });
         }
       } catch (e: any) {
         push({ id: `tbl-${t}`, label: `表读取 ${t}`, status: "fail", detail: e?.message });
@@ -70,13 +71,13 @@ export function HealthCheck() {
     // 7. user_id 隔离抽样
     if (user?.id) {
       try {
-        const [{ data, error }, ms] = await time(() =>
-          supabase.from("projects").select("id,user_id").limit(20) as any
+        const { result, ms } = await timed(() =>
+          supabase.from("projects").select("id,user_id").limit(20)
         );
-        if (error) {
-          push({ id: "rls", label: "user_id 隔离抽样", status: "fail", detail: error.message, ms });
+        if (result.error) {
+          push({ id: "rls", label: "user_id 隔离抽样", status: "fail", detail: result.error.message, ms });
         } else {
-          const rows = (data ?? []) as { user_id: string }[];
+          const rows = (result.data ?? []) as { user_id: string | null }[];
           const leak = rows.find((r) => r.user_id && r.user_id !== user.id);
           if (leak) {
             push({ id: "rls", label: "user_id 隔离抽样", status: "fail", detail: "检测到跨用户数据", ms });
@@ -93,26 +94,25 @@ export function HealthCheck() {
 
     // 8. settings 全局配置
     try {
-      const [{ data, error }, ms] = await time(() =>
-        supabase.from("settings").select("*").eq("id", "global").maybeSingle() as any
+      const { result, ms } = await timed(() =>
+        supabase.from("settings").select("*").eq("id", "global").maybeSingle()
       );
-      if (error) push({ id: "settings", label: "全局设置读取", status: "fail", detail: error.message, ms });
-      else push({ id: "settings", label: "全局设置读取", status: "pass", detail: `apiMode=${data?.api_mode ?? "mock"}`, ms });
+      if (result.error) push({ id: "settings", label: "全局设置读取", status: "fail", detail: result.error.message, ms });
+      else push({ id: "settings", label: "全局设置读取", status: "pass", detail: `apiMode=${(result.data as any)?.api_mode ?? "mock"}`, ms });
     } catch (e: any) {
       push({ id: "settings", label: "全局设置读取", status: "fail", detail: e?.message });
     }
 
-    // 9. Edge Function plan-precheck 可达性
+    // 9. Edge Function plan-precheck 可达性（业务拒绝也算可达）
     try {
-      const [{ error }, ms] = await time(() =>
+      const { result, ms } = await timed(() =>
         supabase.functions.invoke("plan-precheck", { body: { projectId: "__healthcheck__" } })
       );
-      // We expect a business error (403/404/422) — that means function is reachable.
       push({
         id: "edge",
         label: "Edge Function plan-precheck",
         status: "pass",
-        detail: error ? `可达 (业务拒绝: ${error.message?.slice(0, 60)})` : "可达",
+        detail: result.error ? `可达 (业务拒绝: ${String(result.error.message ?? "").slice(0, 60)})` : "可达",
         ms,
       });
     } catch (e: any) {
@@ -121,17 +121,18 @@ export function HealthCheck() {
 
     // 10. Markdown 导出能力
     try {
-      const md = renderMarkdown({
-        title: "健康检查样本",
-        generatedAt: new Date().toISOString(),
-        sections: [{ heading: "test", body: "ok" }],
-      } as any);
+      const md = renderMarkdown("# sample\n\nhealthcheck", "markdown", {
+        projectTitle: "健康检查样本",
+        version: 0,
+        createdAt: new Date().toISOString(),
+      });
       const blob = new Blob([md], { type: "text/markdown" });
+      const on = getFlag("markdownDownload");
       push({
         id: "md",
         label: "Markdown 导出能力",
-        status: blob.size > 0 && getFlag("markdownDownload") ? "pass" : "warn",
-        detail: `bytes=${blob.size}${getFlag("markdownDownload") ? "" : " (flag off)"}`,
+        status: blob.size > 0 && on ? "pass" : "warn",
+        detail: `bytes=${blob.size}${on ? "" : " (flag off)"}`,
       });
     } catch (e: any) {
       push({ id: "md", label: "Markdown 导出能力", status: "fail", detail: e?.message });
@@ -168,7 +169,7 @@ export function HealthCheck() {
           </Button>
           {startedAt && <span className="text-xs text-muted-foreground font-mono">{startedAt}</span>}
           {done && (
-            <div className="flex items-center gap-1.5 ml-auto">
+            <div className="flex items-center gap-1.5 ml-auto flex-wrap">
               <ToneBadge tone="success">pass {summary.pass ?? 0}</ToneBadge>
               {(summary.warn ?? 0) > 0 && <ToneBadge tone="warning">warn {summary.warn}</ToneBadge>}
               {(summary.fail ?? 0) > 0 && <ToneBadge tone="destructive">fail {summary.fail}</ToneBadge>}
@@ -185,7 +186,7 @@ export function HealthCheck() {
 
         <ul className="divide-y border rounded bg-surface">
           {checks.length === 0 && !running && (
-            <li className="px-3 py-6 text-center text-xs text-muted-foreground">尚未运行。点击“运行一键验收”开始。</li>
+            <li className="px-3 py-6 text-center text-xs text-muted-foreground">尚未运行。点击"运行一键验收"开始。</li>
           )}
           {checks.map((c) => (
             <li key={c.id} className="px-3 py-2 flex items-start gap-2 text-sm">
