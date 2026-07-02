@@ -26,7 +26,7 @@ export const FLAG_META: Record<FeatureFlag, { label: string; desc: string; wired
   pdfExport: { label: "PDF 导出（实验版）", desc: "实验中：强制开启后按钮显示为「PDF 实验版」。若渲染结果为空白将被拦截，不生成文件也不上传 Storage。", wired: false },
   pngExport: { label: "PNG 图片导出", desc: "html-to-image 将排产快照渲染为分享用长图 PNG。", wired: true },
   storageUpload: { label: "Storage 文件存储", desc: "私有 bucket 持久化导出的 MD / PDF，按 user_id 前缀隔离，生成签名 URL。", wired: true },
-  aiProvider: { label: "AI 生成 provider", desc: "计划中：替换 mockPlan.ts 为真实模型。", wired: false },
+  aiProvider: { label: "AI 生成 provider", desc: "启用 Lovable AI 生成服装总表；失败时自动回退至 mock，不破坏主流程。", wired: true },
   payments: { label: "支付与会员", desc: "计划中：Stripe / Paddle。", wired: false },
   procurement: { label: "采购 API", desc: "计划中：真实/半自动采购清单。", wired: false },
 };
