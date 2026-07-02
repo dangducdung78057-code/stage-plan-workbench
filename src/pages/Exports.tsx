@@ -160,7 +160,7 @@ export default function Exports() {
                     )}
                     {showPdf && (
                       <Button variant="outline" size="sm" disabled={busy === r.id + ":pdf"} onClick={() => handlePdf(r)}>
-                        <Printer className="h-3.5 w-3.5 mr-1" />PDF
+                        <Printer className="h-3.5 w-3.5 mr-1" />打印/PDF
                       </Button>
                     )}
                   </div>
