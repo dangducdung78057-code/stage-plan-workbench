@@ -1,5 +1,5 @@
 // StageOS domain constants and helpers
-export const STAGEOS_VERSION = "stageos-v3.1-procurement-provider-fallback-pass" as const;
+export const STAGEOS_VERSION = "stageos-v3.2-procurement-http-mock-provider-pass" as const;
 
 export const SCHOOL_STAGES = [
   { value: "primary", label: "小学" },
