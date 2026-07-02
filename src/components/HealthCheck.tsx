@@ -181,29 +181,35 @@ export function HealthCheck() {
       }
     }
 
-    // 11b. PNG 导出：实际渲染一次非空 blob 才 pass
+    // 11b. PNG 导出：实际渲染一次非空 blob 且 printable HTML 内容完整（项目标题/方案表格/风险/隐私声明）才 pass
     if (!getFlag("pngExport")) {
       push({ id: "png", label: "PNG 导出（长图分享）", status: "skip", detail: "flag off" });
     } else if (!validatePrintableHtml(sampleHtml)) {
       push({ id: "png", label: "PNG 导出（长图分享）", status: "fail", detail: "printable html invalid" });
     } else {
-      try {
-        const { result, ms } = await timed(async () => await renderPngBlob(sampleHtml));
-        if (result && result.size > 1024) {
-          push({ id: "png", label: "PNG 导出（长图分享）", status: "pass", detail: `bytes=${result.size}`, ms });
-        } else {
-          push({ id: "png", label: "PNG 导出（长图分享）", status: "fail", detail: "empty blob", ms });
+      const content = validatePrintableContent(sampleHtml);
+      if (!content.ok) {
+        push({ id: "png", label: "PNG 导出（长图分享）", status: "warn", detail: `内容不完整: ${content.missing.join(", ")}` });
+      } else {
+        try {
+          const { result, ms } = await timed(async () => await renderPngBlob(sampleHtml));
+          if (result && result.size > 1024) {
+            push({ id: "png", label: "PNG 导出（长图分享）", status: "pass", detail: `bytes=${result.size}`, ms });
+          } else {
+            push({ id: "png", label: "PNG 导出（长图分享）", status: "fail", detail: "empty blob", ms });
+          }
+        } catch (e: any) {
+          const msg = String(e?.message ?? "unknown");
+          push({
+            id: "png",
+            label: "PNG 导出（长图分享）",
+            status: /PNG_INCOMPLETE_PAYLOAD|PNG_EMPTY_CONTENT/.test(msg) ? "warn" : "fail",
+            detail: msg,
+          });
         }
-      } catch (e: any) {
-        const msg = String(e?.message ?? "unknown");
-        push({
-          id: "png",
-          label: "PNG 导出（长图分享）",
-          status: msg.includes("PNG_EMPTY_CONTENT") ? "warn" : "fail",
-          detail: msg,
-        });
       }
     }
+
 
     // 12. Storage 副本可达性（bucket 存在且当前 user 前缀可 list）
     if (!getFlag("storageUpload")) {
