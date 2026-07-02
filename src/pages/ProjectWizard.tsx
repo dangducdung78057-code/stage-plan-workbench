@@ -259,6 +259,47 @@ export default function ProjectWizard() {
   const goPrev = () => setStep((s) => Math.max(0, s - 1));
 
   const allIssues = useMemo(() => collectIssues(title, data), [title, data]);
+  const [wizardNavIndex, setWizardNavIndex] = useState<number>(-1);
+
+  // Global keyboard shortcuts: Alt+↑ / Alt+↓ to navigate issues
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (!e.altKey) return;
+      if (e.key !== "ArrowUp" && e.key !== "ArrowDown") return;
+      e.preventDefault();
+      if (allIssues.length === 0) return;
+      setWizardNavIndex((prev) => {
+        const start = prev === -1 ? 0 : prev;
+        const next = e.key === "ArrowUp"
+          ? Math.max(0, start - 1)
+          : Math.min(allIssues.length - 1, start + 1);
+        const issue = allIssues[next];
+        setStep(issue.step);
+        setTimeout(() => {
+          const el = document.getElementById(issue.fieldId)
+            ?? document.querySelector<HTMLElement>(`[data-field-wrapper="${issue.fieldId}"]`);
+          if (!el) return;
+          el.scrollIntoView({ behavior: "smooth", block: "center" });
+          (el as HTMLElement).focus?.();
+          const wrapper = el.closest<HTMLElement>("[data-field-wrapper]") ?? el;
+          wrapper.classList.add("ring-2", "ring-warning", "rounded-md", "transition-shadow");
+          window.setTimeout(() => {
+            wrapper.classList.remove("ring-2", "ring-warning", "rounded-md");
+          }, 1600);
+        }, 80);
+        return next;
+      });
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [allIssues]);
+
+  // Clamp index when issue list changes
+  useEffect(() => {
+    if (wizardNavIndex >= allIssues.length) {
+      setWizardNavIndex(allIssues.length > 0 ? allIssues.length - 1 : -1);
+    }
+  }, [allIssues.length, wizardNavIndex]);
 
   const jumpToIssue = (issue: WizardIssue) => {
     setStep(issue.step);
