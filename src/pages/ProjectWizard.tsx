@@ -384,6 +384,16 @@ export default function ProjectWizard() {
                 {drafts.map((d) => {
                   const isActive = d.id === activeId;
                   const isRenaming = renamingId === d.id;
+                  const issues = collectIssues(d.title, d.data);
+                  const errCount = issues.filter((i) => i.severity === "error").length;
+                  const warnCount = issues.filter((i) => i.severity === "warning").length;
+                  const firstErr = issues.find((i) => i.severity === "error");
+                  const firstWarn = issues.find((i) => i.severity === "warning");
+                  const jumpTo = (issue: WizardIssue) => {
+                    if (d.id !== activeId) switchDraft(d.id);
+                    // Give state a tick, then jump — reuse existing jumpToIssue for focus + highlight
+                    setTimeout(() => jumpToIssue(issue), d.id !== activeId ? 40 : 0);
+                  };
                   return (
                     <li key={d.id} className={`px-3 py-2 text-sm ${isActive ? "bg-primary/5" : ""}`}>
                       <div className="flex items-center gap-2">
@@ -410,10 +420,39 @@ export default function ProjectWizard() {
                             {d.name}
                           </button>
                         )}
+                        {errCount > 0 && firstErr && (
+                          <button
+                            type="button"
+                            onClick={() => jumpTo(firstErr)}
+                            title={`${errCount} 项错误 · 点击定位到 step ${firstErr.step + 1}`}
+                            className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-destructive/15 text-destructive hover:bg-destructive/25 shrink-0"
+                          >
+                            {errCount} 错
+                          </button>
+                        )}
+                        {warnCount > 0 && firstWarn && (
+                          <button
+                            type="button"
+                            onClick={() => jumpTo(firstWarn)}
+                            title={`${warnCount} 项警告 · 点击定位到 step ${firstWarn.step + 1}`}
+                            className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-warning/15 text-warning hover:bg-warning/25 shrink-0"
+                          >
+                            {warnCount} 警
+                          </button>
+                        )}
+                        {errCount === 0 && warnCount === 0 && (
+                          <span
+                            title="所有校验通过"
+                            className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-success/15 text-success shrink-0 inline-flex items-center gap-0.5"
+                          >
+                            <Check className="h-2.5 w-2.5" />OK
+                          </span>
+                        )}
                         <span className="text-[10px] font-mono text-muted-foreground shrink-0">
                           step {(d.step ?? 0) + 1}/{STEPS.length}
                         </span>
                       </div>
+
                       <div className="mt-1 flex items-center justify-between text-[11px] text-muted-foreground">
                         <span className="font-mono">{new Date(d.savedAt).toLocaleString()}</span>
                         <div className="flex items-center gap-0.5">
