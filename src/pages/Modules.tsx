@@ -32,7 +32,7 @@ export default function Modules() {
 
       <div className="panel">
         <div className="panel-header"><h2 className="text-sm font-semibold">API 模式</h2></div>
-        <div className="panel-body grid grid-cols-3 gap-4 items-end">
+        <div className="panel-body grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
           <div className="space-y-1.5">
             <Label className="text-xs text-muted-foreground">apiMode</Label>
             <select className="h-9 w-full rounded border bg-background px-2 text-sm" value={apiMode} onChange={(e) => setApiMode(e.target.value)}>
