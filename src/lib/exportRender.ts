@@ -423,20 +423,13 @@ function buildPrintableDoc(data: any, rawPayload: string, format: string, meta: 
   const planB = firstNonEmpty(arrayOf(data?.planB, data?.plan_b, plan?.planB, plan?.plan_b, snapshot?.planB, snapshot?.plan_b), md.planB);
   const purchaseStrategy = firstNonEmpty(arrayOf(plan?.purchaseStrategy, plan?.purchase_strategy, data?.purchaseStrategy, data?.purchase_strategy), md.purchaseStrategy);
   const schedule = firstNonEmpty(arrayOf(data?.reverseSchedule, data?.reverse_schedule, snapshot?.reverse_schedule, snapshot?.reverseSchedule, plan?.reverseSchedule, plan?.schedule), md.schedule);
-  const search = firstNonEmpty(arrayOf(
-    data?.platform_search, data?.platformSearch,
-    data?.procurementSearch, data?.procurement_search,
-    data?.commerceSuggestions, data?.commerce_suggestions,
-    data?.searchSuggestions, data?.search_suggestions,
-    data?.searchRecommendations, data?.search_recommendations,
-    snapshot?.platform_search, snapshot?.platformSearch,
-    snapshot?.procurementSearch, snapshot?.procurement_search,
-    snapshot?.commerceSuggestions, snapshot?.commerce_suggestions,
-    snapshot?.searchSuggestions, snapshot?.search_suggestions,
-    plan?.platformSearch, plan?.platform_search,
-    plan?.procurementSearch, plan?.commerceSuggestions,
-    plan?.searchSuggestions, plan?.searchRecommendations,
-  ), md.search);
+  const searchFromData = readSearchSuggestions(data);
+  const searchFromSnapshot = readSearchSuggestions(snapshot);
+  const searchFromPlan = readSearchSuggestions(plan);
+  const search = firstNonEmpty(
+    firstNonEmpty(firstNonEmpty(searchFromData, searchFromSnapshot), searchFromPlan),
+    md.search,
+  );
   const totalEstimateRaw = value(plan?.totalEstimate, plan?.total_estimate, plan?.total, md.plan?.totalEstimate, "—");
 
   return {
