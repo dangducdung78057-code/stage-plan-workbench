@@ -336,67 +336,6 @@ export function HealthCheck() {
       push({ id: "md", label: "Markdown 导出能力", status: "fail", detail: e?.message });
     }
 
-    const samplePayload = JSON.stringify({
-      project: { title: "健康检查样本", performance_date: "2026-06-30" },
-      input: { schoolStage: "primary", programType: "chorus", performerCount: 2, femaleCount: 1, maleCount: 1, performanceDate: "2026-06-30", perPersonBudget: 120 },
-      snapshot: {
-        mode: "mock",
-        generated_at: new Date().toISOString(),
-        costume_plan: {
-          femalePlan: [{ category: "上装", description: "白衬衫", qty: 1, unitEstimate: 50, subtotal: 50 }],
-          malePlan: [{ category: "上装", description: "西装背心", qty: 1, unitEstimate: 70, subtotal: 70 }],
-          accessories: [{ category: "配饰", description: "蝴蝶结", qty: 2, unitEstimate: 10, subtotal: 20 }],
-          totalEstimate: 140,
-          purchaseStrategy: ["先验样再批量下单"],
-          planB: ["改用替代面料"],
-        },
-        risks: [{ level: "medium", title: "面料缺货", detail: "需提前确认库存" }],
-        reverse_schedule: [{ daysBefore: 14, date: "2026-06-16", task: "面料到货", owner: "采购" }],
-        platform_search: [{ platform: "淘宝", query: "儿童合唱服", note: "人工核验" }],
-      },
-    });
-    const sampleHtml = renderPrintableHtml(samplePayload, "json", {
-      projectTitle: "健康检查样本", version: 0, createdAt: new Date().toISOString(), filenameTitle: "healthcheck",
-    });
-
-    // 11. PDF 导出 (v3.4 三态): 显式 PASS/SKIP/WARN + 原因
-    let pdfDetail: { status: Status; reason: string; detail: string };
-    if (!getFlag("pdfExport")) {
-      pdfDetail = {
-        status: "skip",
-        reason: "PDF disabled by config",
-        detail: "pdfExport flag 未开启（Settings → 分支能力开关）",
-      };
-    } else if (!validatePrintableHtml(sampleHtml)) {
-      pdfDetail = {
-        status: "warn",
-        reason: "PDF generation failed",
-        detail: "printable html invalid",
-      };
-    } else {
-      try {
-        const { result, ms } = await timed(async () => await renderPdfBlob(sampleHtml));
-        const bytes = result?.size ?? 0;
-        if (result && bytes > 1024) {
-          pdfDetail = { status: "pass", reason: "PDF success", detail: `bytes=${bytes}` };
-          push({ id: "pdf", label: "PDF 导出（实验版）", status: "pass", detail: `PDF success — bytes=${bytes}`, ms });
-        } else {
-          pdfDetail = { status: "warn", reason: "PDF generation failed", detail: `bytes=${bytes}` };
-        }
-      } catch (e: any) {
-        pdfDetail = { status: "warn", reason: "PDF generation failed", detail: e?.message ?? "unknown error" };
-      }
-    }
-    if (pdfDetail.status !== "pass") {
-      push({
-        id: "pdf",
-        label: "PDF 导出（实验版）",
-        status: pdfDetail.status,
-        detail: `${pdfDetail.reason} — ${pdfDetail.detail}`,
-      });
-    }
-    (checks as any).__pdfDetail = pdfDetail;
-
     // 11a. PDF 三态调试探针 (v3.4)：仅用于 debug 面板复现 PASS/SKIP/WARN，不进入主验收摘要与结论
     // (a) disabled: 固定 SKIP
     const probeDisabledReason = "PDF disabled by config";
