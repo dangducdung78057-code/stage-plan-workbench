@@ -7,6 +7,7 @@ import { AppShell } from "@/components/AppShell";
 import Workspace from "./pages/Workspace";
 import Projects from "./pages/Projects";
 import ProjectEditor from "./pages/ProjectEditor";
+import ProjectWizard from "./pages/ProjectWizard";
 import ProjectDetail from "./pages/ProjectDetail";
 import Modules from "./pages/Modules";
 import Exports from "./pages/Exports";
