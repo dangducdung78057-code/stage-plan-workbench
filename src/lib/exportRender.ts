@@ -115,23 +115,44 @@ function fmtSchedule(d: any): string {
   return [head, ...rows].join("\n");
 }
 
-function fmtSearch(d: any): string {
-  const recs =
-    d?.platform_search ?? d?.platformSearch ??
-    d?.procurementSearch ?? d?.procurement_search ??
-    d?.commerceSuggestions ?? d?.commerce_suggestions ??
-    d?.searchSuggestions ?? d?.search_suggestions ??
-    d?.searchRecommendations ?? d?.search_recommendations ??
-    d?.snapshot?.platform_search ?? d?.snapshot?.platformSearch ??
-    d?.snapshot?.procurementSearch ?? d?.snapshot?.commerceSuggestions ??
-    d?.snapshot?.searchSuggestions ??
-    d?.plan?.platformSearch ?? d?.plan?.platform_search ??
-    d?.plan?.procurementSearch ?? d?.plan?.commerceSuggestions ??
-    d?.plan?.searchSuggestions ?? d?.plan?.searchRecommendations ??
-    d?.recommendations;
-  if (!Array.isArray(recs) || !recs.length) {
-    return "暂无采购搜索建议，需人工检索与核验。";
+/**
+ * Unified reader for procurement / platform search suggestions.
+ * Compatible with all known payload variants across snapshot / plan / root:
+ *   platform_search, platformSearch,
+ *   procurementSearch, procurement_search,
+ *   commerceSuggestions, commerce_suggestions,
+ *   searchSuggestions, search_suggestions,
+ *   searchRecommendations, search_recommendations,
+ *   purchaseSuggestions, purchase_suggestions
+ * Used by Markdown, PDF and PNG exports so all three stay consistent.
+ */
+export function readSearchSuggestions(d: any): any[] {
+  const keys = [
+    "platform_search", "platformSearch",
+    "procurementSearch", "procurement_search",
+    "commerceSuggestions", "commerce_suggestions",
+    "searchSuggestions", "search_suggestions",
+    "searchRecommendations", "search_recommendations",
+    "purchaseSuggestions", "purchase_suggestions",
+  ];
+  const scopes = [d, d?.snapshot, d?.plan_snapshot, d?.planSnapshot, d?.plan, d?.costume_plan, d?.costumePlan, d?.data];
+  for (const scope of scopes) {
+    if (!scope || typeof scope !== "object") continue;
+    for (const k of keys) {
+      const v = (scope as any)[k];
+      if (Array.isArray(v) && v.length) return v;
+    }
   }
+  const recs = d?.recommendations;
+  if (Array.isArray(recs) && recs.length) return recs;
+  return [];
+}
+
+const SEARCH_EMPTY_MSG = "暂无采购搜索建议，需人工检索与核验。";
+
+function fmtSearch(d: any): string {
+  const recs = readSearchSuggestions(d);
+  if (!recs.length) return SEARCH_EMPTY_MSG;
   return recs.map((r: any) => {
     if (typeof r === "string") return `- ${r}`;
     const q = r.query ?? r.keyword ?? r.q ?? "";
@@ -402,20 +423,13 @@ function buildPrintableDoc(data: any, rawPayload: string, format: string, meta: 
   const planB = firstNonEmpty(arrayOf(data?.planB, data?.plan_b, plan?.planB, plan?.plan_b, snapshot?.planB, snapshot?.plan_b), md.planB);
   const purchaseStrategy = firstNonEmpty(arrayOf(plan?.purchaseStrategy, plan?.purchase_strategy, data?.purchaseStrategy, data?.purchase_strategy), md.purchaseStrategy);
   const schedule = firstNonEmpty(arrayOf(data?.reverseSchedule, data?.reverse_schedule, snapshot?.reverse_schedule, snapshot?.reverseSchedule, plan?.reverseSchedule, plan?.schedule), md.schedule);
-  const search = firstNonEmpty(arrayOf(
-    data?.platform_search, data?.platformSearch,
-    data?.procurementSearch, data?.procurement_search,
-    data?.commerceSuggestions, data?.commerce_suggestions,
-    data?.searchSuggestions, data?.search_suggestions,
-    data?.searchRecommendations, data?.search_recommendations,
-    snapshot?.platform_search, snapshot?.platformSearch,
-    snapshot?.procurementSearch, snapshot?.procurement_search,
-    snapshot?.commerceSuggestions, snapshot?.commerce_suggestions,
-    snapshot?.searchSuggestions, snapshot?.search_suggestions,
-    plan?.platformSearch, plan?.platform_search,
-    plan?.procurementSearch, plan?.commerceSuggestions,
-    plan?.searchSuggestions, plan?.searchRecommendations,
-  ), md.search);
+  const searchFromData = readSearchSuggestions(data);
+  const searchFromSnapshot = readSearchSuggestions(snapshot);
+  const searchFromPlan = readSearchSuggestions(plan);
+  const search = firstNonEmpty(
+    firstNonEmpty(firstNonEmpty(searchFromData, searchFromSnapshot), searchFromPlan),
+    md.search,
+  );
   const totalEstimateRaw = value(plan?.totalEstimate, plan?.total_estimate, plan?.total, md.plan?.totalEstimate, "—");
 
   return {
@@ -625,7 +639,7 @@ function scheduleTable(rows: any[]) {
 
 function searchTable(rows: any[]) {
   if (!Array.isArray(rows) || rows.length === 0) {
-    return `<p>暂无采购搜索建议，需人工检索与核验。</p>`;
+    return `<p>${SEARCH_EMPTY_MSG}</p>`;
   }
   return `<table><thead><tr><th>平台</th><th>关键词</th><th>链接/备注</th></tr></thead><tbody>${rows.map((r) => {
     if (typeof r === "string") return `<tr><td>—</td><td>${escapeHtml(r)}</td><td>人工核验</td></tr>`;
