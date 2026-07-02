@@ -14,7 +14,7 @@ import {
   canPrint,
 } from "@/lib/exportRender";
 import { toast } from "sonner";
-import { FileDown, Printer, Eye } from "lucide-react";
+import { FileDown, Printer, Eye, Loader2 } from "lucide-react";
 
 type Row = {
   id: string; project_id: string; version: number; format: string;
