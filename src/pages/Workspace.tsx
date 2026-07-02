@@ -3,9 +3,32 @@ import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { PROJECT_STATUSES } from "@/lib/stageos";
 import { Plus, ArrowRight, Package, AlertTriangle, CheckCircle2, FileDown, Presentation, Download } from "lucide-react";
 import { MobileCard, MobileCardList, MobileField } from "@/components/MobileCard";
+
+const SLIDE_OUTLINE: { title: string; desc: string }[] = [
+  { title: "封面 · StageOS 项目总览", desc: "能力驱动而非版本驱动的治理理念" },
+  { title: "能力分层 L0/L1/L2", desc: "生产 / 有限 / 实验 三档成熟度定义" },
+  { title: "当前能力矩阵", desc: "AI · Markdown · PNG · PDF · 采购各自所处层级" },
+  { title: "Release Gate G0–G3", desc: "从原型到生产的四道闸门与放行条件" },
+  { title: "一键验收模型", desc: "PASS / WARN / FAIL / SKIP 的唯一状态语义" },
+  { title: "近期流程强化", desc: "确认前强校验 · 解密预览 · 字段跳转闭环" },
+  { title: "Webhook 契约", desc: "outbound-only · 失败不阻塞主流程" },
+  { title: "AI Gateway 与采购回退", desc: "统一网关 · 本地/HTTP 采购 fallback" },
+  { title: "强约束清单", desc: "禁止跨层升级 · 禁止隐藏 FAIL · 禁止版本驱动" },
+  { title: "落地节奏", desc: "以能力层 + Gate 组织路线图" },
+];
+
 
 type Row = {
   id: string;
@@ -58,27 +81,61 @@ export default function Workspace() {
         </div>
       </div>
 
-      <a
-        href="/stageos-overview.pptx"
-        download
-        className="panel flex items-center justify-between gap-3 p-3 hover:border-primary/40 hover:bg-accent/40 transition-colors group"
-        aria-label="下载 StageOS 项目总览幻灯片 (.pptx)"
-      >
-        <div className="flex items-center gap-3 min-w-0">
-          <span className="inline-flex h-9 w-9 items-center justify-center rounded-md bg-primary/10 text-primary shrink-0">
-            <Presentation className="h-4 w-4" />
-          </span>
-          <div className="min-w-0">
-            <div className="text-sm font-medium truncate">StageOS 项目总览 · 幻灯片导读</div>
-            <div className="text-xs text-muted-foreground truncate">
-              10 页 · 能力分层 L0/L1/L2、Gate G0–G3、一键验收治理模型
+      <Dialog>
+        <DialogTrigger asChild>
+          <button
+            type="button"
+            className="panel w-full text-left flex items-center justify-between gap-3 p-3 hover:border-primary/40 hover:bg-accent/40 transition-colors group"
+            aria-label="打开 StageOS 项目总览幻灯片导读"
+          >
+            <div className="flex items-center gap-3 min-w-0">
+              <span className="inline-flex h-9 w-9 items-center justify-center rounded-md bg-primary/10 text-primary shrink-0">
+                <Presentation className="h-4 w-4" />
+              </span>
+              <div className="min-w-0">
+                <div className="text-sm font-medium truncate">StageOS 项目总览 · 幻灯片导读</div>
+                <div className="text-xs text-muted-foreground truncate">
+                  10 页 · 能力分层 L0/L1/L2、Gate G0–G3、一键验收治理模型
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
-        <span className="text-xs text-primary flex items-center gap-1 shrink-0 group-hover:underline">
-          <Download className="h-3.5 w-3.5" /> .pptx
-        </span>
-      </a>
+            <span className="text-xs text-primary flex items-center gap-1 shrink-0 group-hover:underline">
+              查看导读 <ArrowRight className="h-3.5 w-3.5" />
+            </span>
+          </button>
+        </DialogTrigger>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Presentation className="h-4 w-4 text-primary" /> StageOS 项目总览 · 幻灯片导读
+            </DialogTitle>
+            <DialogDescription>
+              先浏览 10 页要点脉络，再下载 .pptx 用于线下汇报。
+            </DialogDescription>
+          </DialogHeader>
+          <ol className="max-h-[52vh] overflow-y-auto pr-1 space-y-2">
+            {SLIDE_OUTLINE.map((s, i) => (
+              <li key={i} className="flex gap-3 rounded-md border border-border/60 p-2.5">
+                <span className="font-mono text-xs text-muted-foreground w-6 shrink-0 pt-0.5">
+                  {String(i + 1).padStart(2, "0")}
+                </span>
+                <div className="min-w-0">
+                  <div className="text-sm font-medium">{s.title}</div>
+                  <div className="text-xs text-muted-foreground mt-0.5">{s.desc}</div>
+                </div>
+              </li>
+            ))}
+          </ol>
+          <DialogFooter>
+            <Button asChild size="sm">
+              <a href="/stageos-overview.pptx" download>
+                <Download className="h-4 w-4 mr-1" /> 下载 .pptx
+              </a>
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
 
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
