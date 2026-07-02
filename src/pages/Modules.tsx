@@ -1,6 +1,7 @@
 import { STAGEOS_MODULES } from "@/lib/stageos";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { SETTINGS_SAFE_COLUMNS } from "@/lib/settingsColumns";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -13,7 +14,7 @@ export default function Modules() {
 
   useEffect(() => {
     (async () => {
-      const { data } = await supabase.from("settings").select("*").eq("id", "global").maybeSingle();
+      const { data } = await supabase.from("settings").select(SETTINGS_SAFE_COLUMNS).eq("id", "global").maybeSingle();
       if (data) { setApiMode(data.api_mode); setApiBaseUrl(data.api_base_url ?? ""); }
     })();
   }, []);
