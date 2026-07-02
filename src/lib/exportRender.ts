@@ -115,23 +115,44 @@ function fmtSchedule(d: any): string {
   return [head, ...rows].join("\n");
 }
 
-function fmtSearch(d: any): string {
-  const recs =
-    d?.platform_search ?? d?.platformSearch ??
-    d?.procurementSearch ?? d?.procurement_search ??
-    d?.commerceSuggestions ?? d?.commerce_suggestions ??
-    d?.searchSuggestions ?? d?.search_suggestions ??
-    d?.searchRecommendations ?? d?.search_recommendations ??
-    d?.snapshot?.platform_search ?? d?.snapshot?.platformSearch ??
-    d?.snapshot?.procurementSearch ?? d?.snapshot?.commerceSuggestions ??
-    d?.snapshot?.searchSuggestions ??
-    d?.plan?.platformSearch ?? d?.plan?.platform_search ??
-    d?.plan?.procurementSearch ?? d?.plan?.commerceSuggestions ??
-    d?.plan?.searchSuggestions ?? d?.plan?.searchRecommendations ??
-    d?.recommendations;
-  if (!Array.isArray(recs) || !recs.length) {
-    return "暂无采购搜索建议，需人工检索与核验。";
+/**
+ * Unified reader for procurement / platform search suggestions.
+ * Compatible with all known payload variants across snapshot / plan / root:
+ *   platform_search, platformSearch,
+ *   procurementSearch, procurement_search,
+ *   commerceSuggestions, commerce_suggestions,
+ *   searchSuggestions, search_suggestions,
+ *   searchRecommendations, search_recommendations,
+ *   purchaseSuggestions, purchase_suggestions
+ * Used by Markdown, PDF and PNG exports so all three stay consistent.
+ */
+export function readSearchSuggestions(d: any): any[] {
+  const keys = [
+    "platform_search", "platformSearch",
+    "procurementSearch", "procurement_search",
+    "commerceSuggestions", "commerce_suggestions",
+    "searchSuggestions", "search_suggestions",
+    "searchRecommendations", "search_recommendations",
+    "purchaseSuggestions", "purchase_suggestions",
+  ];
+  const scopes = [d, d?.snapshot, d?.plan_snapshot, d?.planSnapshot, d?.plan, d?.costume_plan, d?.costumePlan, d?.data];
+  for (const scope of scopes) {
+    if (!scope || typeof scope !== "object") continue;
+    for (const k of keys) {
+      const v = (scope as any)[k];
+      if (Array.isArray(v) && v.length) return v;
+    }
   }
+  const recs = d?.recommendations;
+  if (Array.isArray(recs) && recs.length) return recs;
+  return [];
+}
+
+const SEARCH_EMPTY_MSG = "暂无采购搜索建议，需人工检索与核验。";
+
+function fmtSearch(d: any): string {
+  const recs = readSearchSuggestions(d);
+  if (!recs.length) return SEARCH_EMPTY_MSG;
   return recs.map((r: any) => {
     if (typeof r === "string") return `- ${r}`;
     const q = r.query ?? r.keyword ?? r.q ?? "";
