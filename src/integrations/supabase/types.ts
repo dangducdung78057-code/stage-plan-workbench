@@ -110,6 +110,51 @@ export type Database = {
           },
         ]
       }
+      health_check_runs: {
+        Row: {
+          baseline: string
+          created_at: string
+          fail_count: number
+          id: string
+          items: Json
+          pass_count: number
+          route: string | null
+          skip_count: number
+          summary: Json
+          user_agent: string | null
+          user_id: string
+          warn_count: number
+        }
+        Insert: {
+          baseline: string
+          created_at?: string
+          fail_count?: number
+          id?: string
+          items?: Json
+          pass_count?: number
+          route?: string | null
+          skip_count?: number
+          summary?: Json
+          user_agent?: string | null
+          user_id: string
+          warn_count?: number
+        }
+        Update: {
+          baseline?: string
+          created_at?: string
+          fail_count?: number
+          id?: string
+          items?: Json
+          pass_count?: number
+          route?: string | null
+          skip_count?: number
+          summary?: Json
+          user_agent?: string | null
+          user_id?: string
+          warn_count?: number
+        }
+        Relationships: []
+      }
       plan_snapshots: {
         Row: {
           costume_plan: Json
