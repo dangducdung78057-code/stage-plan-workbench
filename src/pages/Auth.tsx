@@ -8,6 +8,7 @@ import { Package, LogIn, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import { FullPageLoader } from "@/components/FullPageLoader";
 
+
 export default function AuthPage() {
   const { user, loading, signIn, signUp } = useAuth();
   const loc = useLocation();
@@ -36,7 +37,8 @@ export default function AuthPage() {
 
   return (
     <div className="min-h-screen bg-background grid place-items-center p-4">
-      <div className="w-full max-w-sm panel">
+      <main className="w-full max-w-sm panel">
+        <h1 className="sr-only">登录 StageOS 演出服装排产工作台</h1>
         <div className="panel-header">
           <div className="flex items-center gap-2">
             <div className="h-7 w-7 rounded bg-primary grid place-items-center text-primary-foreground">
@@ -76,7 +78,7 @@ export default function AuthPage() {
             v2 已启用邮箱注册与登录；所有项目、快照、导出记录按 <span className="font-mono">user_id</span> 隔离。
           </p>
         </form>
-      </div>
+      </main>
     </div>
   );
 }

@@ -251,7 +251,7 @@ export default function ProjectEditor() {
                   </td>
                   <td><Input className="h-7 font-mono text-xs" type="number" value={s.heightCm} onChange={(e) => updateStudent(i, { heightCm: Number(e.target.value) })} /></td>
                   <td><Input className="h-7" value={s.roleLabel ?? ""} onChange={(e) => updateStudent(i, { roleLabel: e.target.value })} placeholder="如:领唱 / 领舞" /></td>
-                  <td><Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => removeStudent(i)}><Trash2 className="h-3.5 w-3.5" /></Button></td>
+                  <td><Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => removeStudent(i)} aria-label={`删除第 ${i + 1} 行学生`}><Trash2 className="h-3.5 w-3.5" aria-hidden="true" /><span className="sr-only">删除学生</span></Button></td>
                 </tr>
               ))}
             </tbody>
