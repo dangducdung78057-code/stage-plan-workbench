@@ -247,6 +247,42 @@ export type Database = {
         }
         Relationships: []
       }
+      release_freezes: {
+        Row: {
+          baseline: string
+          capability_snapshot: Json
+          created_at: string
+          created_by: string | null
+          gate: string
+          id: string
+          reason: string | null
+          rule: string | null
+          status: string
+        }
+        Insert: {
+          baseline: string
+          capability_snapshot: Json
+          created_at?: string
+          created_by?: string | null
+          gate: string
+          id?: string
+          reason?: string | null
+          rule?: string | null
+          status: string
+        }
+        Update: {
+          baseline?: string
+          capability_snapshot?: Json
+          created_at?: string
+          created_by?: string | null
+          gate?: string
+          id?: string
+          reason?: string | null
+          rule?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
       settings: {
         Row: {
           api_base_url: string | null
