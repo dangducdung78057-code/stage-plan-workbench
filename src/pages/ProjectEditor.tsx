@@ -55,12 +55,22 @@ export default function ProjectEditor() {
 
   async function save() {
     if (!title.trim()) { toast.error("请填写项目标题"); return; }
+    if (errors.length > 0) {
+      toast.error(`存在 ${errors.length} 项校验错误,请先修正`);
+      return;
+    }
     setSaving(true);
     try {
       const { data: userData } = await supabase.auth.getUser();
       const uid = userData.user?.id;
       if (!uid) { toast.error("未登录"); setSaving(false); return; }
       let projectId = id;
+      const validationSnapshot = {
+        checkedAt: new Date().toISOString(),
+        errors,
+        warnings,
+      };
+      const persistedData = { ...data, __validation: validationSnapshot } as StageInputData & { __validation: typeof validationSnapshot };
       if (isEdit && id) {
         await supabase.from("projects").update({
           title, status,
@@ -76,7 +86,7 @@ export default function ProjectEditor() {
         if (error) throw error;
         projectId = created.id;
       }
-      await supabase.from("stage_inputs").upsert({ project_id: projectId!, user_id: uid, data: data as any } as any);
+      await supabase.from("stage_inputs").upsert({ project_id: projectId!, user_id: uid, data: persistedData as any } as any);
       toast.success(isEdit ? "已更新" : "已创建");
       navigate(`/projects/${projectId}`);
     } catch (e: any) {
