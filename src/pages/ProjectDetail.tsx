@@ -676,6 +676,15 @@ function buildMarkdownExport(p: Project, input: StageInputData | null, s: Snapsh
   lines.push("## 倒排");
   (s.reverse_schedule ?? []).forEach((r: any) => lines.push(`- D-${r.daysBefore} ${r.date ?? ""} · ${r.task} · ${r.owner}`));
   lines.push("");
+  lines.push("## 采购搜索建议");
+  ((s as any).platform_search ?? []).forEach((r: any) => {
+    const platform = r.platform ?? "—";
+    const q = r.query ?? r.keyword ?? r.q ?? "—";
+    const note = r.note ?? r.url ?? "需人工核验";
+    lines.push(`- **${platform}**：${q} — ${note}`);
+  });
+  lines.push("");
+  lines.push("> 采购搜索建议仅用于人工检索，不代表实时库存、SKU 或成交价。");
   lines.push("> 免责声明:所有商品/价格/库存信息为估算或搜索建议,需人工核验。");
   return lines.join("\n");
 }

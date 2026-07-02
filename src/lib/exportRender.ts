@@ -116,13 +116,23 @@ function fmtSchedule(d: any): string {
 }
 
 function fmtSearch(d: any): string {
-  const recs = d?.searchRecommendations ?? d?.plan?.searchRecommendations ?? d?.recommendations;
+  const recs =
+    d?.platformSearch ??
+    d?.platform_search ??
+    d?.snapshot?.platform_search ??
+    d?.snapshot?.platformSearch ??
+    d?.searchRecommendations ??
+    d?.plan?.searchRecommendations ??
+    d?.plan?.platformSearch ??
+    d?.recommendations;
   if (!Array.isArray(recs) || !recs.length) return MISSING;
   return recs.map((r: any) => {
     if (typeof r === "string") return `- ${r}`;
     const q = r.query ?? r.keyword ?? r.q ?? "";
     const platform = r.platform ?? "";
-    return `- ${platform ? `**${platform}**：` : ""}${q}`;
+    const note = r.note ?? r.url ?? "";
+    const tail = note ? ` — ${note}` : "";
+    return `- ${platform ? `**${platform}**：` : ""}${q}${tail}`;
   }).join("\n") + `\n\n> 平台搜索建议仅供人工核验，非实时库存价格。`;
 }
 
@@ -510,7 +520,16 @@ function parseMarkdownPayload(raw: string): {
     else schedule.push(item);
   }
 
-  return { project, input, plan, snapshot, risks, planB, purchaseStrategy: [], schedule, search: [] };
+  // ## 采购搜索建议 → "- **平台**：关键词 — 备注"
+  const search: any[] = [];
+  const searchBlock = extractListBlock(raw, /^##\s+采购搜索建议\s*$/m);
+  for (const item of searchBlock) {
+    const m = /^\*\*([^*]+)\*\*\s*[:：]\s*(.+?)(?:\s+[—-]\s+(.+))?$/.exec(item);
+    if (m) search.push({ platform: m[1].trim(), query: m[2].trim(), note: (m[3] ?? "").trim() || undefined });
+    else search.push(item);
+  }
+
+  return { project, input, plan, snapshot, risks, planB, purchaseStrategy: [], schedule, search };
 }
 
 function numOrRaw(s: string): any {
