@@ -44,6 +44,7 @@ export function HealthCheck() {
   const [recent, setRecent] = useState<RunRow[]>([]);
   const [lastRunId, setLastRunId] = useState<string | null>(null);
   const [compareIds, setCompareIds] = useState<[string | null, string | null]>([null, null]);
+  const [snapshot, setSnapshot] = useState<CapabilitySnapshot | null>(null);
   type PdfProbe = { status: Status; reason: string; detail: string; ms?: number };
   const [pdfProbes, setPdfProbes] = useState<{ disabled: PdfProbe; enabled: PdfProbe; error: PdfProbe } | null>(null);
 
