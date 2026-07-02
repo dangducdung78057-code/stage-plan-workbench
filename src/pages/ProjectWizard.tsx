@@ -449,35 +449,70 @@ export default function ProjectWizard() {
   );
 }
 
-function validateStep(step: number, title: string, d: StageInputData): { blockers: string[] } {
-  const b: string[] = [];
-  if (step === 0) {
-    if (!title.trim()) b.push("项目标题");
-    if (!d.schoolStage) b.push("学段");
-    if (!d.programType) b.push("节目类型");
-    if (!d.programTheme?.trim()) b.push("节目主题");
-    if (!d.performanceDate) b.push("演出日期");
-    if (!d.rehearsalFrequencyPerWeek) b.push("彩排频次");
-  } else if (step === 1) {
-    if (typeof d.performerCount !== "number" || d.performerCount <= 0) b.push("总人数");
-    if (typeof d.maleCount !== "number") b.push("男生数");
-    if (typeof d.femaleCount !== "number") b.push("女生数");
-    if (typeof d.perPersonBudget !== "number" || d.perPersonBudget <= 0) b.push("人均预算");
-    if (
-      typeof d.performerCount === "number" &&
-      typeof d.maleCount === "number" &&
-      typeof d.femaleCount === "number" &&
-      d.maleCount + d.femaleCount !== d.performerCount
-    ) b.push("男女之和 = 总人数");
-  } else if (step === 2) {
-    if (!d.screenThemeColor?.trim()) b.push("屏幕主题色");
-    if (!d.lightingStyle?.trim()) b.push("灯光风格");
-  } else if (step === 3) {
-    if (d.students && d.students.length > 0 && typeof d.performerCount === "number"
-      && d.students.length !== d.performerCount) b.push("学生行数 = 总人数(或清空)");
+export type WizardIssue = {
+  step: number;
+  fieldId: string;
+  label: string;
+  message: string;
+  severity: "error" | "warning";
+};
+
+function collectIssues(title: string, d: StageInputData): WizardIssue[] {
+  const out: WizardIssue[] = [];
+  const err = (step: number, fieldId: string, label: string, message: string) =>
+    out.push({ step, fieldId, label, message, severity: "error" });
+  const warn = (step: number, fieldId: string, label: string, message: string) =>
+    out.push({ step, fieldId, label, message, severity: "warning" });
+
+  // Step 0
+  if (!title.trim()) err(0, "w-title", "项目标题", "必填,用于工作台识别项目");
+  if (!d.schoolStage) err(0, "w-schoolStage", "学段", "必选:primary / junior / senior");
+  if (!d.programType) err(0, "w-programType", "节目类型", "必选");
+  if (!d.programTheme?.trim()) err(0, "w-programTheme", "节目主题", "必填");
+  if (!d.performanceDate) err(0, "w-performanceDate", "演出日期", "必填,用于生成倒排计划");
+  if (!d.rehearsalFrequencyPerWeek) err(0, "w-rehearsalFrequencyPerWeek", "彩排频次", "必选:2 / 3 / 5");
+
+  // Step 1
+  if (typeof d.performerCount !== "number" || d.performerCount <= 0)
+    err(1, "w-performerCount", "总人数 performerCount", "必填,正整数");
+  if (typeof d.maleCount !== "number") err(1, "w-maleCount", "男生数 maleCount", "必填");
+  if (typeof d.femaleCount !== "number") err(1, "w-femaleCount", "女生数 femaleCount", "必填");
+  if (typeof d.perPersonBudget !== "number" || d.perPersonBudget <= 0)
+    err(1, "w-perPersonBudget", "人均预算 perPersonBudget", "必填,正数");
+  if (
+    typeof d.performerCount === "number" &&
+    typeof d.maleCount === "number" &&
+    typeof d.femaleCount === "number" &&
+    d.maleCount + d.femaleCount !== d.performerCount
+  ) {
+    err(1, "w-maleCount",
+      "人数校验",
+      `男(${d.maleCount}) + 女(${d.femaleCount}) = ${d.maleCount + d.femaleCount},与总人数 ${d.performerCount} 不一致`);
   }
-  return { blockers: b };
+
+  // Step 2
+  if (!d.screenThemeColor?.trim()) err(2, "w-screenThemeColor", "屏幕主题色 screenThemeColor", "必填");
+  if (!d.lightingStyle?.trim()) err(2, "w-lightingStyle", "灯光风格 lightingStyle", "必填");
+
+  // Step 3 (roster)
+  if (
+    d.students && d.students.length > 0 &&
+    typeof d.performerCount === "number" &&
+    d.students.length !== d.performerCount
+  ) {
+    warn(3, "w-students-panel",
+      "学生名录行数",
+      `已填 ${d.students.length} 行,与总人数 ${d.performerCount} 不一致(清空或补齐)`);
+  }
+
+  return out;
 }
+
+function validateStep(step: number, title: string, d: StageInputData): { blockers: string[] } {
+  const items = collectIssues(title, d).filter((i) => i.step === step);
+  return { blockers: items.map((i) => i.label) };
+}
+
 
 function CountsHint({ data }: { data: StageInputData }) {
   const { performerCount, maleCount, femaleCount } = data;
