@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { PROJECT_STATUSES } from "@/lib/stageos";
-import { Plus, ArrowRight, Package, AlertTriangle, CheckCircle2, FileDown } from "lucide-react";
+import { Plus, ArrowRight, Package, AlertTriangle, CheckCircle2, FileDown, Presentation, Download } from "lucide-react";
 import { MobileCard, MobileCardList, MobileField } from "@/components/MobileCard";
 
 type Row = {
@@ -57,6 +57,29 @@ export default function Workspace() {
           </Button>
         </div>
       </div>
+
+      <a
+        href="/stageos-overview.pptx"
+        download
+        className="panel flex items-center justify-between gap-3 p-3 hover:border-primary/40 hover:bg-accent/40 transition-colors group"
+        aria-label="下载 StageOS 项目总览幻灯片 (.pptx)"
+      >
+        <div className="flex items-center gap-3 min-w-0">
+          <span className="inline-flex h-9 w-9 items-center justify-center rounded-md bg-primary/10 text-primary shrink-0">
+            <Presentation className="h-4 w-4" />
+          </span>
+          <div className="min-w-0">
+            <div className="text-sm font-medium truncate">StageOS 项目总览 · 幻灯片导读</div>
+            <div className="text-xs text-muted-foreground truncate">
+              10 页 · 能力分层 L0/L1/L2、Gate G0–G3、一键验收治理模型
+            </div>
+          </div>
+        </div>
+        <span className="text-xs text-primary flex items-center gap-1 shrink-0 group-hover:underline">
+          <Download className="h-3.5 w-3.5" /> .pptx
+        </span>
+      </a>
+
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <StatCard icon={<Package className="h-4 w-4" />} label="项目总数" value={counts.total} route="/api/stageos/costume-master-plan" />
