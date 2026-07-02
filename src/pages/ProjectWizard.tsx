@@ -548,6 +548,31 @@ export default function ProjectWizard() {
                                     </button>
                                   );
                                 })}
+                                {(() => {
+                                  const filter = popoverIssueFilter[d.id] ?? "all";
+                                  const filtered = filter === "all" ? issues : issues.filter((i) => i.severity === filter);
+                                  const first = filtered[0];
+                                  return (
+                                    <button
+                                      type="button"
+                                      disabled={!first}
+                                      onClick={() => {
+                                        if (!first) return;
+                                        setPopoverNavIndex((s) => ({ ...s, [d.id]: 0 }));
+                                        jumpTo(first);
+                                      }}
+                                      className={[
+                                        "ml-auto text-[11px] px-2 py-0.5 rounded-md border transition-colors inline-flex items-center gap-1",
+                                        first
+                                          ? "border-primary bg-primary/10 text-primary font-medium hover:bg-primary/20"
+                                          : "border-border bg-muted text-muted-foreground opacity-50 cursor-not-allowed",
+                                      ].join(" ")}
+                                    >
+                                      <AlertTriangle className="h-3 w-3" />
+                                      跳到首个问题
+                                    </button>
+                                  );
+                                })()}
                               </div>
                               {(() => {
                                 const filter = popoverIssueFilter[d.id] ?? "all";
