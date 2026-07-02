@@ -13,6 +13,7 @@ import { FLAG_META, useFlags, setFlag, type FeatureFlag } from "@/lib/featureFla
 
 export default function SettingsPage() {
   const { user, signOut } = useAuth();
+  const flags = useFlags();
   const [apiMode, setApiMode] = useState("mock");
   const [apiBaseUrl, setApiBaseUrl] = useState("");
   const [counts, setCounts] = useState({ projects: 0, snapshots: 0, exports: 0, confirmations: 0 });
