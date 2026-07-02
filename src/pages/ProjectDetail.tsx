@@ -14,6 +14,7 @@ import {
   ArrowLeft, Sparkles, FileJson, FileText, CheckCircle2, AlertTriangle,
   ExternalLink, Image as ImageIcon, Video, Layers as LayersIcon, Wand2,
 } from "lucide-react";
+import { MobileCard, MobileCardList, MobileField } from "@/components/MobileCard";
 
 type Project = { id: string; title: string; status: string; performance_date: string | null; performer_count: number | null; updated_at: string };
 type Snapshot = {
@@ -184,19 +185,29 @@ export default function ProjectDetail() {
           {snapshots.length > 1 && (
             <div className="panel">
               <div className="panel-header"><h3 className="text-sm font-semibold">历史快照</h3></div>
-              <table className="ops-table">
-                <thead><tr><th>版本</th><th>模式</th><th>生成时间</th><th>合计</th></tr></thead>
-                <tbody>
-                  {snapshots.map((s) => (
-                    <tr key={s.id}>
-                      <td className="font-mono">v{s.version}</td>
-                      <td><ToneBadge tone="info">{s.mode}</ToneBadge></td>
-                      <td className="font-mono text-xs text-muted-foreground">{new Date(s.generated_at).toLocaleString("zh-CN", { hour12: false })}</td>
-                      <td className="font-mono">¥ {s.costume_plan?.totalEstimate ?? "—"}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <div className="hidden md:block">
+                <table className="ops-table">
+                  <thead><tr><th>版本</th><th>模式</th><th>生成时间</th><th>合计</th></tr></thead>
+                  <tbody>
+                    {snapshots.map((s) => (
+                      <tr key={s.id}>
+                        <td className="font-mono">v{s.version}</td>
+                        <td><ToneBadge tone="info">{s.mode}</ToneBadge></td>
+                        <td className="font-mono text-xs text-muted-foreground">{new Date(s.generated_at).toLocaleString("zh-CN", { hour12: false })}</td>
+                        <td className="font-mono">¥ {s.costume_plan?.totalEstimate ?? "—"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <MobileCardList>
+                {snapshots.map((s) => (
+                  <MobileCard key={s.id} title={<span className="font-mono">v{s.version}</span>} right={<ToneBadge tone="info">{s.mode}</ToneBadge>}>
+                    <MobileField label="生成时间" value={new Date(s.generated_at).toLocaleString("zh-CN", { hour12: false })} mono />
+                    <MobileField label="合计" value={`¥ ${s.costume_plan?.totalEstimate ?? "—"}`} mono />
+                  </MobileCard>
+                ))}
+              </MobileCardList>
             </div>
           )}
         </TabsContent>
@@ -223,20 +234,30 @@ export default function ProjectDetail() {
               {confirmations.length > 0 && (
                 <div>
                   <div className="text-xs text-muted-foreground mb-1">历史记录</div>
-                  <table className="ops-table">
-                    <thead><tr><th>状态</th><th>备注</th><th>时间</th></tr></thead>
-                    <tbody>
-                      {confirmations.map((c) => (
-                        <tr key={c.id}>
-                          <td><StatusBadge status={c.status} /></td>
-                          <td className="text-xs">{c.notes ?? "—"}</td>
-                          <td className="font-mono text-xs text-muted-foreground">
-                            {new Date(c.confirmed_at ?? c.created_at).toLocaleString("zh-CN", { hour12: false })}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                  <div className="hidden md:block">
+                    <table className="ops-table">
+                      <thead><tr><th>状态</th><th>备注</th><th>时间</th></tr></thead>
+                      <tbody>
+                        {confirmations.map((c) => (
+                          <tr key={c.id}>
+                            <td><StatusBadge status={c.status} /></td>
+                            <td className="text-xs">{c.notes ?? "—"}</td>
+                            <td className="font-mono text-xs text-muted-foreground">
+                              {new Date(c.confirmed_at ?? c.created_at).toLocaleString("zh-CN", { hour12: false })}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <MobileCardList>
+                    {confirmations.map((c) => (
+                      <MobileCard key={c.id} title={<StatusBadge status={c.status} />}>
+                        <MobileField label="备注" value={c.notes ?? "—"} stack />
+                        <MobileField label="时间" value={new Date(c.confirmed_at ?? c.created_at).toLocaleString("zh-CN", { hour12: false })} mono />
+                      </MobileCard>
+                    ))}
+                  </MobileCardList>
                 </div>
               )}
             </div>
@@ -314,7 +335,7 @@ function PlanView({ snapshot }: { snapshot: Snapshot }) {
   const search = (snapshot.platform_search ?? []) as any[];
   return (
     <>
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         <PlanTable title="女生方案 femalePlan" rows={plan.femalePlan} />
         <PlanTable title="男生方案 malePlan" rows={plan.malePlan} />
         <PlanTable title="配饰 accessories" rows={plan.accessories} />
@@ -376,19 +397,33 @@ function PlanView({ snapshot }: { snapshot: Snapshot }) {
           <h3 className="text-sm font-semibold">倒排时间表 reverseSchedule</h3>
           <span className="kbd-route">/reverse-schedule</span>
         </div>
-        <table className="ops-table">
-          <thead><tr><th className="w-24">D-天数</th><th className="w-32">日期</th><th>任务</th><th className="w-32">负责人</th></tr></thead>
-          <tbody>
-            {schedule.map((s, i) => (
-              <tr key={i}>
-                <td className="font-mono">D-{s.daysBefore}</td>
-                <td className="font-mono text-xs text-muted-foreground">{s.date ?? "—"}</td>
-                <td>{s.task}</td>
-                <td className="text-xs">{s.owner}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <div className="hidden md:block">
+          <table className="ops-table">
+            <thead><tr><th className="w-24">D-天数</th><th className="w-32">日期</th><th>任务</th><th className="w-32">负责人</th></tr></thead>
+            <tbody>
+              {schedule.map((s, i) => (
+                <tr key={i}>
+                  <td className="font-mono">D-{s.daysBefore}</td>
+                  <td className="font-mono text-xs text-muted-foreground">{s.date ?? "—"}</td>
+                  <td>{s.task}</td>
+                  <td className="text-xs">{s.owner}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <MobileCardList>
+          {schedule.map((s, i) => (
+            <MobileCard
+              key={i}
+              title={<span className="font-mono">D-{s.daysBefore}</span>}
+              right={<span className="font-mono text-[11px] text-muted-foreground">{s.date ?? "—"}</span>}
+            >
+              <MobileField label="任务" value={s.task} stack />
+              <MobileField label="负责人" value={s.owner} />
+            </MobileCard>
+          ))}
+        </MobileCardList>
       </div>
 
       <div className="panel">
@@ -400,19 +435,37 @@ function PlanView({ snapshot }: { snapshot: Snapshot }) {
           <div className="text-xs text-muted-foreground">
             以下为搜索关键词与链接,不代表真实 SKU、库存、价格或采购承诺。所有商品与商务信息需人工核验后才能作为采购依据。
           </div>
-          <table className="ops-table">
-            <thead><tr><th className="w-24">平台</th><th>关键词</th><th className="w-24">链接</th><th>说明</th></tr></thead>
-            <tbody>
-              {search.map((s, i) => (
-                <tr key={i}>
-                  <td>{s.platform}</td>
-                  <td className="font-mono text-xs">{s.query}</td>
-                  <td><a href={s.url} target="_blank" rel="noreferrer" className="text-primary text-xs hover:underline inline-flex items-center gap-1">打开 <ExternalLink className="h-3 w-3" /></a></td>
-                  <td className="text-xs text-muted-foreground">{s.note}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div className="hidden md:block">
+            <table className="ops-table">
+              <thead><tr><th className="w-24">平台</th><th>关键词</th><th className="w-24">链接</th><th>说明</th></tr></thead>
+              <tbody>
+                {search.map((s, i) => (
+                  <tr key={i}>
+                    <td>{s.platform}</td>
+                    <td className="font-mono text-xs">{s.query}</td>
+                    <td><a href={s.url} target="_blank" rel="noreferrer" className="text-primary text-xs hover:underline inline-flex items-center gap-1">打开 <ExternalLink className="h-3 w-3" /></a></td>
+                    <td className="text-xs text-muted-foreground">{s.note}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <MobileCardList className="p-0 pt-2">
+            {search.map((s, i) => (
+              <MobileCard
+                key={i}
+                title={s.platform}
+                right={
+                  <a href={s.url} target="_blank" rel="noreferrer" className="text-primary text-xs hover:underline inline-flex items-center gap-1">
+                    打开 <ExternalLink className="h-3 w-3" />
+                  </a>
+                }
+              >
+                <MobileField label="关键词" value={<span className="font-mono">{s.query}</span>} stack />
+                <MobileField label="说明" value={<span className="text-muted-foreground">{s.note}</span>} stack />
+              </MobileCard>
+            ))}
+          </MobileCardList>
         </div>
       </div>
     </>
@@ -420,26 +473,51 @@ function PlanView({ snapshot }: { snapshot: Snapshot }) {
 }
 
 function PlanTable({ title, rows }: { title: string; rows: any[] }) {
+  const list = rows ?? [];
+  const subtotal = list.reduce((sum, r) => sum + (Number(r.subtotal) || 0), 0);
   return (
     <div className="panel">
-      <div className="panel-header"><h3 className="text-sm font-semibold">{title}</h3></div>
-      <table className="ops-table">
-        <thead><tr><th>项</th><th className="w-14 text-right">数量</th><th className="w-20 text-right">单价</th><th className="w-20 text-right">小计</th></tr></thead>
-        <tbody>
-          {(rows ?? []).map((r, i) => (
-            <tr key={i}>
-              <td>
-                <div className="font-medium text-xs">{r.category}</div>
-                <div className="text-xs text-muted-foreground">{r.description}</div>
-                {r.sizing && <div className="text-[10px] text-muted-foreground font-mono">size: {r.sizing}</div>}
-              </td>
-              <td className="text-right font-mono text-xs">{r.qty}</td>
-              <td className="text-right font-mono text-xs">¥{r.unitEstimate}</td>
-              <td className="text-right font-mono text-xs">¥{r.subtotal}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <div className="panel-header">
+        <h3 className="text-sm font-semibold">{title}</h3>
+        <span className="text-xs font-mono text-muted-foreground">¥{subtotal}</span>
+      </div>
+      <div className="hidden md:block">
+        <table className="ops-table">
+          <thead><tr><th>项</th><th className="w-14 text-right">数量</th><th className="w-20 text-right">单价</th><th className="w-20 text-right">小计</th></tr></thead>
+          <tbody>
+            {list.map((r, i) => (
+              <tr key={i}>
+                <td>
+                  <div className="font-medium text-xs">{r.category}</div>
+                  <div className="text-xs text-muted-foreground">{r.description}</div>
+                  {r.sizing && <div className="text-[10px] text-muted-foreground font-mono">size: {r.sizing}</div>}
+                </td>
+                <td className="text-right font-mono text-xs">{r.qty}</td>
+                <td className="text-right font-mono text-xs">¥{r.unitEstimate}</td>
+                <td className="text-right font-mono text-xs">¥{r.subtotal}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <MobileCardList empty="暂无条目">
+        {list.map((r, i) => (
+          <MobileCard
+            key={i}
+            title={
+              <div className="min-w-0">
+                <div className="text-sm font-medium break-words">{r.category}</div>
+                <div className="text-xs text-muted-foreground break-words">{r.description}</div>
+                {r.sizing && <div className="text-[10px] text-muted-foreground font-mono mt-0.5">size: {r.sizing}</div>}
+              </div>
+            }
+          >
+            <MobileField label="数量" value={r.qty} mono />
+            <MobileField label="单价" value={`¥${r.unitEstimate}`} mono />
+            <MobileField label="小计" value={`¥${r.subtotal}`} mono />
+          </MobileCard>
+        ))}
+      </MobileCardList>
     </div>
   );
 }

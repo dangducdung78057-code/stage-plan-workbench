@@ -5,6 +5,7 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { PROJECT_STATUSES } from "@/lib/stageos";
 import { Plus, ArrowRight, Package, AlertTriangle, CheckCircle2, FileDown } from "lucide-react";
+import { MobileCard, MobileCardList, MobileField } from "@/components/MobileCard";
 
 type Row = {
   id: string;
@@ -74,7 +75,7 @@ export default function Workspace() {
             查看全部 <ArrowRight className="h-3 w-3" />
           </Link>
         </div>
-        <div className="overflow-x-auto">
+        <div className="hidden md:block overflow-x-auto">
           <table className="ops-table">
             <thead>
               <tr>
@@ -118,6 +119,27 @@ export default function Workspace() {
             </tbody>
           </table>
         </div>
+        <MobileCardList
+          empty={
+            loading ? "加载中…" : (
+              <>暂无项目。<Link to="/projects/new" className="text-primary hover:underline">立即新建</Link></>
+            )
+          }
+        >
+          {!loading && rows.slice(0, 10).map((r) => (
+            <MobileCard
+              key={r.id}
+              title={r.title}
+              right={<StatusBadge status={r.status} />}
+              footer={<Link to={`/projects/${r.id}`} className="text-primary text-xs hover:underline">打开 →</Link>}
+            >
+              <MobileField label="演出日期" value={r.performance_date ?? "—"} mono />
+              <MobileField label="人数" value={r.performer_count ?? "—"} mono />
+              <MobileField label="确认状态" value={PROJECT_STATUSES.find((s) => s.value === r.status)?.label ?? r.status} />
+              <MobileField label="更新时间" value={new Date(r.updated_at).toLocaleString("zh-CN", { hour12: false })} mono />
+            </MobileCard>
+          ))}
+        </MobileCardList>
       </div>
     </div>
   );
