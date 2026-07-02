@@ -47,7 +47,7 @@ export default function Projects() {
           </div>
           <span className="kbd-route">GET /projects</span>
         </div>
-        <div className="overflow-x-auto">
+        <div className="hidden md:block overflow-x-auto">
           <table className="ops-table">
             <thead>
               <tr>
@@ -77,6 +77,25 @@ export default function Projects() {
             </tbody>
           </table>
         </div>
+        <MobileCardList empty={loading ? "加载中…" : "无匹配项目"}>
+          {!loading && filtered.map((r) => (
+            <MobileCard
+              key={r.id}
+              title={r.title}
+              right={<StatusBadge status={r.status} />}
+              footer={
+                <>
+                  <Link to={`/projects/${r.id}`} className="text-primary text-xs hover:underline">打开 →</Link>
+                  <Link to={`/projects/${r.id}/edit`} className="text-xs text-muted-foreground hover:underline">编辑</Link>
+                </>
+              }
+            >
+              <MobileField label="演出日期" value={r.performance_date ?? "—"} mono />
+              <MobileField label="人数" value={r.performer_count ?? "—"} mono />
+              <MobileField label="更新时间" value={new Date(r.updated_at).toLocaleString("zh-CN", { hour12: false })} mono />
+            </MobileCard>
+          ))}
+        </MobileCardList>
       </div>
     </div>
   );
