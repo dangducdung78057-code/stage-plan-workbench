@@ -69,6 +69,30 @@ export default function ProjectEditor() {
     console.groupEnd();
   }, [debugHints, errors, warnings]);
 
+  // 支持通过 URL hash (#field-xxx) 从确认弹窗定位到具体字段:滚动 + 短暂高亮。
+  useEffect(() => {
+    const applyHash = () => {
+      const h = window.location.hash;
+      if (!h.startsWith("#field-")) return;
+      // 等待字段渲染(尤其是异步加载 stage_inputs.data 后)。
+      const tryScroll = (retries: number) => {
+        const el = document.getElementById(h.slice(1));
+        if (!el) { if (retries > 0) setTimeout(() => tryScroll(retries - 1), 120); return; }
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        el.classList.add("ring-2", "ring-destructive", "ring-offset-2", "transition");
+        const input = el.querySelector("input,select,textarea") as HTMLElement | null;
+        input?.focus();
+        setTimeout(() => el.classList.remove("ring-2", "ring-destructive", "ring-offset-2"), 2000);
+      };
+      tryScroll(10);
+    };
+    applyHash();
+    window.addEventListener("hashchange", applyHash);
+    return () => window.removeEventListener("hashchange", applyHash);
+  }, [data]);
+
+
+
 
   const set = <K extends keyof StageInputData>(k: K, v: StageInputData[K]) =>
     setData((d) => ({ ...d, [k]: v }));
