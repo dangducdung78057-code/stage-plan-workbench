@@ -192,7 +192,7 @@ export default function ProjectEditor() {
                     <td className="font-mono">{field}</td>
                     <td className="text-right font-mono">{h.errors.length}</td>
                     <td className="text-right font-mono">{h.warnings.length}</td>
-                    <td className="font-mono text-[11px] text-muted-foreground">{FIELD_KEYWORDS[field].join(" | ")}</td>
+                    <td className="font-mono text-[11px] text-muted-foreground">{(FIELD_HINT_KEYWORDS as Record<string, readonly string[]>)[field].join(" | ")}</td>
                   </tr>
                 ))}
               </tbody>
