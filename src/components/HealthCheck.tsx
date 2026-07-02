@@ -677,6 +677,7 @@ export function HealthCheck() {
       lines.push("");
       lines.push(`Release Freeze: ${freeze.status}  (gate=${freeze.gate}, rule ${freeze.rule})`);
       lines.push(`  persisted: ${freeze.persisted}${freeze.id ? ` · id=${freeze.id}` : ""}${freeze.error ? ` · error=${freeze.error}` : ""}`);
+    }
     if (snapshot && !snapshot.error && snapshot.rows.length > 0) {
       const c = snapshot.counts;
       lines.push(
