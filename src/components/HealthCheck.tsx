@@ -64,30 +64,40 @@ export function HealthCheck() {
     setRunning(true);
     setChecks([]);
     setSnapshot(null);
+    setGate(null);
     setStartedAt(new Date().toLocaleString());
     const out: Check[] = [];
     const push = (c: Check) => { out.push(c); setChecks([...out]); };
     let procurementSettings: ProcurementSettings = { ...PROCUREMENT_SETTINGS_DEFAULTS };
 
-    // 1. Capability Snapshot（唯一事实源）
-    //    治理宪章：系统成熟度只以 Capability Layer + Release Gate + 一键验收结果为准，
-    //    版本号不参与判定。此项从 public.system_capabilities 读取快照，展示于本次运行。
+    // 1. Capability Snapshot + Release Gate（唯一事实源 · 决策层）
+    //    治理宪章：能力清单不仅统计，直接参与 Gate 判定；WARN 参与 Gate 计算。
     const snap = await loadCapabilitySnapshot();
     setSnapshot(snap);
+    const gateResult = computeReleaseGate(snap);
+    setGate(gateResult);
     if (snap.error) {
       push({ id: "capability_snapshot", label: "能力清单快照 (system_capabilities)", status: "fail", detail: `读取失败: ${snap.error}` });
     } else if (snap.rows.length === 0) {
       push({ id: "capability_snapshot", label: "能力清单快照 (system_capabilities)", status: "fail", detail: "快照为空，缺少 SSoT" });
     } else {
       const { counts } = snap;
-      const gate = computeReleaseGate(snap);
       push({
         id: "capability_snapshot",
         label: "能力清单快照 (system_capabilities)",
         status: counts.FAIL > 0 ? "fail" : counts.WARN > 0 ? "warn" : "pass",
-        detail: `L0=${counts.L0} L1=${counts.L1} L2=${counts.L2} · PASS=${counts.PASS} WARN=${counts.WARN} FAIL=${counts.FAIL} SKIP=${counts.SKIP} · gate=${gate.gate}`,
+        detail: `L0=${counts.L0} L1=${counts.L1} L2=${counts.L2} · PASS=${counts.PASS} WARN=${counts.WARN} FAIL=${counts.FAIL} SKIP=${counts.SKIP}`,
       });
     }
+    // Gate 作为独立检查项呈现：G0 → fail；G1/G2 → warn；G3 → pass
+    push({
+      id: "release_gate",
+      label: `Release Gate · ${gateResult.gate}`,
+      status: gateResult.gate === "G0" ? "fail" : gateResult.gate === "G3" ? "pass" : "warn",
+      detail: `[${gateResult.rule}] ${gateResult.reason}`,
+    });
+
+
 
 
     // 2. auth session
