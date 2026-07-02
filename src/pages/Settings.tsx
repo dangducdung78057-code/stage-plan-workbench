@@ -8,9 +8,12 @@ import { useAuth } from "@/hooks/useAuth";
 import { STAGEOS_VERSION } from "@/lib/stageos";
 import { toast } from "sonner";
 import { CheckCircle2, XCircle } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { FLAG_META, useFlags, setFlag, type FeatureFlag } from "@/lib/featureFlags";
 
 export default function SettingsPage() {
   const { user, signOut } = useAuth();
+  const flags = useFlags();
   const [apiMode, setApiMode] = useState("mock");
   const [apiBaseUrl, setApiBaseUrl] = useState("");
   const [counts, setCounts] = useState({ projects: 0, snapshots: 0, exports: 0, confirmations: 0 });
@@ -76,6 +79,37 @@ export default function SettingsPage() {
               退出登录
             </Button>
           </div>
+        </div>
+      </div>
+
+      <div className="panel">
+        <div className="panel-header">
+          <h2 className="text-sm font-semibold">分支能力开关 (v2.x)</h2>
+          <span className="kbd-route">flags</span>
+        </div>
+        <div className="panel-body space-y-2">
+          <p className="text-xs text-muted-foreground">
+            分支功能默认关闭；仅本机 localStorage 生效，不影响 v2 主流程与其他账号。
+          </p>
+          {(Object.keys(FLAG_META) as FeatureFlag[]).map((k) => {
+            const meta = FLAG_META[k];
+            return (
+              <div key={k} className="flex items-center justify-between gap-3 border rounded px-2.5 py-2 bg-surface">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium">{meta.label}</span>
+                    {!meta.wired && <ToneBadge tone="warning">计划中</ToneBadge>}
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-0.5">{meta.desc}</div>
+                </div>
+                <Switch
+                  checked={flags[k]}
+                  disabled={!meta.wired}
+                  onCheckedChange={(v) => { setFlag(k, v); toast.success(`${meta.label} 已${v ? "开启" : "关闭"}`); }}
+                />
+              </div>
+            );
+          })}
         </div>
       </div>
 
