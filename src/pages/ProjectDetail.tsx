@@ -252,6 +252,10 @@ export default function ProjectDetail() {
       a.href = url; a.download = `${project.title}-v${latest.version}.${isJson ? "json" : "md"}`;
       a.click(); URL.revokeObjectURL(url);
       toast.success(`已导出 ${format.toUpperCase()}`);
+      dispatchWebhook("export.created", {
+        project_id: project.id,
+        summary: { format, version: latest.version, snapshot_id: latest.id, bytes: blob.size },
+      });
       load();
     } catch (e: any) { toast.error(e.message); }
     finally { setBusy(false); }
