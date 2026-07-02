@@ -56,7 +56,7 @@ export default function Exports() {
               </tr>
             ))}
           </tbody>
-        </table>
+        </table></div>
       </div>
       <Dialog open={!!open} onOpenChange={(o) => !o && setOpen(null)}>
         <DialogContent className="max-w-3xl max-h-[80vh] overflow-auto">
