@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { STAGEOS_VERSION } from "@/lib/stageos";
 import { getFlag } from "@/lib/featureFlags";
-import { renderMarkdown, renderPrintableHtml, renderPdfBlob, renderPngBlob, validatePrintableHtml } from "@/lib/exportRender";
+import { renderMarkdown, renderPrintableHtml, renderPdfBlob, renderPngBlob, validatePrintableHtml, validatePrintableContent } from "@/lib/exportRender";
 import { CheckCircle2, XCircle, Loader2, AlertTriangle } from "lucide-react";
 
 type Status = "pass" | "fail" | "warn" | "skip";
