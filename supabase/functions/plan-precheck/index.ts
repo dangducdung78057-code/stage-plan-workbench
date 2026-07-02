@@ -33,9 +33,16 @@ function validateStageInput(data: StageInputData): string[] {
   return issues;
 }
 
-function fail(code: string, message: string, status: number, extra: Record<string, unknown> = {}) {
-  return new Response(JSON.stringify({ ok: false, code, message, ...extra }), {
-    status,
+function fail(errorCode: string, message: string, status: number, extra: Record<string, unknown> = {}) {
+  // Return 200 for business rejections so supabase-js does not throw on the client.
+  // The real status is echoed in the JSON body for observability.
+  return new Response(JSON.stringify({ ok: false, errorCode, message, status, ...extra }), {
+    status: 200,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
+function _unused(status: number) { return status; }
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 }
