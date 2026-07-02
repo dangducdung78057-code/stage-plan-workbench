@@ -37,18 +37,57 @@ export default function ProjectEditor() {
   const { errors, warnings } = validateStageInputDetailed(data);
 
   // 字段级联动提示:根据关键字把整体 errors/warnings 分派到对应输入下方。
-  const pickHints = (keywords: string[]) => ({
-    errors: errors.filter((m) => keywords.some((k) => m.includes(k))),
-    warnings: warnings.filter((m) => keywords.some((k) => m.includes(k))),
-  });
-  const hints = {
-    performerCount: pickHints(["performerCount", "总人数", "人数校验", "学生行数"]),
-    maleCount: pickHints(["maleCount", "男生", "人数校验", "性别分布"]),
-    femaleCount: pickHints(["femaleCount", "女生", "人数校验", "性别分布"]),
-    perPersonBudget: pickHints(["人均预算", "perPersonBudget"]),
-    rehearsal: pickHints(["彩排频次", "rehearsalFrequency"]),
-    students: pickHints(["studentId", "heightCm", "学生行数", "性别分布"]),
+  const FIELD_KEYWORDS: Record<string, string[]> = {
+    performerCount: ["performerCount", "总人数", "人数校验", "学生行数"],
+    maleCount: ["maleCount", "男生", "人数校验", "性别分布"],
+    femaleCount: ["femaleCount", "女生", "人数校验", "性别分布"],
+    perPersonBudget: ["人均预算", "perPersonBudget"],
+    rehearsal: ["彩排频次", "rehearsalFrequency"],
+    students: ["studentId", "heightCm", "学生行数", "性别分布"],
   };
+  const pickHints = (keywords: string[]) => {
+    const matchedBy = (m: string) => keywords.filter((k) => m.includes(k));
+    return {
+      errors: errors.filter((m) => matchedBy(m).length > 0),
+      warnings: warnings.filter((m) => matchedBy(m).length > 0),
+    };
+  };
+  const hints = Object.fromEntries(
+    Object.entries(FIELD_KEYWORDS).map(([k, kws]) => [k, pickHints(kws)]),
+  ) as Record<keyof typeof FIELD_KEYWORDS, { errors: string[]; warnings: string[] }>;
+
+  // 调试模式:URL ?debug=hints 或 localStorage 键 "stageos:debug-hints" = "1"
+  const debugHints =
+    typeof window !== "undefined" &&
+    (new URLSearchParams(window.location.search).get("debug") === "hints" ||
+      window.localStorage.getItem("stageos:debug-hints") === "1");
+
+  // 未匹配到任何字段的 error/warning(便于发现关键词覆盖缺口)
+  const allKeywords = Object.values(FIELD_KEYWORDS).flat();
+  const unmatched = {
+    errors: errors.filter((m) => !allKeywords.some((k) => m.includes(k))),
+    warnings: warnings.filter((m) => !allKeywords.some((k) => m.includes(k))),
+  };
+
+  useEffect(() => {
+    if (!debugHints) return;
+    // eslint-disable-next-line no-console
+    console.groupCollapsed(
+      `[StageOS hints] errors=${errors.length} warnings=${warnings.length} unmatched=${unmatched.errors.length + unmatched.warnings.length}`,
+    );
+    console.table(
+      Object.entries(hints).map(([field, h]) => ({
+        field,
+        errors: h.errors.length,
+        warnings: h.warnings.length,
+      })),
+    );
+    if (unmatched.errors.length || unmatched.warnings.length) {
+      console.warn("[StageOS hints] unmatched", unmatched);
+    }
+    console.groupEnd();
+  }, [debugHints, errors, warnings]);
+
 
   const set = <K extends keyof StageInputData>(k: K, v: StageInputData[K]) =>
     setData((d) => ({ ...d, [k]: v }));
