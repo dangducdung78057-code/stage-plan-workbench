@@ -88,6 +88,7 @@ export default function ProjectWizard() {
   const autosaveRef = useRef<number | null>(null);
   const [expandedIssueDrafts, setExpandedIssueDrafts] = useState<Set<string>>(new Set());
   const [popoverNavIndex, setPopoverNavIndex] = useState<Record<string, number>>({});
+  const [popoverIssueFilter, setPopoverIssueFilter] = useState<Record<string, "all" | "error" | "warning">>({});
 
   // Restore drafts on mount
   useEffect(() => {
