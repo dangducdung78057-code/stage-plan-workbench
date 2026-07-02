@@ -16,6 +16,7 @@ import {
   ExternalLink, Image as ImageIcon, Video, Layers as LayersIcon, Wand2,
 } from "lucide-react";
 import { MobileCard, MobileCardList, MobileField } from "@/components/MobileCard";
+import { renderMarkdown } from "@/lib/exportRender";
 
 type Project = { id: string; title: string; status: string; performance_date: string | null; performer_count: number | null; updated_at: string };
 type Snapshot = {
@@ -219,7 +220,7 @@ export default function ProjectDetail() {
     if (!project || !latest) return;
     setBusy(true);
     try {
-      const payload = format === "json" ? buildJsonExport(project, input, latest) : buildMarkdownExport(project, input, latest);
+      const payload = buildExportPayload(project, input, latest);
       const { data: userData } = await supabase.auth.getUser();
       const uid = userData.user?.id;
       await supabase.from("export_records").insert({
@@ -229,7 +230,17 @@ export default function ProjectDetail() {
       await supabase.from("projects").update({ status: "exported" }).eq("id", project.id);
       const isJson = format === "json";
       const mime = isJson ? "application/json;charset=utf-8" : "text/markdown;charset=utf-8";
-      const body = isJson ? payload : (payload.startsWith("\uFEFF") ? payload : "\uFEFF" + payload);
+      const markdown = isJson ? "" : renderMarkdown(payload, "json", {
+        projectTitle: project.title,
+        version: latest.version,
+        createdAt: new Date().toLocaleString("zh-CN", { hour12: false }),
+      });
+      if (!isJson) {
+        console.info("[StageOS Markdown Debug] project.title", project.title);
+        console.info("[StageOS Markdown Debug] snapshot.project.title", payload.snapshot.project.title ?? payload.project.title);
+        console.info("[StageOS Markdown Debug] renderMarkdown.firstLine", markdown.split(/\r?\n/, 1)[0]?.replace(/^#\s*/, ""));
+      }
+      const body = isJson ? JSON.stringify(payload, null, 2) : (markdown.startsWith("\uFEFF") ? markdown : "\uFEFF" + markdown);
       const blob = new Blob([body], { type: mime });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -704,50 +715,17 @@ function PlaceholderCard({ icon, title, route }: { icon: React.ReactNode; title:
   );
 }
 
-function buildJsonExport(p: Project, input: StageInputData | null, s: Snapshot) {
-  return JSON.stringify({
-    project: p, input, snapshot: s, exportedAt: new Date().toISOString(),
+function buildExportPayload(p: Project, input: StageInputData | null, s: Snapshot) {
+  return {
+    project: { ...p, ...(input ?? {}), title: p.title },
+    input,
+    snapshot: { ...s, project: { title: p.title } },
+    plan: s.costume_plan,
+    risks: s.risks ?? [],
+    planB: s.costume_plan?.planB ?? s.costume_plan?.plan_b ?? [],
+    reverseSchedule: s.reverse_schedule ?? [],
+    platform_search: s.platform_search ?? [],
+    exportedAt: new Date().toISOString(),
     disclaimer: "所有价格/SKU/库存为估算或搜索建议,不代表真实采购承诺。",
-  }, null, 2);
-}
-function buildMarkdownExport(p: Project, input: StageInputData | null, s: Snapshot) {
-  const plan = s.costume_plan;
-  const lines: string[] = [];
-  lines.push(`# ${p.title} — 服装总表 v${s.version}`);
-  lines.push(`> 生成时间: ${new Date(s.generated_at).toLocaleString("zh-CN")} · 模式: ${s.mode}`);
-  lines.push("");
-  lines.push(`- 学段: ${input?.schoolStage ?? "—"}`);
-  lines.push(`- 节目类型: ${input?.programType ?? "—"}`);
-  lines.push(`- 演出日期: ${p.performance_date ?? "—"}`);
-  lines.push(`- 总人数: ${input?.performerCount ?? "—"} (男 ${input?.maleCount ?? "—"} / 女 ${input?.femaleCount ?? "—"})`);
-  lines.push("");
-  const section = (t: string, rows: any[]) => {
-    lines.push(`## ${t}`);
-    lines.push("| 类别 | 描述 | 数量 | 单价 | 小计 |");
-    lines.push("| --- | --- | ---: | ---: | ---: |");
-    (rows ?? []).forEach((r) => lines.push(`| ${r.category} | ${r.description} | ${r.qty} | ${r.unitEstimate} | ${r.subtotal} |`));
-    lines.push("");
   };
-  section("女生方案", plan.femalePlan);
-  section("男生方案", plan.malePlan);
-  section("配饰", plan.accessories);
-  lines.push(`## 总额估算: ¥ ${plan.totalEstimate}`);
-  lines.push("");
-  lines.push("## 风险");
-  (s.risks ?? []).forEach((r: any) => lines.push(`- **[${r.level}] ${r.title}** — ${r.detail}`));
-  lines.push("");
-  lines.push("## 倒排");
-  (s.reverse_schedule ?? []).forEach((r: any) => lines.push(`- D-${r.daysBefore} ${r.date ?? ""} · ${r.task} · ${r.owner}`));
-  lines.push("");
-  lines.push("## 采购搜索建议");
-  ((s as any).platform_search ?? []).forEach((r: any) => {
-    const platform = r.platform ?? "—";
-    const q = r.query ?? r.keyword ?? r.q ?? "—";
-    const note = r.note ?? r.url ?? "需人工核验";
-    lines.push(`- **${platform}**：${q} — ${note}`);
-  });
-  lines.push("");
-  lines.push("> 采购搜索建议仅用于人工检索，不代表实时库存、SKU 或成交价。");
-  lines.push("> 免责声明:所有商品/价格/库存信息为估算或搜索建议,需人工核验。");
-  return lines.join("\n");
 }

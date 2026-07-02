@@ -28,8 +28,14 @@ import { FileDown, Eye, Loader2, FileText, Cloud, Link2, Trash2, RefreshCcw, Ima
 
 type Row = {
   id: string; project_id: string; version: number; format: string;
-  payload: string; created_at: string;
+  payload: unknown; snapshot_id: string | null; created_at: string;
 };
+
+function payloadSize(payload: unknown) {
+  if (typeof payload === "string") return payload.length;
+  if (payload == null) return 0;
+  try { return JSON.stringify(payload).length; } catch { return 0; }
+}
 
 export default function Exports() {
   const { user } = useAuth();
@@ -73,7 +79,7 @@ export default function Exports() {
   async function guard(row: Row): Promise<boolean> {
     const { data: u } = await supabase.auth.getUser();
     if (!u.user) { toast.error("请先登录"); return false; }
-    if (!row.payload || row.payload.length === 0) {
+    if (payloadSize(row.payload) === 0) {
       toast.error("暂无可下载载荷，请先导出。");
       return false;
     }
@@ -87,6 +93,41 @@ export default function Exports() {
       return false;
     }
     return true;
+  }
+
+  async function readMarkdownSource(row: Row): Promise<{ payload: unknown; format: string; projectTitle?: string }> {
+    const snapshotQuery = row.snapshot_id
+      ? supabase.from("plan_snapshots").select("*").eq("id", row.snapshot_id).maybeSingle()
+      : supabase.from("plan_snapshots").select("*").eq("project_id", row.project_id).eq("version", row.version).maybeSingle();
+    const [{ data: project }, { data: stageInput }, { data: snapshot }] = await Promise.all([
+      supabase.from("projects").select("*").eq("id", row.project_id).maybeSingle(),
+      supabase.from("stage_inputs").select("data").eq("project_id", row.project_id).maybeSingle(),
+      snapshotQuery,
+    ]);
+
+    const p: any = project ?? {};
+    const input = (stageInput as any)?.data ?? {};
+    const snap: any = snapshot ?? {};
+    const snapshotPayload = snap.plan_json ?? snap.payload ?? snap.snapshot ?? snap;
+    const plan = snapshotPayload?.costume_plan ?? snapshotPayload?.costumePlan ?? snapshotPayload?.plan ?? snap.costume_plan ?? {};
+    const projectTitle = p.title ?? (row.payload as any)?.project?.title ?? projectTitles[row.project_id];
+
+    if (!project && !snapshot) {
+      return { payload: row.payload, format: row.format, projectTitle };
+    }
+
+    const payload = {
+      project: { ...p, ...input, title: projectTitle },
+      input,
+      snapshot: { ...snap, ...snapshotPayload, project: { title: projectTitle } },
+      plan,
+      risks: snapshotPayload?.risks ?? snap.risks ?? [],
+      planB: snapshotPayload?.planB ?? snapshotPayload?.plan_b ?? plan?.planB ?? plan?.plan_b ?? [],
+      reverseSchedule: snapshotPayload?.reverseSchedule ?? snapshotPayload?.reverse_schedule ?? snap.reverse_schedule ?? [],
+      platform_search: snapshotPayload?.platform_search ?? snapshotPayload?.platformSearch ?? snap.platform_search ?? [],
+      exportedAt: new Date().toISOString(),
+    };
+    return { payload, format: "json", projectTitle };
   }
 
   async function maybeUploadToStorage(row: Row, ext: "md" | "pdf" | "png", blob: Blob, contentType: string) {
@@ -108,12 +149,16 @@ export default function Exports() {
     setBusy(row.id + ":md");
     try {
       if (!(await guard(row))) return;
-      const title = projectTitles[row.project_id];
-      const md = renderMarkdown(row.payload, row.format, {
+      const source = await readMarkdownSource(row);
+      const title = source.projectTitle ?? projectTitles[row.project_id];
+      const md = renderMarkdown(source.payload, source.format, {
         projectTitle: title,
         version: row.version,
         createdAt: new Date(row.created_at).toLocaleString("zh-CN", { hour12: false }),
       });
+      console.info("[StageOS Markdown Debug] project.title", title);
+      console.info("[StageOS Markdown Debug] snapshot.project.title", (source.payload as any)?.snapshot?.project?.title ?? (source.payload as any)?.project?.title);
+      console.info("[StageOS Markdown Debug] renderMarkdown.firstLine", md.split(/\r?\n/, 1)[0]?.replace(/^#\s*/, ""));
       const fn = buildFilename("md", title, row.version, row.project_id);
       const mdWithBom = md.startsWith("\uFEFF") ? md : "\uFEFF" + md;
       const blob = new Blob([mdWithBom], { type: "text/markdown;charset=utf-8" });
@@ -135,7 +180,7 @@ export default function Exports() {
       const title = projectTitles[row.project_id];
       const createdAt = new Date(row.created_at).toLocaleString("zh-CN", { hour12: false });
       const fn = buildFilename("pdf", title, row.version, row.project_id);
-      const html = renderPrintableHtml(row.payload, row.format, {
+      const html = renderPrintableHtml(row.payload as string, row.format, {
         projectTitle: title,
         version: row.version,
         createdAt,
@@ -174,7 +219,7 @@ export default function Exports() {
       const title = projectTitles[row.project_id];
       const createdAt = new Date(row.created_at).toLocaleString("zh-CN", { hour12: false });
       const fn = buildFilename("png", title, row.version, row.project_id);
-      const html = renderPrintableHtml(row.payload, row.format, {
+      const html = renderPrintableHtml(row.payload as string, row.format, {
         projectTitle: title,
         version: row.version,
         createdAt,
@@ -295,7 +340,7 @@ export default function Exports() {
                 <td className="font-mono" style={{ whiteSpace: "nowrap" }}>v{r.version}</td>
                 <td style={{ whiteSpace: "nowrap" }}><ToneBadge tone={r.format === "json" ? "info" : "primary"}>{r.format}</ToneBadge></td>
                 <td className="font-mono text-xs text-muted-foreground" style={{ whiteSpace: "nowrap" }}>{new Date(r.created_at).toLocaleString("zh-CN", { hour12: false })}</td>
-                <td className="font-mono text-xs" style={{ whiteSpace: "nowrap" }}>{r.payload?.length ?? 0} B</td>
+                <td className="font-mono text-xs" style={{ whiteSpace: "nowrap" }}>{payloadSize(r.payload)} B</td>
                 <td style={{ minWidth: 280 }}>
                   <div className="flex gap-1 flex-wrap" style={{ whiteSpace: "nowrap" }}>
                     <Button variant="ghost" size="sm" onClick={() => setOpen(r)}>
@@ -365,7 +410,7 @@ export default function Exports() {
             >
               <MobileField label="版本" value={`v${r.version}`} mono />
               <MobileField label="时间" value={new Date(r.created_at).toLocaleString("zh-CN", { hour12: false })} mono />
-              <MobileField label="大小" value={`${r.payload?.length ?? 0} B`} mono />
+              <MobileField label="大小" value={`${payloadSize(r.payload)} B`} mono />
             </MobileCard>
           ))}
         </MobileCardList>
@@ -420,7 +465,7 @@ export default function Exports() {
       <Dialog open={!!open} onOpenChange={(o) => !o && setOpen(null)}>
         <DialogContent className="max-w-3xl max-h-[80vh] overflow-auto">
           <DialogHeader><DialogTitle>导出内容 · {open?.format.toUpperCase()} v{open?.version}</DialogTitle></DialogHeader>
-          <pre className="text-xs bg-surface-muted p-3 rounded font-mono whitespace-pre-wrap break-all">{open?.payload}</pre>
+          <pre className="text-xs bg-surface-muted p-3 rounded font-mono whitespace-pre-wrap break-all">{typeof open?.payload === "string" ? open.payload : JSON.stringify(open?.payload ?? "", null, 2)}</pre>
         </DialogContent>
       </Dialog>
     </div>
