@@ -338,6 +338,29 @@ export function validatePrintableHtml(html: string): boolean {
   return true;
 }
 
+/**
+ * Stricter content check for PNG/PDF: the payload must actually contain
+ * project title data, at least one plan section with rows, a risks list,
+ * and the privacy disclaimer. Prevents "looks-fine but empty" exports.
+ */
+export function validatePrintableContent(html: string): { ok: boolean; missing: string[] } {
+  const missing: string[] = [];
+  if (!validatePrintableHtml(html)) return { ok: false, missing: ["printable html invalid"] };
+  const text = stripHtml(html).replace(/\s+/g, " ").trim();
+  const titleAttr = unescapeHtml(/data-project-title="([^"]+)"/i.exec(html)?.[1] ?? "").trim();
+  if (!titleAttr || titleAttr === "未命名项目") missing.push("项目标题");
+  // At least one plan section with an actual row (not "本快照缺少此字段")
+  const planHtmlSlice = html.match(/女生方案[\s\S]*?配饰[\s\S]*?<\/section>/i)?.[0] ?? html;
+  const planHasRow = /<tbody>[\s\S]*?<tr>[\s\S]*?<td>[\s\S]*?<\/td>[\s\S]*?<\/tr>[\s\S]*?<\/tbody>/i.test(planHtmlSlice);
+  if (!planHasRow) missing.push("女生方案/男生方案 表格数据");
+  // Risks: expect at least one <li> under 风险列表
+  const risksSlice = html.match(/风险列表[\s\S]*?<\/section>/i)?.[0] ?? "";
+  if (!/<li>/i.test(risksSlice)) missing.push("风险列表");
+  if (!/隐私声明/.test(text)) missing.push("隐私声明");
+  return { ok: missing.length === 0, missing };
+}
+
+
 function buildPrintableDoc(data: any, rawPayload: string, format: string, meta: { projectTitle?: string; version: number; createdAt: string }) {
   // Always compute an MD fallback so JSON+MD payloads produce identical printable content.
   const md = parseMarkdownPayload(rawPayload);
