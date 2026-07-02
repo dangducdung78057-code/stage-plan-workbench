@@ -22,7 +22,7 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="p-6 max-w-3xl space-y-4">
+    <div className="p-4 md:p-6 max-w-3xl space-y-4">
       <div>
         <h1 className="text-xl font-semibold">设置</h1>
         <p className="text-sm text-muted-foreground">全局操作参数。v1 无用户/租户/权限。</p>
