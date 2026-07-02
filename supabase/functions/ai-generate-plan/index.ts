@@ -182,7 +182,8 @@ Deno.serve(async (req) => {
 
     const ai = await callLovableAi(prompt, apiKey);
     if (!ai.ok) return json({ ok: false, code: ai.code, message: ai.message, aiFailed: true }, 502);
-    if (!shapeOk(ai.data)) return json({ ok: false, code: "AI_SHAPE_INVALID", message: "AI 输出结构不合规。", aiFailed: true }, 502);
+    const shape = validatePlanShape(ai.data);
+    if (!shape.ok) return json({ ok: false, code: "AI_SHAPE_INVALID", message: `AI 输出结构不合规，缺少: ${shape.missing.join(", ")}`, missing: shape.missing, aiFailed: true }, 502);
 
     return json({ ok: true, mode: "ai", plan: ai.data });
   } catch (e) {
