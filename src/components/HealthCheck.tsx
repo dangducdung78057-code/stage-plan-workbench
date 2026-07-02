@@ -766,19 +766,36 @@ export function HealthCheck() {
           </div>
         )}
 
+        {gate && (
+          <div className={
+            "rounded border px-3 py-2 text-xs flex items-start gap-2 " +
+            (gate.gate === "G3"
+              ? "border-success/40 bg-success/5"
+              : gate.gate === "G0"
+                ? "border-destructive/40 bg-destructive/5"
+                : "border-warning/40 bg-warning/5")
+          }>
+            <ToneBadge tone={gateTone(gate.gate) as any}>{gate.gate}</ToneBadge>
+            <div className="min-w-0 flex-1">
+              <div className="font-semibold text-sm">Release Gate · {gate.gate}</div>
+              <div className="font-mono text-[11px] mt-0.5 break-words">
+                [{gate.rule}] {gate.reason}
+              </div>
+              {gate.triggers.length > 0 && (
+                <div className="font-mono text-[10px] text-muted-foreground mt-0.5 break-words">
+                  triggers: {gate.triggers.join(", ")}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {snapshot && (
           <div className="border rounded bg-surface">
             <div className="px-3 py-1.5 border-b flex items-center gap-2 text-xs flex-wrap">
               <span className="font-semibold">Capability Snapshot</span>
               <span className="text-muted-foreground font-mono">system_capabilities · SSoT</span>
-              {(() => {
-                const g = computeReleaseGate(snapshot);
-                const tone =
-                  g.gate === "G3" ? "success" :
-                  g.gate === "G2" ? "warning" :
-                  g.gate === "G1" ? "warning" : "destructive";
-                return <ToneBadge tone={tone as any}>gate {g.gate}</ToneBadge>;
-              })()}
+              {gate && <ToneBadge tone={gateTone(gate.gate) as any}>gate {gate.gate}</ToneBadge>}
               <span className="text-[11px] text-muted-foreground ml-auto font-mono">
                 L0={snapshot.counts.L0} · L1={snapshot.counts.L1} · L2={snapshot.counts.L2} · WARN={snapshot.counts.WARN} · FAIL={snapshot.counts.FAIL}
               </span>
