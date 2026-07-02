@@ -6,7 +6,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { STAGEOS_VERSION } from "@/lib/stageos";
 import { getFlag } from "@/lib/featureFlags";
 import { renderMarkdown, renderPrintableHtml, renderPdfBlob, renderPngBlob, validatePrintableHtml, validatePrintableContent } from "@/lib/exportRender";
-import { CheckCircle2, XCircle, Loader2, AlertTriangle } from "lucide-react";
+import { CheckCircle2, XCircle, Loader2, AlertTriangle, Copy } from "lucide-react";
+import { toast } from "sonner";
 
 type Status = "pass" | "fail" | "warn" | "skip";
 type Check = { id: string; label: string; status: Status; detail?: string; ms?: number };
@@ -305,6 +306,32 @@ export function HealthCheck() {
   const failed = (summary.fail ?? 0) > 0;
   const done = checks.length > 0 && !running;
 
+  async function copySummary() {
+    const lines: string[] = [];
+    lines.push("StageOS 一键验收摘要");
+    lines.push(`版本标记: ${STAGEOS_VERSION}`);
+    lines.push(`时间: ${startedAt ?? new Date().toLocaleString()}`);
+    lines.push(`登录状态: ${user?.email ?? user?.id ?? "未登录"}`);
+    lines.push("");
+    lines.push("检查项:");
+    for (const c of checks) {
+      lines.push(`- [${c.status.toUpperCase()}] ${c.label}${c.detail ? ` — ${c.detail}` : ""}`);
+    }
+    lines.push("");
+    lines.push(
+      `汇总: pass=${summary.pass ?? 0} warn=${summary.warn ?? 0} fail=${summary.fail ?? 0} skip=${summary.skip ?? 0}`,
+    );
+    const text = lines.join("\n");
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.success("验收摘要已复制到剪贴板");
+    } catch {
+      toast.error("复制失败，请手动选择文本");
+      // eslint-disable-next-line no-console
+      console.log(text);
+    }
+  }
+
   return (
     <div className="panel">
       <div className="panel-header">
@@ -323,6 +350,9 @@ export function HealthCheck() {
               {(summary.warn ?? 0) > 0 && <ToneBadge tone="warning">warn {summary.warn}</ToneBadge>}
               {(summary.fail ?? 0) > 0 && <ToneBadge tone="destructive">fail {summary.fail}</ToneBadge>}
               {(summary.skip ?? 0) > 0 && <ToneBadge tone="muted">skip {summary.skip}</ToneBadge>}
+              <Button size="sm" variant="outline" onClick={copySummary} className="h-7">
+                <Copy className="h-3.5 w-3.5 mr-1" />复制验收摘要
+              </Button>
             </div>
           )}
         </div>
