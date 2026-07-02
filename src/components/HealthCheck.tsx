@@ -843,6 +843,11 @@ export function HealthCheck() {
                   <li key={r.module} className="px-3 py-1.5 flex items-center gap-2">
                     <ToneBadge tone={r.layer === "L0" ? "success" : r.layer === "L1" ? "muted" : "warning"}>{r.layer}</ToneBadge>
                     <span className="font-mono min-w-0 flex-1 truncate">{r.module}</span>
+                    {r.layer === "L2" && r.status === "WARN" && (
+                      <span className="text-[10px] px-1 py-0.5 rounded bg-warning/10 text-warning border border-warning/30 whitespace-nowrap">
+                        isolated experimental warning
+                      </span>
+                    )}
                     {!r.enabled && <span className="text-[10px] text-muted-foreground">disabled</span>}
                     {r.notes && <span className="text-[10px] text-muted-foreground truncate hidden sm:inline max-w-[240px]">{r.notes}</span>}
                     <StatusTag status={r.status.toLowerCase() as Status} />
