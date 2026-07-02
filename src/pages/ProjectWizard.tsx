@@ -554,6 +554,7 @@ export default function ProjectWizard() {
                                     <button
                                       key={f}
                                       type="button"
+                                      title={f === "all" ? "Alt+1" : f === "error" ? "Alt+2" : "Alt+3"}
                                       onClick={() => {
                                         setPopoverIssueFilter((s) => ({ ...s, [d.id]: f }));
                                         setPopoverNavIndex((s) => ({ ...s, [d.id]: 0 }));
@@ -570,6 +571,7 @@ export default function ProjectWizard() {
                                     </button>
                                   );
                                 })}
+                                <span className="text-[10px] text-muted-foreground font-mono">Alt+1/2/3</span>
                                 {(() => {
                                   const filter = popoverIssueFilter[d.id] ?? "all";
                                   const filtered = filter === "all" ? issues : issues.filter((i) => i.severity === filter);
