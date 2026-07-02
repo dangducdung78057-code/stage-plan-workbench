@@ -57,14 +57,39 @@ export default function ProjectDetail() {
 
   useEffect(() => { load(); }, [id]);
 
+  const hasPrivacyConfirmation = confirmations.some((c) => c.status === "confirmed");
+
   async function handleGenerate() {
     if (!input || !project) return;
-    if (issues.length > 0) {
-      toast.warning("请先解决数据校验提示,再生成排产。");
-      return;
-    }
     setBusy(true);
     try {
+      // Precheck order: auth -> permission -> confirmation -> validation.
+      // Backend enforces the same order via the plan-precheck edge function.
+      const { data: pre, error: preErr } = await supabase.functions.invoke("plan-precheck", {
+        body: { projectId: project.id },
+      });
+      if (preErr || !pre?.ok) {
+        const code = pre?.code ?? "INTERNAL";
+        if (code === "AUTH_REQUIRED") {
+          toast.error("请先登录后再生成排产。");
+          return;
+        }
+        if (code === "FORBIDDEN") {
+          toast.error("无权访问该项目。");
+          return;
+        }
+        if (code === "PRIVACY_CONFIRMATION_REQUIRED") {
+          toast.warning("请先完成用户确认/隐私确认后再生成排产。");
+          return;
+        }
+        if (code === "VALIDATION_REQUIRED") {
+          toast.warning("请先解决数据校验提示,再生成排产。");
+          return;
+        }
+        toast.error("生成前置校验失败:" + (pre?.message ?? preErr?.message ?? code));
+        return;
+      }
+
       const { costumePlan, risks, reverseSchedule, platformSearch } = generateMockPlan(input);
       const nextVersion = (snapshots[0]?.version ?? 0) + 1;
       const { error } = await supabase.from("plan_snapshots").insert({
@@ -81,11 +106,13 @@ export default function ProjectDetail() {
   }
 
   async function handleConfirm(newStatus: "draft" | "needs_revision" | "confirmed") {
-    if (!project || !latest) { toast.error("请先生成排产快照"); return; }
+    if (!project) return;
     setBusy(true);
     try {
+      // Privacy/user confirmation can be recorded before a snapshot exists;
+      // snapshot-level confirmation attaches the latest snapshot when available.
       await supabase.from("confirmation_records").insert({
-        project_id: project.id, snapshot_id: latest.id,
+        project_id: project.id, snapshot_id: latest?.id ?? null,
         status: newStatus, notes: notes || null,
         confirmed_at: newStatus === "confirmed" ? new Date().toISOString() : null,
       });
@@ -141,11 +168,29 @@ export default function ProjectDetail() {
         </div>
         <div className="flex items-center gap-2">
           <Button asChild variant="outline" size="sm"><Link to={`/projects/${id}/edit`}>编辑输入</Link></Button>
-          <Button size="sm" onClick={handleGenerate} disabled={busy}>
+          <Button
+            size="sm"
+            onClick={handleGenerate}
+            disabled={busy}
+            title={hasPrivacyConfirmation ? "生成 Mock 排产" : "请先完成用户/隐私确认"}
+          >
             <Sparkles className="h-4 w-4 mr-1" />生成 Mock 排产
+            {!hasPrivacyConfirmation && <span className="ml-2 kbd-route">需确认</span>}
           </Button>
         </div>
       </div>
+
+      {!hasPrivacyConfirmation && (
+        <div className="panel border-warning/40 bg-warning/5 panel-body flex items-start gap-2 text-sm">
+          <AlertTriangle className="h-4 w-4 text-warning mt-0.5" />
+          <div>
+            <div className="font-medium text-warning">尚未完成用户/隐私确认</div>
+            <div className="mt-1 text-muted-foreground text-xs">
+              请先在「确认 <span className="kbd-route">/confirm</span>」标签页完成确认后再生成排产。错误码:<span className="font-mono">PRIVACY_CONFIRMATION_REQUIRED</span>
+            </div>
+          </div>
+        </div>
+      )}
 
       {issues.length > 0 && (
         <div className="panel border-warning/40 bg-warning/5 panel-body flex items-start gap-2 text-sm">
@@ -221,14 +266,17 @@ export default function ProjectDetail() {
               </span>
             </div>
             <div className="panel-body space-y-3">
+              <div className="text-xs text-muted-foreground">
+                用户/隐私确认为生成排产的前置条件。未完成确认前无法生成 Mock 排产。
+              </div>
               <Textarea rows={3} placeholder="填写确认/修订备注(可选)…" value={notes} onChange={(e) => setNotes(e.target.value)} />
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={() => handleConfirm("draft")} disabled={busy || !latest}>标记为草稿</Button>
-                <Button variant="outline" size="sm" onClick={() => handleConfirm("needs_revision")} disabled={busy || !latest}>
+              <div className="flex gap-2 flex-wrap">
+                <Button variant="outline" size="sm" onClick={() => handleConfirm("draft")} disabled={busy}>标记为草稿</Button>
+                <Button variant="outline" size="sm" onClick={() => handleConfirm("needs_revision")} disabled={busy}>
                   <AlertTriangle className="h-4 w-4 mr-1" />需要修订
                 </Button>
-                <Button size="sm" onClick={() => handleConfirm("confirmed")} disabled={busy || !latest}>
-                  <CheckCircle2 className="h-4 w-4 mr-1" />确认
+                <Button size="sm" onClick={() => handleConfirm("confirmed")} disabled={busy}>
+                  <CheckCircle2 className="h-4 w-4 mr-1" />确认(隐私/用户)
                 </Button>
               </div>
               {confirmations.length > 0 && (
