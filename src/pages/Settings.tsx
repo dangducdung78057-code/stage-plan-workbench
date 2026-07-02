@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ToneBadge } from "@/components/StatusBadge";
 import { useAuth } from "@/hooks/useAuth";
+import { STAGEOS_VERSION } from "@/lib/stageos";
 import { toast } from "sonner";
 import { CheckCircle2, XCircle } from "lucide-react";
 
