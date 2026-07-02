@@ -57,8 +57,13 @@ export default function Workspace() {
     itemRefs.current[activeSlide]?.scrollIntoView({ block: "nearest", behavior: "smooth" });
   }, [guideOpen, activeSlide]);
 
-  const moveSlide = (delta: number) =>
-    setActiveSlide((i) => Math.min(SLIDE_OUTLINE.length - 1, Math.max(0, i + delta)));
+  const focusSlide = (next: number) => {
+    const clamped = Math.min(SLIDE_OUTLINE.length - 1, Math.max(0, next));
+    setActiveSlide(clamped);
+    itemRefs.current[clamped]?.focus();
+  };
+  const moveSlide = (delta: number) => focusSlide(activeSlide + delta);
+
 
 
   useEffect(() => {
@@ -133,13 +138,13 @@ export default function Workspace() {
           <div
             className="max-h-[52vh] overflow-y-auto pr-1"
             onKeyDown={(e) => {
-              if (e.key === "ArrowDown" || e.key === "PageDown") { e.preventDefault(); moveSlide(1); }
-              else if (e.key === "ArrowUp" || e.key === "PageUp") { e.preventDefault(); moveSlide(-1); }
-              else if (e.key === "Home") { e.preventDefault(); setActiveSlide(0); }
-              else if (e.key === "End") { e.preventDefault(); setActiveSlide(SLIDE_OUTLINE.length - 1); }
+              if (e.key === "ArrowDown" || e.key === "PageDown") { e.preventDefault(); focusSlide(activeSlide + 1); }
+              else if (e.key === "ArrowUp" || e.key === "PageUp") { e.preventDefault(); focusSlide(activeSlide - 1); }
+              else if (e.key === "Home") { e.preventDefault(); focusSlide(0); }
+              else if (e.key === "End") { e.preventDefault(); focusSlide(SLIDE_OUTLINE.length - 1); }
             }}
           >
-            <ol className="relative space-y-4" role="listbox" aria-label="幻灯片分镜列表" aria-activedescendant={`slide-item-${activeSlide}`}>
+            <ol className="relative space-y-4" aria-label="幻灯片分镜列表">
               <div className="pointer-events-none absolute left-[19px] top-2 bottom-2 w-px bg-border" aria-hidden />
               {SLIDE_OUTLINE.map((s, i) => {
                 const isFirst = i === 0;
@@ -152,12 +157,13 @@ export default function Workspace() {
                       ref={(el) => (itemRefs.current[i] = el)}
                       id={`slide-item-${i}`}
                       type="button"
-                      role="option"
-                      aria-selected={isActive}
+                      aria-current={isActive ? "true" : undefined}
+                      aria-label={`第 ${i + 1} 页，共 ${SLIDE_OUTLINE.length} 页：${s.title}。${s.desc}`}
                       onClick={() => setActiveSlide(i)}
-                      className="relative flex items-stretch gap-3 w-full text-left group focus:outline-none"
+                      className="relative flex items-stretch gap-3 w-full text-left group rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                     >
                       <div
+                        aria-hidden
                         className={`relative z-10 h-10 w-10 shrink-0 rounded-lg flex items-center justify-center text-xs font-bold font-mono ring-4 ring-background shadow-sm transition-colors ${
                           isActive
                             ? "bg-primary text-primary-foreground"
@@ -182,7 +188,7 @@ export default function Workspace() {
                         <div className={`text-sm ${isActive || emphasised ? "font-semibold" : "font-medium"} truncate`}>
                           {s.title}
                         </div>
-                        <div className={`text-xs mt-0.5 truncate ${isActive ? "text-foreground/70" : "text-muted-foreground"}`}>
+                        <div className="text-xs mt-0.5 truncate text-muted-foreground">
                           {s.desc}
                         </div>
                       </div>
@@ -190,8 +196,13 @@ export default function Workspace() {
                   </li>
                 );
               })}
+
             </ol>
+            <div className="sr-only" aria-live="polite" aria-atomic="true">
+              第 {activeSlide + 1} 页，共 {SLIDE_OUTLINE.length} 页：{SLIDE_OUTLINE[activeSlide].title}
+            </div>
           </div>
+
 
           <DialogFooter className="sm:justify-between gap-2 items-center">
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
