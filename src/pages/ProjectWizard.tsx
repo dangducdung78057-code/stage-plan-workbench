@@ -258,20 +258,20 @@ export default function ProjectWizard() {
         <div className="panel-body space-y-4">
           {step === 0 && (
             <div className="grid grid-cols-2 gap-4">
-              <Field label="项目标题" required>
-                <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="如:2026 春季合唱汇演 · 高一 3 班" />
+              <Field label="项目标题" required htmlFor="w-title">
+                <Input id="w-title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="如:2026 春季合唱汇演 · 高一 3 班" />
               </Field>
-              <Field label="学段 schoolStage" required>
+              <Field label="学段 schoolStage" required htmlFor="w-schoolStage">
                 <Select value={data.schoolStage} onValueChange={(v) => set("schoolStage", v)}>
-                  <SelectTrigger><SelectValue placeholder="选择学段" /></SelectTrigger>
+                  <SelectTrigger id="w-schoolStage"><SelectValue placeholder="选择学段" /></SelectTrigger>
                   <SelectContent>
                     {SCHOOL_STAGES.map((s) => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </Field>
-              <Field label="节目类型 programType" required>
+              <Field label="节目类型 programType" required htmlFor="w-programType">
                 <Select value={data.programType} onValueChange={(v) => set("programType", v)}>
-                  <SelectTrigger><SelectValue placeholder="选择节目类型" /></SelectTrigger>
+                  <SelectTrigger id="w-programType"><SelectValue placeholder="选择节目类型" /></SelectTrigger>
                   <SelectContent className="max-h-72">
                     {PROGRAM_TYPES.map((s) => (
                       <SelectItem key={s.value} value={s.value}>
@@ -281,21 +281,21 @@ export default function ProjectWizard() {
                   </SelectContent>
                 </Select>
               </Field>
-              <Field label="节目主题 programTheme" required>
-                <Input value={data.programTheme ?? ""} onChange={(e) => set("programTheme", e.target.value)} placeholder="如:光的礼赞" />
+              <Field label="节目主题 programTheme" required htmlFor="w-programTheme">
+                <Input id="w-programTheme" value={data.programTheme ?? ""} onChange={(e) => set("programTheme", e.target.value)} placeholder="如:光的礼赞" />
               </Field>
-              <Field label="场地类型 venueType">
-                <Input value={data.venueType ?? ""} onChange={(e) => set("venueType", e.target.value)} placeholder="室内剧场 / 露天舞台 …" />
+              <Field label="场地类型 venueType" htmlFor="w-venueType">
+                <Input id="w-venueType" value={data.venueType ?? ""} onChange={(e) => set("venueType", e.target.value)} placeholder="室内剧场 / 露天舞台 …" />
               </Field>
-              <Field label="演出日期 performanceDate" required>
-                <Input type="date" value={data.performanceDate ?? ""} onChange={(e) => set("performanceDate", e.target.value)} />
+              <Field label="演出日期 performanceDate" required htmlFor="w-performanceDate">
+                <Input id="w-performanceDate" type="date" value={data.performanceDate ?? ""} onChange={(e) => set("performanceDate", e.target.value)} />
               </Field>
-              <Field label="彩排频次(次/周)" required>
+              <Field label="彩排频次(次/周)" required htmlFor="w-rehearsalFrequencyPerWeek">
                 <Select
                   value={String(data.rehearsalFrequencyPerWeek ?? "")}
                   onValueChange={(v) => set("rehearsalFrequencyPerWeek", Number(v) as 2 | 3 | 5)}
                 >
-                  <SelectTrigger><SelectValue placeholder="选择彩排频次" /></SelectTrigger>
+                  <SelectTrigger id="w-rehearsalFrequencyPerWeek"><SelectValue placeholder="选择彩排频次" /></SelectTrigger>
                   <SelectContent>
                     {REHEARSAL_FREQUENCIES.map((n) => <SelectItem key={n} value={String(n)}>{n} 次/周</SelectItem>)}
                   </SelectContent>
@@ -307,17 +307,17 @@ export default function ProjectWizard() {
           {step === 1 && (
             <>
               <div className="grid grid-cols-4 gap-4">
-                <Field label="总人数 performerCount" required>
-                  <Input type="number" value={data.performerCount ?? ""} onChange={(e) => set("performerCount", e.target.value ? Number(e.target.value) : undefined)} />
+                <Field label="总人数 performerCount" required htmlFor="w-performerCount">
+                  <Input id="w-performerCount" type="number" value={data.performerCount ?? ""} onChange={(e) => set("performerCount", e.target.value ? Number(e.target.value) : undefined)} />
                 </Field>
-                <Field label="男生数 maleCount" required>
-                  <Input type="number" value={data.maleCount ?? ""} onChange={(e) => set("maleCount", e.target.value ? Number(e.target.value) : undefined)} />
+                <Field label="男生数 maleCount" required htmlFor="w-maleCount">
+                  <Input id="w-maleCount" type="number" value={data.maleCount ?? ""} onChange={(e) => set("maleCount", e.target.value ? Number(e.target.value) : undefined)} />
                 </Field>
-                <Field label="女生数 femaleCount" required>
-                  <Input type="number" value={data.femaleCount ?? ""} onChange={(e) => set("femaleCount", e.target.value ? Number(e.target.value) : undefined)} />
+                <Field label="女生数 femaleCount" required htmlFor="w-femaleCount">
+                  <Input id="w-femaleCount" type="number" value={data.femaleCount ?? ""} onChange={(e) => set("femaleCount", e.target.value ? Number(e.target.value) : undefined)} />
                 </Field>
-                <Field label="人均预算 perPersonBudget (元)" required>
-                  <Input type="number" value={data.perPersonBudget ?? ""} onChange={(e) => set("perPersonBudget", e.target.value ? Number(e.target.value) : undefined)} />
+                <Field label="人均预算 perPersonBudget (元)" required htmlFor="w-perPersonBudget">
+                  <Input id="w-perPersonBudget" type="number" value={data.perPersonBudget ?? ""} onChange={(e) => set("perPersonBudget", e.target.value ? Number(e.target.value) : undefined)} />
                 </Field>
               </div>
               <CountsHint data={data} />
@@ -326,19 +326,20 @@ export default function ProjectWizard() {
 
           {step === 2 && (
             <div className="grid grid-cols-2 gap-4">
-              <Field label="屏幕主题色 screenThemeColor" required>
-                <Input value={data.screenThemeColor ?? ""} onChange={(e) => set("screenThemeColor", e.target.value)} placeholder="如:靛蓝 / #1E3A8A" />
+              <Field label="屏幕主题色 screenThemeColor" required htmlFor="w-screenThemeColor">
+                <Input id="w-screenThemeColor" value={data.screenThemeColor ?? ""} onChange={(e) => set("screenThemeColor", e.target.value)} placeholder="如:靛蓝 / #1E3A8A" />
               </Field>
-              <Field label="灯光风格 lightingStyle" required>
-                <Input value={data.lightingStyle ?? ""} onChange={(e) => set("lightingStyle", e.target.value)} placeholder="如:暖调聚光 / 冷色氛围" />
+              <Field label="灯光风格 lightingStyle" required htmlFor="w-lightingStyle">
+                <Input id="w-lightingStyle" value={data.lightingStyle ?? ""} onChange={(e) => set("lightingStyle", e.target.value)} placeholder="如:暖调聚光 / 冷色氛围" />
               </Field>
               <div className="col-span-2">
-                <Field label="特殊期待 specialExpectation">
-                  <Textarea rows={3} value={data.specialExpectation ?? ""} onChange={(e) => set("specialExpectation", e.target.value)} placeholder="如:主色需契合校徽色系;避免过多亮片" />
+                <Field label="特殊期待 specialExpectation" htmlFor="w-specialExpectation">
+                  <Textarea id="w-specialExpectation" rows={3} value={data.specialExpectation ?? ""} onChange={(e) => set("specialExpectation", e.target.value)} placeholder="如:主色需契合校徽色系;避免过多亮片" />
                 </Field>
               </div>
             </div>
           )}
+
 
           {step === 3 && (
             <div className="space-y-3">
