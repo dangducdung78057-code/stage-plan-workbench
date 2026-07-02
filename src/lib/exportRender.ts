@@ -496,6 +496,7 @@ export function renderPrintableHtml(
   hr { border: none; border-top: 1px dashed #bbb; margin: 10pt 0; }
   strong { color: #000; }
   .footer-note { margin-top: 14pt; padding-top: 8pt; border-top: 1px solid #bbb; color: #444; font-size: 10pt; }
+  .stageos-watermark { margin-top: 18pt; padding-top: 6pt; border-top: 1px dashed #bbb; font-size: 8.5pt; color: #777; text-align: center; letter-spacing: .02em; font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; }
 </style>
 </head>
 <body>
