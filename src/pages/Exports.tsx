@@ -9,6 +9,7 @@ import {
   buildFilename,
   renderMarkdown,
   renderPrintableHtml,
+  validatePrintableHtml,
   downloadBlob,
   renderPdfBlob,
   renderPngBlob,
@@ -139,7 +140,12 @@ export default function Exports() {
         createdAt,
         filenameTitle: fn.replace(/\.pdf$/, ""),
       });
+      if (!validatePrintableHtml(html)) {
+        toast.error("PDF 渲染失败：导出内容为空，请先下载 Markdown。");
+        return;
+      }
       const blob = await renderPdfBlob(html);
+      if (!blob || blob.size < 1024) throw new Error("PDF_EMPTY_CONTENT");
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url; a.download = fn;
@@ -147,9 +153,13 @@ export default function Exports() {
       setTimeout(() => URL.revokeObjectURL(url), 1000);
       toast.success("PDF 已生成并下载");
       await maybeUploadToStorage(row, "pdf", blob, "application/pdf");
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      toast.error("PDF 生成失败，请改用 Markdown 或稍后重试");
+      if (String(e?.message ?? "").includes("PRINTABLE_HTML_INVALID") || String(e?.message ?? "").includes("PDF_EMPTY_CONTENT")) {
+        toast.error("PDF 渲染失败：导出内容为空，请先下载 Markdown。");
+      } else {
+        toast.error("PDF 生成失败，请改用 Markdown 或稍后重试");
+      }
     } finally {
       setBusy(null);
     }
@@ -168,7 +178,12 @@ export default function Exports() {
         createdAt,
         filenameTitle: fn.replace(/\.png$/, ""),
       });
+      if (!validatePrintableHtml(html)) {
+        toast.error("PNG 渲染失败：导出内容为空，请先下载 Markdown。");
+        return;
+      }
       const blob = await renderPngBlob(html);
+      if (!blob || blob.size < 1024) throw new Error("PNG_EMPTY_CONTENT");
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url; a.download = fn;
@@ -178,7 +193,7 @@ export default function Exports() {
       await maybeUploadToStorage(row, "png", blob, "image/png");
     } catch (e: any) {
       console.error(e);
-      if (String(e?.message ?? "").includes("PNG_EMPTY_CONTENT")) {
+      if (String(e?.message ?? "").includes("PNG_EMPTY_CONTENT") || String(e?.message ?? "").includes("PRINTABLE_HTML_INVALID")) {
         toast.error("PNG 渲染失败：导出内容为空，请先下载 Markdown。");
       } else {
         toast.error("PNG 生成失败，请改用 Markdown 或稍后重试");
