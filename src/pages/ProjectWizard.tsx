@@ -356,9 +356,93 @@ export default function ProjectWizard() {
               draft saved · {new Date(savedAt).toLocaleTimeString()}
             </span>
           )}
-          {savedAt && (
-            <Button variant="ghost" size="sm" onClick={discardDraft} title="清空当前草稿">
-              <RotateCcw className="h-4 w-4 mr-1" />清空草稿
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" title="草稿版本管理">
+                <FolderOpen className="h-4 w-4 mr-1" />
+                草稿
+                <span className="ml-1.5 text-[10px] font-mono px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+                  {drafts.length}
+                </span>
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-[380px] p-0">
+              <div className="px-3 py-2 border-b flex items-center justify-between">
+                <div className="text-xs text-muted-foreground">
+                  当前:<span className="font-medium text-foreground">{activeDraft?.name ?? "未保存"}</span>
+                </div>
+                <Button size="sm" variant="ghost" onClick={newDraft} className="h-7 px-2">
+                  <FilePlus2 className="h-3.5 w-3.5 mr-1" />新建
+                </Button>
+              </div>
+              <ul className="max-h-72 overflow-y-auto divide-y divide-border/60">
+                {drafts.length === 0 && (
+                  <li className="px-3 py-6 text-center text-xs text-muted-foreground">
+                    尚无草稿。开始填写后将自动保存。
+                  </li>
+                )}
+                {drafts.map((d) => {
+                  const isActive = d.id === activeId;
+                  const isRenaming = renamingId === d.id;
+                  return (
+                    <li key={d.id} className={`px-3 py-2 text-sm ${isActive ? "bg-primary/5" : ""}`}>
+                      <div className="flex items-center gap-2">
+                        {isRenaming ? (
+                          <Input
+                            autoFocus
+                            className="h-7 text-sm"
+                            value={renameValue}
+                            onChange={(e) => setRenameValue(e.target.value)}
+                            onBlur={() => { renameDraft(d.id, renameValue); setRenamingId(null); }}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") { renameDraft(d.id, renameValue); setRenamingId(null); }
+                              if (e.key === "Escape") setRenamingId(null);
+                            }}
+                          />
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => switchDraft(d.id)}
+                            className="flex-1 text-left truncate font-medium hover:text-primary"
+                            title="切换到此草稿"
+                          >
+                            {isActive && <span className="text-[10px] font-mono text-primary mr-1">●</span>}
+                            {d.name}
+                          </button>
+                        )}
+                        <span className="text-[10px] font-mono text-muted-foreground shrink-0">
+                          step {(d.step ?? 0) + 1}/{STEPS.length}
+                        </span>
+                      </div>
+                      <div className="mt-1 flex items-center justify-between text-[11px] text-muted-foreground">
+                        <span className="font-mono">{new Date(d.savedAt).toLocaleString()}</span>
+                        <div className="flex items-center gap-0.5">
+                          <Button variant="ghost" size="icon" className="h-6 w-6"
+                            title="重命名"
+                            onClick={() => { setRenamingId(d.id); setRenameValue(d.name); }}>
+                            <Pencil className="h-3 w-3" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-6 w-6"
+                            title="另存为副本"
+                            onClick={() => duplicateDraft(d.id)}>
+                            <Copy className="h-3 w-3" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive hover:text-destructive"
+                            title="删除草稿"
+                            onClick={() => deleteDraft(d.id)}>
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </PopoverContent>
+          </Popover>
+          {activeId && (
+            <Button variant="ghost" size="sm" onClick={discardActive} title="删除当前草稿并清空表单">
+              <RotateCcw className="h-4 w-4 mr-1" />清空
             </Button>
           )}
           <Button variant="outline" size="sm" onClick={saveDraftAndExit}>
@@ -369,6 +453,7 @@ export default function ProjectWizard() {
           </Button>
         </div>
       </div>
+
 
       {/* Stepper */}
       <ol className="grid grid-cols-5 gap-2">
