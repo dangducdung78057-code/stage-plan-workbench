@@ -11,6 +11,7 @@ import {
   renderPrintableHtml,
   downloadBlob,
   renderPdfBlob,
+  renderPngBlob,
 } from "@/lib/exportRender";
 import {
   buildStoragePath,
@@ -22,7 +23,7 @@ import {
 } from "@/lib/exportStorage";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
-import { FileDown, Eye, Loader2, FileText, Cloud, Link2, Trash2, RefreshCcw } from "lucide-react";
+import { FileDown, Eye, Loader2, FileText, Cloud, Link2, Trash2, RefreshCcw, Image as ImageIcon } from "lucide-react";
 
 type Row = {
   id: string; project_id: string; version: number; format: string;
@@ -87,7 +88,7 @@ export default function Exports() {
     return true;
   }
 
-  async function maybeUploadToStorage(row: Row, ext: "md" | "pdf", blob: Blob, contentType: string) {
+  async function maybeUploadToStorage(row: Row, ext: "md" | "pdf" | "png", blob: Blob, contentType: string) {
     if (!storageOn || !user?.id) return;
     try {
       const path = buildStoragePath({
