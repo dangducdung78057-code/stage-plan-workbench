@@ -231,6 +231,33 @@ export function HealthCheck() {
       }
     }
 
+    // 13. AI provider 可达性（flag off 时 skip；flag on 时业务拒绝也算可达）
+    if (!getFlag("aiProvider")) {
+      push({ id: "ai", label: "AI provider (ai-generate-plan)", status: "skip", detail: "flag off (mock 主流程生效)" });
+    } else {
+      try {
+        const { result, ms } = await timed(async () => await (
+          supabase.functions.invoke("ai-generate-plan", { body: { projectId: "__healthcheck__" } }))
+        );
+        const data: any = result.data;
+        const reachable = !!data || !!result.error;
+        push({
+          id: "ai",
+          label: "AI provider (ai-generate-plan)",
+          status: reachable ? "pass" : "fail",
+          detail: data?.code
+            ? `可达 (业务拒绝: ${data.code})`
+            : result.error
+              ? `可达 (${String(result.error.message ?? "").slice(0, 60)})`
+              : "可达",
+          ms,
+        });
+      } catch (e: any) {
+        push({ id: "ai", label: "AI provider (ai-generate-plan)", status: "fail", detail: e?.message });
+      }
+    }
+
+
     setRunning(false);
   }
 

@@ -9,6 +9,7 @@ import {
   validateStageInput, type StageInputData, PROGRAM_TYPES, SCHOOL_STAGES, CONFIRMATION_STATUSES,
 } from "@/lib/stageos";
 import { generateMockPlan } from "@/lib/mockPlan";
+import { getFlag, useFlags } from "@/lib/featureFlags";
 import { toast } from "sonner";
 import {
   ArrowLeft, Sparkles, FileJson, FileText, CheckCircle2, AlertTriangle,
@@ -42,6 +43,8 @@ export default function ProjectDetail() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [generationNotice, setGenerationNotice] = useState<PrecheckResult | null>(null);
+  const flags = useFlags();
+  const aiOn = flags.aiProvider;
 
   const latest = snapshots[0];
   const latestConfirm = confirmations[0];
@@ -116,18 +119,46 @@ export default function ProjectDetail() {
         return;
       }
 
-      const { costumePlan, risks, reverseSchedule, platformSearch } = generateMockPlan(input);
+      // AI 生成 provider（feature flag，失败自动回退到 mock）
+      let costumePlan: any, risks: any, reverseSchedule: any, platformSearch: any;
+      let mode: "ai" | "mock" = "mock";
+      const useAi = getFlag("aiProvider");
+      if (useAi) {
+        try {
+          const res = await supabase.functions.invoke("ai-generate-plan", { body: { projectId: project.id } });
+          const data: any = res.data;
+          if (data?.ok && data.plan) {
+            costumePlan = data.plan.costumePlan;
+            risks = data.plan.risks;
+            reverseSchedule = data.plan.reverseSchedule;
+            platformSearch = data.plan.platformSearch;
+            mode = "ai";
+          } else {
+            const code = data?.code ?? (res.error?.message ?? "AI_UNKNOWN");
+            toast.warning(`AI 生成失败(${code})，已回退到 mock。`);
+          }
+        } catch (aiErr: any) {
+          toast.warning(`AI 生成异常，已回退到 mock:${aiErr?.message ?? "unknown"}`);
+        }
+      }
+      if (mode === "mock") {
+        const mocked = generateMockPlan(input);
+        costumePlan = mocked.costumePlan;
+        risks = mocked.risks;
+        reverseSchedule = mocked.reverseSchedule;
+        platformSearch = mocked.platformSearch;
+      }
       const nextVersion = (snapshots[0]?.version ?? 0) + 1;
       const { data: userData } = await supabase.auth.getUser();
       const uid = userData.user?.id;
       const { error } = await supabase.from("plan_snapshots").insert({
-        project_id: project.id, user_id: uid, version: nextVersion, mode: "mock",
+        project_id: project.id, user_id: uid, version: nextVersion, mode,
         costume_plan: costumePlan as any, risks: risks as any,
         reverse_schedule: reverseSchedule as any, platform_search: platformSearch as any,
       } as any);
       if (error) throw error;
       await supabase.from("projects").update({ status: "planning" }).eq("id", project.id);
-      toast.success(`已生成 v${nextVersion} 服装总表(mock)`);
+      toast.success(`已生成 v${nextVersion} 服装总表(${mode})`);
       setGenerationNotice(null);
       load();
     } catch (e: any) { toast.error("生成失败:" + e.message); }
@@ -207,10 +238,11 @@ export default function ProjectDetail() {
             size="sm"
             onClick={handleGenerate}
             disabled={busy}
-            title={hasPrivacyConfirmation ? "生成 Mock 排产" : "请先完成用户/隐私确认"}
+            title={hasPrivacyConfirmation ? (aiOn ? "生成 AI 排产（失败回退 mock）" : "生成 Mock 排产") : "请先完成用户/隐私确认"}
             className="w-full md:w-auto justify-center"
           >
-            <Sparkles className="h-4 w-4 mr-1" />生成 Mock 排产
+            <Sparkles className="h-4 w-4 mr-1" />{aiOn ? "生成 AI 排产" : "生成 Mock 排产"}
+            {aiOn && <span className="ml-2 kbd-route whitespace-nowrap">AI</span>}
             {!hasPrivacyConfirmation && <span className="ml-2 kbd-route whitespace-nowrap">需确认</span>}
           </Button>
         </div>
