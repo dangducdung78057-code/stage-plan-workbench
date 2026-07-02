@@ -306,13 +306,33 @@ export default function ProjectEditor() {
   );
 }
 
-function Field({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
+function Field({
+  label, required, children, hint,
+}: {
+  label: string;
+  required?: boolean;
+  children: React.ReactNode;
+  hint?: { errors: string[]; warnings: string[] };
+}) {
+  const hasErr = (hint?.errors.length ?? 0) > 0;
+  const hasWarn = (hint?.warnings.length ?? 0) > 0;
   return (
     <div className="space-y-1.5">
-      <Label className="text-xs text-muted-foreground">
+      <Label className={`text-xs ${hasErr ? "text-destructive" : hasWarn ? "text-warning" : "text-muted-foreground"}`}>
         {label}{required && <span className="text-destructive ml-0.5">*</span>}
       </Label>
       {children}
+      {hasErr && (
+        <ul className="text-[11px] text-destructive space-y-0.5">
+          {hint!.errors.map((m) => <li key={`e-${m}`}>• {m}</li>)}
+        </ul>
+      )}
+      {hasWarn && (
+        <ul className="text-[11px] text-warning space-y-0.5">
+          {hint!.warnings.map((m) => <li key={`w-${m}`}>• {m}</li>)}
+        </ul>
+      )}
     </div>
   );
 }
+
