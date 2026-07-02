@@ -13,6 +13,7 @@ import {
   loadCapabilitySnapshot, computeReleaseGate, gateTone,
   type CapabilitySnapshot, type GateResult,
 } from "@/lib/capabilitySnapshot";
+import { persistFreeze, freezeTone, type FreezePersisted } from "@/lib/releaseFreeze";
 
 
 type Status = "pass" | "fail" | "warn" | "skip";
