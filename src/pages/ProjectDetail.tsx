@@ -397,19 +397,33 @@ function PlanView({ snapshot }: { snapshot: Snapshot }) {
           <h3 className="text-sm font-semibold">倒排时间表 reverseSchedule</h3>
           <span className="kbd-route">/reverse-schedule</span>
         </div>
-        <table className="ops-table">
-          <thead><tr><th className="w-24">D-天数</th><th className="w-32">日期</th><th>任务</th><th className="w-32">负责人</th></tr></thead>
-          <tbody>
-            {schedule.map((s, i) => (
-              <tr key={i}>
-                <td className="font-mono">D-{s.daysBefore}</td>
-                <td className="font-mono text-xs text-muted-foreground">{s.date ?? "—"}</td>
-                <td>{s.task}</td>
-                <td className="text-xs">{s.owner}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <div className="hidden md:block">
+          <table className="ops-table">
+            <thead><tr><th className="w-24">D-天数</th><th className="w-32">日期</th><th>任务</th><th className="w-32">负责人</th></tr></thead>
+            <tbody>
+              {schedule.map((s, i) => (
+                <tr key={i}>
+                  <td className="font-mono">D-{s.daysBefore}</td>
+                  <td className="font-mono text-xs text-muted-foreground">{s.date ?? "—"}</td>
+                  <td>{s.task}</td>
+                  <td className="text-xs">{s.owner}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <MobileCardList>
+          {schedule.map((s, i) => (
+            <MobileCard
+              key={i}
+              title={<span className="font-mono">D-{s.daysBefore}</span>}
+              right={<span className="font-mono text-[11px] text-muted-foreground">{s.date ?? "—"}</span>}
+            >
+              <MobileField label="任务" value={s.task} stack />
+              <MobileField label="负责人" value={s.owner} />
+            </MobileCard>
+          ))}
+        </MobileCardList>
       </div>
 
       <div className="panel">
