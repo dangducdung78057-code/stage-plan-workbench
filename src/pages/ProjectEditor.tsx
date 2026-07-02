@@ -192,6 +192,45 @@ export default function ProjectEditor() {
         </div>
       )}
 
+      {debugHints && (
+        <div className="panel border-info/40 bg-info/5">
+          <div className="panel-header">
+            <h2 className="text-sm font-semibold text-info">联动提示调试</h2>
+            <span className="text-[11px] text-muted-foreground font-mono">
+              ?debug=hints · errors={errors.length} warnings={warnings.length}
+            </span>
+          </div>
+          <div className="panel-body space-y-2 text-xs">
+            <table className="ops-table">
+              <thead>
+                <tr><th>字段</th><th className="w-16 text-right">errors</th><th className="w-16 text-right">warnings</th><th>关键词</th></tr>
+              </thead>
+              <tbody>
+                {Object.entries(hints).map(([field, h]) => (
+                  <tr key={field}>
+                    <td className="font-mono">{field}</td>
+                    <td className="text-right font-mono">{h.errors.length}</td>
+                    <td className="text-right font-mono">{h.warnings.length}</td>
+                    <td className="font-mono text-[11px] text-muted-foreground">{FIELD_KEYWORDS[field].join(" | ")}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {(unmatched.errors.length > 0 || unmatched.warnings.length > 0) && (
+              <div className="rounded border border-destructive/40 bg-destructive/5 p-2">
+                <div className="font-medium text-destructive mb-1">未匹配到任何字段的信息(需扩充关键词)</div>
+                <ul className="list-disc list-inside space-y-0.5">
+                  {unmatched.errors.map((m) => <li key={`ue-${m}`} className="text-destructive">错误:{m}</li>)}
+                  {unmatched.warnings.map((m) => <li key={`uw-${m}`} className="text-warning">提示:{m}</li>)}
+                </ul>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+
+
       <div className="panel">
         <div className="panel-header"><h2 className="text-sm font-semibold">基本信息</h2></div>
         <div className="panel-body grid grid-cols-2 gap-4">
