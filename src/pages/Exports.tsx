@@ -299,7 +299,7 @@ export default function Exports() {
                       <Button variant="outline" size="sm" disabled={busy === r.id + ":pdf"} onClick={() => handlePdf(r)}>
                         {busy === r.id + ":pdf"
                           ? <><Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />生成中…</>
-                          : <><FileText className="h-3.5 w-3.5 mr-1" />PDF</>}
+                          : <><FileText className="h-3.5 w-3.5 mr-1" />PDF 实验版</>}
                       </Button>
                     )}
                     {showPng && (
