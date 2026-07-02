@@ -17,6 +17,10 @@ import {
   ExternalLink, Image as ImageIcon, Video, Layers as LayersIcon, Wand2,
 } from "lucide-react";
 import { MobileCard, MobileCardList, MobileField } from "@/components/MobileCard";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { renderMarkdown } from "@/lib/exportRender";
 import { ProcurementCandidatesToggle, ProcurementDisclaimer } from "@/components/ProcurementCandidatesRow";
 import type { MatchContext } from "@/lib/procurementMatch";
