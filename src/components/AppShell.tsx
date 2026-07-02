@@ -26,7 +26,7 @@ function SidebarInner({ onNavigate }: { onNavigate?: () => void }) {
           </div>
           <div className="min-w-0">
             <div className="text-sm font-semibold text-white whitespace-nowrap">StageOS</div>
-            <div className="text-[10px] font-mono text-sidebar-foreground/70 whitespace-nowrap">ops.costume.v1</div>
+            <div className="text-[10px] font-mono text-sidebar-foreground/70 whitespace-nowrap">ops.costume.v2</div>
           </div>
         </div>
       </div>
