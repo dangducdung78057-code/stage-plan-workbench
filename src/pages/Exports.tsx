@@ -151,6 +151,13 @@ export default function Exports() {
                           : <><FileDown className="h-3.5 w-3.5 mr-1" />MD</>}
                       </Button>
                     )}
+                    {showPdf && (
+                      <Button variant="outline" size="sm" disabled={busy === r.id + ":pdf"} onClick={() => handlePdf(r)}>
+                        {busy === r.id + ":pdf"
+                          ? <><Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />生成中…</>
+                          : <><FileText className="h-3.5 w-3.5 mr-1" />PDF</>}
+                      </Button>
+                    )}
                   </div>
                 </td>
               </tr>
