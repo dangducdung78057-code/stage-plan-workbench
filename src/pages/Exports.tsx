@@ -115,7 +115,8 @@ export default function Exports() {
         createdAt: new Date(row.created_at).toLocaleString("zh-CN", { hour12: false }),
       });
       const fn = buildFilename("md", title, row.version, row.project_id);
-      const blob = new Blob([md], { type: "text/markdown;charset=utf-8" });
+      const mdWithBom = md.startsWith("\uFEFF") ? md : "\uFEFF" + md;
+      const blob = new Blob([mdWithBom], { type: "text/markdown;charset=utf-8" });
       downloadBlob(md, fn, "text/markdown;charset=utf-8");
       toast.success("Markdown 已开始下载");
       await maybeUploadToStorage(row, "md", blob, "text/markdown;charset=utf-8");
