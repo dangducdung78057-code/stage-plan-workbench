@@ -625,8 +625,13 @@ export default function ProjectDetail() {
                   </div>
                 )}
 
+                {confirmPreview && (
+                  <div className="sr-only" role="status" aria-live="polite">
+                    校验完成:{confirmPreview.errors.length} 项错误,{confirmPreview.warnings.length} 项提示。
+                  </div>
+                )}
                 {confirmPreview && confirmPreview.errors.length === 0 && confirmPreview.warnings.length === 0 && (
-                  <div className="text-success">✓ 未发现错误或提示,可继续确认。</div>
+                  <div className="text-success"><span aria-hidden="true">✓ </span>未发现错误或提示,可继续确认。</div>
                 )}
                 {confirmPreview && confirmPreview.errors.length > 0 && (
                   <div>
