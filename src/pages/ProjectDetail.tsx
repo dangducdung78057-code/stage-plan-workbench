@@ -610,16 +610,40 @@ export default function ProjectDetail() {
                 {confirmPreview && confirmPreview.errors.length > 0 && (
                   <div>
                     <div className="font-medium text-destructive mb-1">错误({confirmPreview.errors.length})</div>
-                    <ul className="list-disc pl-5 space-y-0.5">
-                      {confirmPreview.errors.map((e) => <li key={`e-${e}`} className="text-destructive">{e}</li>)}
+                    <ul className="space-y-1">
+                      {confirmPreview.errors.map((e) => {
+                        const loc = locateValidationField(e);
+                        return (
+                          <li key={`e-${e}`} className="text-destructive flex flex-wrap gap-1 items-start">
+                            {loc && (
+                              <span className="inline-block rounded bg-destructive/15 text-destructive px-1.5 py-0.5 text-[10px] font-mono shrink-0">
+                                {loc.label}·{loc.field}
+                              </span>
+                            )}
+                            <span className="flex-1">{e}</span>
+                          </li>
+                        );
+                      })}
                     </ul>
                   </div>
                 )}
                 {confirmPreview && confirmPreview.warnings.length > 0 && (
                   <div>
                     <div className="font-medium text-warning mb-1">提示({confirmPreview.warnings.length})</div>
-                    <ul className="list-disc pl-5 space-y-0.5">
-                      {confirmPreview.warnings.map((w) => <li key={`w-${w}`} className="text-warning">{w}</li>)}
+                    <ul className="space-y-1">
+                      {confirmPreview.warnings.map((w) => {
+                        const loc = locateValidationField(w);
+                        return (
+                          <li key={`w-${w}`} className="text-warning flex flex-wrap gap-1 items-start">
+                            {loc && (
+                              <span className="inline-block rounded bg-warning/15 text-warning px-1.5 py-0.5 text-[10px] font-mono shrink-0">
+                                {loc.label}·{loc.field}
+                              </span>
+                            )}
+                            <span className="flex-1">{w}</span>
+                          </li>
+                        );
+                      })}
                     </ul>
                   </div>
                 )}
