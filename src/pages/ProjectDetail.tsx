@@ -19,6 +19,7 @@ import { MobileCard, MobileCardList, MobileField } from "@/components/MobileCard
 import { renderMarkdown } from "@/lib/exportRender";
 import { ProcurementCandidatesToggle, ProcurementDisclaimer } from "@/components/ProcurementCandidatesRow";
 import type { MatchContext } from "@/lib/procurementMatch";
+import { useProcurementSettings } from "@/lib/procurementSettings";
 
 type Project = { id: string; title: string; status: string; performance_date: string | null; performer_count: number | null; updated_at: string };
 type Snapshot = {
@@ -48,6 +49,7 @@ export default function ProjectDetail() {
   const [generationNotice, setGenerationNotice] = useState<PrecheckResult | null>(null);
   const flags = useFlags();
   const aiOn = flags.aiProvider;
+  const procurementSettings = useProcurementSettings();
 
   const latest = snapshots[0];
   const latestConfirm = confirmations[0];
@@ -360,7 +362,7 @@ export default function ProjectDetail() {
               <span className="text-xs">流程:compile-prompt → costume-master-plan → gated-output → confirm → export</span>
             </div>
           )}
-          {latest && <PlanView snapshot={latest} ctx={{ programType: input?.programType, schoolStage: input?.schoolStage }} procurementOn={flags.procurement} />}
+          {latest && <PlanView snapshot={latest} ctx={{ programType: input?.programType, schoolStage: input?.schoolStage }} procurementOn={procurementSettings.procurementCandidatesEnabled} />}
           {snapshots.length > 1 && (
             <div className="panel">
               <div className="panel-header"><h3 className="text-sm font-semibold">历史快照</h3></div>
