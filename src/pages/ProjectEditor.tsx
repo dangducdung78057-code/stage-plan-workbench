@@ -77,20 +77,33 @@ export default function ProjectEditor() {
     console.groupEnd();
   }, [debugHints, errors, warnings]);
 
-  // 支持通过 URL hash (#field-xxx) 从确认弹窗定位到具体字段:滚动 + 短暂高亮。
+  // 支持通过 URL hash (#field-xxx) 从确认弹窗定位到具体字段:滚动 + 分阶段高亮。
   useEffect(() => {
     const applyHash = () => {
       const h = window.location.hash;
       if (!h.startsWith("#field-")) return;
-      // 等待字段渲染(尤其是异步加载 stage_inputs.data 后)。
       const tryScroll = (retries: number) => {
         const el = document.getElementById(h.slice(1));
         if (!el) { if (retries > 0) setTimeout(() => tryScroll(retries - 1), 120); return; }
         el.scrollIntoView({ behavior: "smooth", block: "center" });
-        el.classList.add("ring-2", "ring-destructive", "ring-offset-2", "transition");
         const input = el.querySelector("input,select,textarea") as HTMLElement | null;
-        input?.focus();
-        setTimeout(() => el.classList.remove("ring-2", "ring-destructive", "ring-offset-2"), 2000);
+        // 阶段 1(0-900ms):脉冲 + 背景闪烁,吸引注意力。
+        const pulse = ["ring-2", "ring-destructive", "ring-offset-2", "ring-offset-background",
+          "bg-destructive/10", "rounded-md", "animate-pulse", "transition-all", "duration-500"];
+        const steady = ["ring-2", "ring-destructive/60", "ring-offset-2", "ring-offset-background",
+          "rounded-md", "transition-all", "duration-1000"];
+        el.classList.add(...pulse);
+        setTimeout(() => input?.focus({ preventScroll: true }), 350);
+        setTimeout(() => {
+          el.classList.remove(...pulse);
+          el.classList.add(...steady);
+        }, 900);
+        // 阶段 2(900-2900ms):稳定环,再 fade。
+        setTimeout(() => {
+          el.classList.remove(...steady);
+          // 清掉 hash,避免刷新反复触发。
+          history.replaceState(null, "", window.location.pathname + window.location.search);
+        }, 2900);
       };
       tryScroll(10);
     };
