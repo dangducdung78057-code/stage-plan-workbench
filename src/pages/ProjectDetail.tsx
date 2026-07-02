@@ -17,6 +17,10 @@ import {
   ExternalLink, Image as ImageIcon, Video, Layers as LayersIcon, Wand2,
 } from "lucide-react";
 import { MobileCard, MobileCardList, MobileField } from "@/components/MobileCard";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { renderMarkdown } from "@/lib/exportRender";
 import { ProcurementCandidatesToggle, ProcurementDisclaimer } from "@/components/ProcurementCandidatesRow";
 import type { MatchContext } from "@/lib/procurementMatch";
@@ -49,6 +53,9 @@ export default function ProjectDetail() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [generationNotice, setGenerationNotice] = useState<PrecheckResult | null>(null);
+  const [confirmPreview, setConfirmPreview] = useState<{
+    errors: string[]; warnings: string[]; checkedAt: string;
+  } | null>(null);
   const flags = useFlags();
   const aiOn = flags.aiProvider;
   const procurementSettings = useProcurementSettings();
@@ -447,7 +454,14 @@ export default function ProjectDetail() {
                 <Button variant="outline" size="sm" onClick={() => handleConfirm("needs_revision")} disabled={busy}>
                   <AlertTriangle className="h-4 w-4 mr-1" />需要修订
                 </Button>
-                <Button size="sm" onClick={() => handleConfirm("confirmed")} disabled={busy}>
+                <Button size="sm" onClick={async () => {
+                  if (!project) return;
+                  const { data: siRow } = await supabase
+                    .from("stage_inputs").select("data").eq("project_id", project.id).maybeSingle();
+                  const fresh = (siRow?.data ?? input ?? {}) as StageInputData;
+                  const { errors, warnings } = validateStageInputDetailed(fresh);
+                  setConfirmPreview({ errors, warnings, checkedAt: new Date().toISOString() });
+                }} disabled={busy}>
                   <CheckCircle2 className="h-4 w-4 mr-1" />确认(隐私/用户)
                 </Button>
               </div>
@@ -535,6 +549,55 @@ export default function ProjectDetail() {
           </div>
         </TabsContent>
       </Tabs>
+
+      <AlertDialog open={!!confirmPreview} onOpenChange={(o) => !o && setConfirmPreview(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>确认前校验预览</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-2 text-sm">
+                <div className="text-xs text-muted-foreground">
+                  校验时间:<span className="font-mono">{confirmPreview?.checkedAt}</span>
+                </div>
+                {confirmPreview && confirmPreview.errors.length === 0 && confirmPreview.warnings.length === 0 && (
+                  <div className="text-success">✓ 未发现错误或提示,可继续确认。</div>
+                )}
+                {confirmPreview && confirmPreview.errors.length > 0 && (
+                  <div>
+                    <div className="font-medium text-destructive mb-1">错误({confirmPreview.errors.length})</div>
+                    <ul className="list-disc pl-5 space-y-0.5">
+                      {confirmPreview.errors.map((e) => <li key={`e-${e}`} className="text-destructive">{e}</li>)}
+                    </ul>
+                  </div>
+                )}
+                {confirmPreview && confirmPreview.warnings.length > 0 && (
+                  <div>
+                    <div className="font-medium text-warning mb-1">提示({confirmPreview.warnings.length})</div>
+                    <ul className="list-disc pl-5 space-y-0.5">
+                      {confirmPreview.warnings.map((w) => <li key={`w-${w}`} className="text-warning">{w}</li>)}
+                    </ul>
+                  </div>
+                )}
+                {confirmPreview && confirmPreview.errors.length > 0 && (
+                  <div className="text-xs text-destructive">存在错误,无法继续确认。请先修正。</div>
+                )}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>取消</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={!!confirmPreview?.errors.length}
+              onClick={() => {
+                setConfirmPreview(null);
+                handleConfirm("confirmed");
+              }}
+            >
+              继续确认
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
