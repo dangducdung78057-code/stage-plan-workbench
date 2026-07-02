@@ -125,7 +125,7 @@
 
   /* Checkpoint banner — shown once at build-time */
   .checkpoint-banner::before {
-    content: "CHECKPOINT: stageos-v4.0-outbound-webhook-layer";
+    content: "CHECKPOINT: stageos-v4.1-webhook-signature";
     display: block;
     font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     font-size: 10px;

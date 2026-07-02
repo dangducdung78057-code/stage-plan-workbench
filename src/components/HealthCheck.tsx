@@ -10,7 +10,7 @@ import { renderMarkdown, renderPrintableHtml, renderPdfBlob, renderPngBlob, vali
 import { CheckCircle2, XCircle, Loader2, AlertTriangle, Copy, Download as DownloadIcon, History } from "lucide-react";
 import { toast } from "sonner";
 
-const STABLE_BASELINE = "stageos-v4.0-outbound-webhook-layer";
+const STABLE_BASELINE = "stageos-v4.1-webhook-signature";
 
 type Status = "pass" | "fail" | "warn" | "skip";
 type Check = { id: string; label: string; status: Status; detail?: string; ms?: number };

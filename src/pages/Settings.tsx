@@ -24,7 +24,7 @@ import {
 import {
   WEBHOOK_EVENTS, WEBHOOK_EVENT_META, WEBHOOK_SETTINGS_DEFAULTS,
   normalizeWebhookSettings, readLocalWebhookSettings, saveLocalWebhookSettings,
-  dispatchWebhook, type WebhookEvent, type WebhookSettings,
+  dispatchWebhook, generateWebhookSecret, type WebhookEvent, type WebhookSettings,
 } from "@/lib/webhook";
 
 export default function SettingsPage() {
@@ -128,10 +128,22 @@ export default function SettingsPage() {
         webhook_enabled: webhook.webhookEnabled,
         webhook_url: webhook.webhookUrl || null,
         webhook_events: webhook.webhookEvents,
+        webhook_secret: webhook.webhookSecret || null,
       } as any);
       if (error) { toast.error(`Webhook 保存失败：${error.message}`); return; }
       toast.success("Webhook 设置已保存");
     } finally { setWebhookSaving(false); }
+  }
+
+  function rotateWebhookSecret() {
+    const next = generateWebhookSecret();
+    patchWebhook({ webhookSecret: next });
+    toast.success("已生成新的签名密钥，记得点击「保存」后同步到接收端");
+  }
+
+  function clearWebhookSecret() {
+    patchWebhook({ webhookSecret: "" });
+    toast.message("已清空签名密钥（后续出站请求将不再签名）");
   }
 
   async function testWebhook() {
@@ -343,7 +355,7 @@ export default function SettingsPage() {
 
       <div className="panel">
         <div className="panel-header">
-          <h2 className="text-sm font-semibold">Outbound Webhook (v4.0)</h2>
+          <h2 className="text-sm font-semibold">Outbound Webhook (v4.1 · HMAC 签名 + Replay 防护)</h2>
           <span className="kbd-route">webhook</span>
         </div>
         <div className="panel-body space-y-3">
@@ -364,7 +376,7 @@ export default function SettingsPage() {
               onChange={(e) => patchWebhook({ webhookUrl: e.target.value })}
               placeholder="https://example.com/hooks/stageos"
             />
-            <p className="text-xs text-muted-foreground">留空视为未配置；出站请求带 <span className="font-mono">x-stageos-event</span> / <span className="font-mono">x-stageos-version</span> 头。</p>
+            <p className="text-xs text-muted-foreground">留空视为未配置；出站请求带 <span className="font-mono">x-stageos-event</span> / <span className="font-mono">x-stageos-version</span> / <span className="font-mono">x-stageos-timestamp</span> / <span className="font-mono">x-stageos-nonce</span> 头，配置签名密钥后额外带 <span className="font-mono">x-stageos-signature</span>。</p>
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs text-muted-foreground">webhookEvents</Label>
@@ -389,10 +401,35 @@ export default function SettingsPage() {
               })}
             </div>
           </div>
+
+          <div className="space-y-1.5 border-t pt-3">
+            <Label className="text-xs text-muted-foreground">webhookSecret（HMAC-SHA256 签名密钥）</Label>
+            <Input
+              value={webhook.webhookSecret}
+              onChange={(e) => patchWebhook({ webhookSecret: e.target.value })}
+              placeholder="whsec_... 留空则不签名（向后兼容 v4.0 接收端）"
+              className="font-mono text-xs"
+              spellCheck={false}
+              autoComplete="off"
+            />
+            <div className="flex flex-wrap gap-2">
+              <Button size="sm" variant="outline" onClick={rotateWebhookSecret}>生成新密钥</Button>
+              {webhook.webhookSecret ? (
+                <Button size="sm" variant="ghost" onClick={clearWebhookSecret}>清空</Button>
+              ) : null}
+            </div>
+            <p className="text-[11px] text-muted-foreground leading-relaxed">
+              签名方式：<span className="font-mono">HMAC-SHA256(secret, `${'{'}timestamp{'}'}.${'{'}nonce{'}'}.${'{'}body{'}'}`)</span>，Header 形如 <span className="font-mono">x-stageos-signature: t=…,n=…,v1=&lt;hex&gt;</span>。<br />
+              接收端应校验：① 用同一密钥重算 v1 并常量时间比较；② 拒绝时间戳超出 ±5 分钟窗口的请求；③ 在窗口内记录 nonce，拒绝重复。
+            </p>
+          </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             <KV k="webhookEnabled" v={String(webhook.webhookEnabled)} mono />
             <KV k="webhookUrl" v={webhook.webhookUrl || "—"} mono />
             <KV k="webhookEvents" v={webhook.webhookEvents.join(",") || "—"} mono />
+            <KV k="webhookSecret" v={webhook.webhookSecret ? `已配置 · ${webhook.webhookSecret.slice(0, 10)}… (${webhook.webhookSecret.length} chars)` : "未配置（不签名）"} mono />
+            <KV k="signatureScheme" v={webhook.webhookSecret ? "HMAC-SHA256 (v1)" : "none"} mono />
             <KV k="baseline" v={STAGEOS_VERSION} mono />
           </div>
           <div className="flex flex-wrap gap-2">
@@ -404,7 +441,7 @@ export default function SettingsPage() {
             </Button>
           </div>
           <p className="text-[11px] text-muted-foreground">
-            v4.0 范围仅限 outbound：不做 inbound API、不做 token 认证、不引入外部 provider 系统。
+            v4.1 范围仅限 outbound + 签名：不做 inbound API、不做 token 认证、不引入外部 provider 系统。
           </p>
         </div>
       </div>
