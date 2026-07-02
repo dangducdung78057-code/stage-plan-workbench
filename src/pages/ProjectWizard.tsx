@@ -262,7 +262,7 @@ export default function ProjectWizard() {
   const allIssues = useMemo(() => collectIssues(title, data), [title, data]);
   const [wizardNavIndex, setWizardNavIndex] = useState<number>(-1);
 
-  // Global keyboard shortcuts: Alt+↑ / Alt+↓ to navigate issues; Alt+Enter to jump to first issue
+  // Global keyboard shortcuts: Alt+↑ / Alt+↓ to navigate issues; Alt+Enter to jump to first issue; Alt+1/2/3 to toggle filter
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (!e.altKey) return;
@@ -276,6 +276,16 @@ export default function ProjectWizard() {
         if (filtered.length === 0) return;
         setPopoverNavIndex((s) => ({ ...s, [activeId!]: 0 }));
         jumpToIssue(filtered[0]);
+        return;
+      }
+      if (e.key === "1" || e.key === "2" || e.key === "3") {
+        e.preventDefault();
+        if (!activeId) return;
+        const map: Record<string, "all" | "error" | "warning"> = { "1": "all", "2": "error", "3": "warning" };
+        const next = map[e.key];
+        if (!next) return;
+        setPopoverIssueFilter((s) => ({ ...s, [activeId]: next }));
+        toast.success(`筛选已切换: ${next === "all" ? "全部" : next === "error" ? "错误" : "警告"}`);
         return;
       }
       if (e.key !== "ArrowUp" && e.key !== "ArrowDown") return;
