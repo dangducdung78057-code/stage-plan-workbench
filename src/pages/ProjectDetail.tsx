@@ -449,7 +449,7 @@ export default function ProjectDetail() {
           {latest && <PlanView snapshot={latest} ctx={{ programType: input?.programType, schoolStage: input?.schoolStage }} procurementOn={procurementSettings.procurementCandidatesEnabled} />}
           {snapshots.length > 1 && (
             <div className="panel">
-              <div className="panel-header"><h3 className="text-sm font-semibold">历史快照</h3></div>
+              <div className="panel-header"><h2 className="text-sm font-semibold">历史快照</h2></div>
               <div className="hidden md:block">
                 <table className="ops-table">
                   <thead><tr><th>版本</th><th>模式</th><th>生成时间</th><th>合计</th></tr></thead>
