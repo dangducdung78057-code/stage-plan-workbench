@@ -655,7 +655,7 @@ function PlanView({ snapshot, ctx, procurementOn }: { snapshot: Snapshot; ctx: M
   );
 }
 
-function PlanTable({ title, rows }: { title: string; rows: any[] }) {
+function PlanTable({ title, rows, ctx, procurementOn }: { title: string; rows: any[]; ctx: MatchContext; procurementOn: boolean }) {
   const list = rows ?? [];
   const subtotal = list.reduce((sum, r) => sum + (Number(r.subtotal) || 0), 0);
   return (
@@ -674,6 +674,7 @@ function PlanTable({ title, rows }: { title: string; rows: any[] }) {
                   <div className="font-medium text-xs">{r.category}</div>
                   <div className="text-xs text-muted-foreground">{r.description}</div>
                   {r.sizing && <div className="text-[10px] text-muted-foreground font-mono">size: {r.sizing}</div>}
+                  {procurementOn && <ProcurementCandidatesToggle item={r} ctx={ctx} />}
                 </td>
                 <td className="text-right font-mono text-xs">{r.qty}</td>
                 <td className="text-right font-mono text-xs">¥{r.unitEstimate}</td>
@@ -698,6 +699,7 @@ function PlanTable({ title, rows }: { title: string; rows: any[] }) {
             <MobileField label="数量" value={r.qty} mono />
             <MobileField label="单价" value={`¥${r.unitEstimate}`} mono />
             <MobileField label="小计" value={`¥${r.subtotal}`} mono />
+            {procurementOn && <div className="col-span-full"><ProcurementCandidatesToggle item={r} ctx={ctx} /></div>}
           </MobileCard>
         ))}
       </MobileCardList>
