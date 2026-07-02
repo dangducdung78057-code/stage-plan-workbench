@@ -168,11 +168,29 @@ export default function ProjectDetail() {
         </div>
         <div className="flex items-center gap-2">
           <Button asChild variant="outline" size="sm"><Link to={`/projects/${id}/edit`}>编辑输入</Link></Button>
-          <Button size="sm" onClick={handleGenerate} disabled={busy}>
+          <Button
+            size="sm"
+            onClick={handleGenerate}
+            disabled={busy}
+            title={hasPrivacyConfirmation ? "生成 Mock 排产" : "请先完成用户/隐私确认"}
+          >
             <Sparkles className="h-4 w-4 mr-1" />生成 Mock 排产
+            {!hasPrivacyConfirmation && <span className="ml-2 kbd-route">需确认</span>}
           </Button>
         </div>
       </div>
+
+      {!hasPrivacyConfirmation && (
+        <div className="panel border-warning/40 bg-warning/5 panel-body flex items-start gap-2 text-sm">
+          <AlertTriangle className="h-4 w-4 text-warning mt-0.5" />
+          <div>
+            <div className="font-medium text-warning">尚未完成用户/隐私确认</div>
+            <div className="mt-1 text-muted-foreground text-xs">
+              请先在「确认 <span className="kbd-route">/confirm</span>」标签页完成确认后再生成排产。错误码:<span className="font-mono">PRIVACY_CONFIRMATION_REQUIRED</span>
+            </div>
+          </div>
+        </div>
+      )}
 
       {issues.length > 0 && (
         <div className="panel border-warning/40 bg-warning/5 panel-body flex items-start gap-2 text-sm">
