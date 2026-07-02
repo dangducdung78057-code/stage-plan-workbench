@@ -146,6 +146,9 @@ export default function SettingsPage() {
       });
       toast.success("已异步发送测试 webhook（结果见 webhook_delivery_logs）");
     } finally { setWebhookTesting(false); }
+  }
+
+
 
   return (
     <div className="p-4 md:p-6 max-w-3xl space-y-4">
