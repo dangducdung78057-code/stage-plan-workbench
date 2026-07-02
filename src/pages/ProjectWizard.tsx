@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -16,7 +16,17 @@ import { generateMockPlan } from "@/lib/mockPlan";
 import { toast } from "sonner";
 import {
   ArrowLeft, ArrowRight, Check, AlertTriangle, Plus, Trash2, Wand2, CheckCircle2, Circle,
+  Save, RotateCcw,
 } from "lucide-react";
+
+const DRAFT_KEY = "stageos:wizard:draft:v1";
+
+type WizardDraft = {
+  step: number;
+  title: string;
+  data: StageInputData;
+  savedAt: string;
+};
 
 type Student = NonNullable<StageInputData["students"]>[number];
 
@@ -36,6 +46,44 @@ export default function ProjectWizard() {
   const [title, setTitle] = useState("");
   const [data, setData] = useState<StageInputData>({ rehearsalFrequencyPerWeek: 3 });
   const [submitting, setSubmitting] = useState(false);
+  const [savedAt, setSavedAt] = useState<string | null>(null);
+  const [hydrated, setHydrated] = useState(false);
+  const autosaveRef = useRef<number | null>(null);
+
+  // Restore draft on mount
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(DRAFT_KEY);
+      if (raw) {
+        const d = JSON.parse(raw) as WizardDraft;
+        setStep(d.step ?? 0);
+        setTitle(d.title ?? "");
+        setData(d.data ?? { rehearsalFrequencyPerWeek: 3 });
+        setSavedAt(d.savedAt ?? null);
+        toast.success("已恢复上次草稿", {
+          description: `保存于 ${d.savedAt ? new Date(d.savedAt).toLocaleString() : "未知时间"} · step ${(d.step ?? 0) + 1}/${STEPS.length}`,
+        });
+      }
+    } catch { /* ignore */ }
+    setHydrated(true);
+  }, []);
+
+  // Autosave (debounced) after hydration
+  useEffect(() => {
+    if (!hydrated) return;
+    if (autosaveRef.current) window.clearTimeout(autosaveRef.current);
+    autosaveRef.current = window.setTimeout(() => {
+      const isEmpty = !title.trim() && Object.keys(data).length <= 1;
+      if (isEmpty) return;
+      const now = new Date().toISOString();
+      const draft: WizardDraft = { step, title, data, savedAt: now };
+      try {
+        localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+        setSavedAt(now);
+      } catch { /* quota */ }
+    }, 600);
+    return () => { if (autosaveRef.current) window.clearTimeout(autosaveRef.current); };
+  }, [hydrated, step, title, data]);
 
   const set = <K extends keyof StageInputData>(k: K, v: StageInputData[K]) =>
     setData((d) => ({ ...d, [k]: v }));
@@ -43,6 +91,29 @@ export default function ProjectWizard() {
   const stepIssues = useMemo(() => validateStep(step, title, data), [step, title, data]);
   const globalIssues = useMemo(() => validateStageInput(data), [data]);
   const canNext = stepIssues.blockers.length === 0;
+
+  const saveDraftAndExit = () => {
+    const now = new Date().toISOString();
+    const draft: WizardDraft = { step, title, data, savedAt: now };
+    try {
+      localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+      toast.success("草稿已保存,下次进入向导可继续。");
+      navigate("/projects");
+    } catch {
+      toast.error("保存草稿失败(存储配额限制)。");
+    }
+  };
+
+  const discardDraft = () => {
+    localStorage.removeItem(DRAFT_KEY);
+    setStep(0);
+    setTitle("");
+    setData({ rehearsalFrequencyPerWeek: 3 });
+    setSavedAt(null);
+    toast.success("已清空草稿,重新开始。");
+  };
+
+
 
   const goNext = () => {
     if (!canNext) {
@@ -84,6 +155,7 @@ export default function ProjectWizard() {
         status: "draft",
       });
 
+      localStorage.removeItem(DRAFT_KEY);
       toast.success("项目已创建,mock 计划已生成");
       navigate(`/projects/${projectId}`);
     } catch (e: any) {
@@ -118,9 +190,24 @@ export default function ProjectWizard() {
           <h1 className="text-xl font-semibold">新建项目 · 向导</h1>
           <span className="kbd-route">wizard://projects/new</span>
         </div>
-        <Button asChild variant="ghost" size="sm">
-          <Link to="/projects/new">切换到经典表单</Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          {savedAt && (
+            <span className="text-[11px] text-muted-foreground font-mono hidden sm:inline">
+              draft saved · {new Date(savedAt).toLocaleTimeString()}
+            </span>
+          )}
+          {savedAt && (
+            <Button variant="ghost" size="sm" onClick={discardDraft} title="清空当前草稿">
+              <RotateCcw className="h-4 w-4 mr-1" />清空草稿
+            </Button>
+          )}
+          <Button variant="outline" size="sm" onClick={saveDraftAndExit}>
+            <Save className="h-4 w-4 mr-1" />保存草稿并退出
+          </Button>
+          <Button asChild variant="ghost" size="sm">
+            <Link to="/projects/new">切换到经典表单</Link>
+          </Button>
+        </div>
       </div>
 
       {/* Stepper */}
