@@ -228,3 +228,34 @@ export function validateStageInput(data: StageInputData): string[] {
   const { errors, warnings } = validateStageInputDetailed(data);
   return [...errors, ...warnings];
 }
+
+export type ValidationSnapshot = {
+  checkedAt: string;
+  errors: string[];
+  warnings: string[];
+};
+
+const VALIDATION_HISTORY_LIMIT = 20;
+
+/**
+ * Append a validation snapshot to the persisted stage input.
+ * Deduplicates against the last entry when errors/warnings are identical
+ * (only updates checkedAt would spam the history), and caps the history size.
+ */
+export function appendValidationHistory(
+  prevData: (StageInputData & { __validation?: ValidationSnapshot; __validationHistory?: ValidationSnapshot[] }) | undefined | null,
+  snapshot: ValidationSnapshot,
+): StageInputData & { __validation: ValidationSnapshot; __validationHistory: ValidationSnapshot[] } {
+  const base = (prevData ?? {}) as StageInputData & { __validation?: ValidationSnapshot; __validationHistory?: ValidationSnapshot[] };
+  const prevHistory = Array.isArray(base.__validationHistory) ? base.__validationHistory : [];
+  const last = prevHistory[prevHistory.length - 1];
+  const sameAsLast =
+    last &&
+    JSON.stringify(last.errors) === JSON.stringify(snapshot.errors) &&
+    JSON.stringify(last.warnings) === JSON.stringify(snapshot.warnings);
+  const nextHistory = sameAsLast
+    ? [...prevHistory.slice(0, -1), snapshot]
+    : [...prevHistory, snapshot];
+  const trimmed = nextHistory.slice(-VALIDATION_HISTORY_LIMIT);
+  return { ...base, __validation: snapshot, __validationHistory: trimmed };
+}

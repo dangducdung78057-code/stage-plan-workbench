@@ -359,8 +359,13 @@ export default function ProjectWizard() {
       if (error) throw error;
       const projectId = created.id;
 
-      const { errors: vErrors, warnings: vWarnings } = (await import("@/lib/stageos")).validateStageInputDetailed(data);
-      const persistedData = { ...data, __validation: { checkedAt: new Date().toISOString(), errors: vErrors, warnings: vWarnings } };
+      const stageos = await import("@/lib/stageos");
+      const { errors: vErrors, warnings: vWarnings } = stageos.validateStageInputDetailed(data);
+      const persistedData = stageos.appendValidationHistory(data, {
+        checkedAt: new Date().toISOString(),
+        errors: vErrors,
+        warnings: vWarnings,
+      });
       await supabase.from("stage_inputs").upsert({ project_id: projectId, user_id: uid, data: persistedData as any } as any);
 
       // Generate mock plan snapshot immediately
