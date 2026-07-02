@@ -6,6 +6,8 @@ import { matchCandidates, type PlanItem, type MatchContext } from "./procurement
 import type { Candidate } from "./procurementCatalog";
 
 export type ProcurementProviderMode = "local" | "http";
+// 向后兼容别名（v3.0 命名）
+export type ProcurementProviderId = ProcurementProviderMode;
 // 展示用 provider 徽章 id：local / http / fallback-local
 export type ProviderDisplayId = "local" | "http" | "fallback-local";
 
