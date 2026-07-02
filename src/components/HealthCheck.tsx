@@ -636,10 +636,22 @@ export function HealthCheck() {
       lines.push(`Release Gate: ${gate.gate}  [rule ${gate.rule}]`);
       lines.push(`reason: ${gate.reason}`);
       if (gate.triggers.length > 0) lines.push(`triggers: ${gate.triggers.join(", ")}`);
+      lines.push(
+        `warn_count_by_layer: L0=${gate.warnCountByLayer.L0} L1=${gate.warnCountByLayer.L1} L2=${gate.warnCountByLayer.L2}`,
+      );
+      lines.push(`system_warn_modules (unique): ${gate.systemWarnModules.join(", ") || "(none)"}`);
+      lines.push(`gate_triggering_warn_modules: ${gate.gateTriggeringWarnModules.join(", ") || "(none)"}`);
+      if (gate.isolatedExperimentalWarnings.length > 0) {
+        lines.push(
+          `isolated_experimental_warnings: ${gate.isolatedExperimentalWarnings.map((w) => w.module).join(", ")}  [tag: isolated experimental warning]`,
+        );
+      }
     }
     if (snapshot && !snapshot.error && snapshot.rows.length > 0) {
       const c = snapshot.counts;
-      lines.push(`capability_counts: L0=${c.L0} L1=${c.L1} L2=${c.L2} · PASS=${c.PASS} WARN=${c.WARN} FAIL=${c.FAIL} SKIP=${c.SKIP}`);
+      lines.push(
+        `capability_counts: L0=${c.L0}(WARN=${c.L0_WARN},FAIL=${c.L0_FAIL}) L1=${c.L1}(WARN=${c.L1_WARN},FAIL=${c.L1_FAIL}) L2=${c.L2}(WARN=${c.L2_WARN},FAIL=${c.L2_FAIL}) · PASS=${c.PASS} WARN(unique)=${c.warnUnique} FAIL=${c.FAIL} SKIP=${c.SKIP}`,
+      );
     }
     lines.push("");
     lines.push("检查项:");
