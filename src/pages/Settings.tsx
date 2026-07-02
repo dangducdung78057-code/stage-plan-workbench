@@ -50,6 +50,10 @@ export default function SettingsPage() {
           <StatusRow ok={false} label="payment" value="not connected" />
           <StatusRow ok label="export" value="mock only" note />
           <StatusRow ok label="row-level isolation" value="by user_id" />
+          <div className="sm:col-span-2 border rounded px-2.5 py-1.5 bg-surface flex items-center justify-between">
+            <span className="text-xs text-muted-foreground font-mono">version tag</span>
+            <span className="font-mono text-xs text-success">{STAGEOS_VERSION}</span>
+          </div>
         </div>
       </div>
 
