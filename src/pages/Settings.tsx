@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { CheckCircle2, XCircle } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { FLAG_META, useFlags, setFlag, type FeatureFlag } from "@/lib/featureFlags";
+import { HealthCheck } from "@/components/HealthCheck";
 
 export default function SettingsPage() {
   const { user, signOut } = useAuth();
@@ -59,6 +60,10 @@ export default function SettingsPage() {
           </div>
         </div>
       </div>
+
+      <HealthCheck />
+
+
 
       <div className="panel">
         <div className="panel-header">
