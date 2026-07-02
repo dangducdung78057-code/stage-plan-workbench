@@ -644,10 +644,11 @@ export default function ProjectDetail() {
                                   setConfirmPreview(null);
                                   navigate(`/projects/${project?.id}/edit?from=confirm#field-${anchor}`);
                                 }}
-                                className="inline-block rounded bg-destructive/15 hover:bg-destructive/25 text-destructive px-1.5 py-0.5 text-[10px] font-mono shrink-0 cursor-pointer"
-                                title="点击跳转到该字段"
+                                className="inline-flex items-center rounded bg-destructive/15 hover:bg-destructive/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive focus-visible:ring-offset-1 text-destructive px-1.5 py-0.5 text-[10px] font-mono shrink-0"
+                                aria-label={`跳转到 ${loc.label}(${loc.field})字段并修正`}
                               >
-                                {loc.label}·{loc.field} ↗
+                                <span>{loc.label}·{loc.field}</span>
+                                <span aria-hidden="true" className="ml-0.5">↗</span>
                               </button>
                             )}
                             <span className="flex-1">{e}</span>
