@@ -613,12 +613,21 @@ export default function ProjectDetail() {
                     <ul className="space-y-1">
                       {confirmPreview.errors.map((e) => {
                         const loc = locateValidationField(e);
+                        const anchor = loc ? loc.field.split(".")[0] : null;
                         return (
                           <li key={`e-${e}`} className="text-destructive flex flex-wrap gap-1 items-start">
                             {loc && (
-                              <span className="inline-block rounded bg-destructive/15 text-destructive px-1.5 py-0.5 text-[10px] font-mono shrink-0">
-                                {loc.label}·{loc.field}
-                              </span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setConfirmPreview(null);
+                                  navigate(`/projects/${project?.id}/edit#field-${anchor}`);
+                                }}
+                                className="inline-block rounded bg-destructive/15 hover:bg-destructive/25 text-destructive px-1.5 py-0.5 text-[10px] font-mono shrink-0 cursor-pointer"
+                                title="点击跳转到该字段"
+                              >
+                                {loc.label}·{loc.field} ↗
+                              </button>
                             )}
                             <span className="flex-1">{e}</span>
                           </li>
@@ -633,12 +642,21 @@ export default function ProjectDetail() {
                     <ul className="space-y-1">
                       {confirmPreview.warnings.map((w) => {
                         const loc = locateValidationField(w);
+                        const anchor = loc ? loc.field.split(".")[0] : null;
                         return (
                           <li key={`w-${w}`} className="text-warning flex flex-wrap gap-1 items-start">
                             {loc && (
-                              <span className="inline-block rounded bg-warning/15 text-warning px-1.5 py-0.5 text-[10px] font-mono shrink-0">
-                                {loc.label}·{loc.field}
-                              </span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setConfirmPreview(null);
+                                  navigate(`/projects/${project?.id}/edit#field-${anchor}`);
+                                }}
+                                className="inline-block rounded bg-warning/15 hover:bg-warning/25 text-warning px-1.5 py-0.5 text-[10px] font-mono shrink-0 cursor-pointer"
+                                title="点击跳转到该字段"
+                              >
+                                {loc.label}·{loc.field} ↗
+                              </button>
                             )}
                             <span className="flex-1">{w}</span>
                           </li>

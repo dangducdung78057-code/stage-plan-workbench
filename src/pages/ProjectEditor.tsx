@@ -69,6 +69,30 @@ export default function ProjectEditor() {
     console.groupEnd();
   }, [debugHints, errors, warnings]);
 
+  // 支持通过 URL hash (#field-xxx) 从确认弹窗定位到具体字段:滚动 + 短暂高亮。
+  useEffect(() => {
+    const applyHash = () => {
+      const h = window.location.hash;
+      if (!h.startsWith("#field-")) return;
+      // 等待字段渲染(尤其是异步加载 stage_inputs.data 后)。
+      const tryScroll = (retries: number) => {
+        const el = document.getElementById(h.slice(1));
+        if (!el) { if (retries > 0) setTimeout(() => tryScroll(retries - 1), 120); return; }
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        el.classList.add("ring-2", "ring-destructive", "ring-offset-2", "transition");
+        const input = el.querySelector("input,select,textarea") as HTMLElement | null;
+        input?.focus();
+        setTimeout(() => el.classList.remove("ring-2", "ring-destructive", "ring-offset-2"), 2000);
+      };
+      tryScroll(10);
+    };
+    applyHash();
+    window.addEventListener("hashchange", applyHash);
+    return () => window.removeEventListener("hashchange", applyHash);
+  }, [data]);
+
+
+
 
   const set = <K extends keyof StageInputData>(k: K, v: StageInputData[K]) =>
     setData((d) => ({ ...d, [k]: v }));
@@ -239,7 +263,7 @@ export default function ProjectEditor() {
           <Field label="演出日期">
             <Input type="date" value={data.performanceDate ?? ""} onChange={(e) => set("performanceDate", e.target.value)} />
           </Field>
-          <Field label="彩排频次(次/周)" hint={hints.rehearsal}>
+          <Field label="彩排频次(次/周)" hint={hints.rehearsal} field="rehearsalFrequencyPerWeek">
             <Select value={String(data.rehearsalFrequencyPerWeek ?? "")} onValueChange={(v) => set("rehearsalFrequencyPerWeek", Number(v) as 2|3|5)}>
               <SelectTrigger><SelectValue placeholder="选择彩排频次" /></SelectTrigger>
               <SelectContent>{REHEARSAL_FREQUENCIES.map((n) => <SelectItem key={n} value={String(n)}>{n} 次/周</SelectItem>)}</SelectContent>
@@ -263,16 +287,16 @@ export default function ProjectEditor() {
       <div className="panel">
         <div className="panel-header"><h2 className="text-sm font-semibold">人数与预算</h2></div>
         <div className="panel-body grid grid-cols-4 gap-4">
-          <Field label="总人数 performerCount" hint={hints.performerCount}>
+          <Field label="总人数 performerCount" hint={hints.performerCount} field="performerCount">
             <Input type="number" value={data.performerCount ?? ""} onChange={(e) => set("performerCount", e.target.value ? Number(e.target.value) : undefined)} />
           </Field>
-          <Field label="男生数 maleCount" hint={hints.maleCount}>
+          <Field label="男生数 maleCount" hint={hints.maleCount} field="maleCount">
             <Input type="number" value={data.maleCount ?? ""} onChange={(e) => set("maleCount", e.target.value ? Number(e.target.value) : undefined)} />
           </Field>
-          <Field label="女生数 femaleCount" hint={hints.femaleCount}>
+          <Field label="女生数 femaleCount" hint={hints.femaleCount} field="femaleCount">
             <Input type="number" value={data.femaleCount ?? ""} onChange={(e) => set("femaleCount", e.target.value ? Number(e.target.value) : undefined)} />
           </Field>
-          <Field label="人均预算 (元)" hint={hints.perPersonBudget}>
+          <Field label="人均预算 (元)" hint={hints.perPersonBudget} field="perPersonBudget">
             <Input type="number" value={data.perPersonBudget ?? ""} onChange={(e) => set("perPersonBudget", e.target.value ? Number(e.target.value) : undefined)} />
           </Field>
         </div>
@@ -319,7 +343,7 @@ export default function ProjectEditor() {
         </div>
       </div>
 
-      <div className="panel">
+      <div className="panel scroll-mt-24" id="field-students" data-field="students">
         <div className="panel-header">
           <div className="flex items-center gap-2">
             <h2 className="text-sm font-semibold">学生名录(匿名)</h2>
@@ -374,17 +398,18 @@ export default function ProjectEditor() {
 }
 
 function Field({
-  label, required, children, hint,
+  label, required, children, hint, field,
 }: {
   label: string;
   required?: boolean;
   children: React.ReactNode;
   hint?: { errors: string[]; warnings: string[] };
+  field?: string;
 }) {
   const hasErr = (hint?.errors.length ?? 0) > 0;
   const hasWarn = (hint?.warnings.length ?? 0) > 0;
   return (
-    <div className="space-y-1.5">
+    <div className="space-y-1.5 scroll-mt-24 rounded-sm" id={field ? `field-${field}` : undefined} data-field={field}>
       <Label className={`text-xs ${hasErr ? "text-destructive" : hasWarn ? "text-warning" : "text-muted-foreground"}`}>
         {label}{required && <span className="text-destructive ml-0.5">*</span>}
       </Label>
@@ -402,4 +427,5 @@ function Field({
     </div>
   );
 }
+
 
