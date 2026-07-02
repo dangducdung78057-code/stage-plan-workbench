@@ -116,13 +116,23 @@ function fmtSchedule(d: any): string {
 }
 
 function fmtSearch(d: any): string {
-  const recs = d?.searchRecommendations ?? d?.plan?.searchRecommendations ?? d?.recommendations;
+  const recs =
+    d?.platformSearch ??
+    d?.platform_search ??
+    d?.snapshot?.platform_search ??
+    d?.snapshot?.platformSearch ??
+    d?.searchRecommendations ??
+    d?.plan?.searchRecommendations ??
+    d?.plan?.platformSearch ??
+    d?.recommendations;
   if (!Array.isArray(recs) || !recs.length) return MISSING;
   return recs.map((r: any) => {
     if (typeof r === "string") return `- ${r}`;
     const q = r.query ?? r.keyword ?? r.q ?? "";
     const platform = r.platform ?? "";
-    return `- ${platform ? `**${platform}**：` : ""}${q}`;
+    const note = r.note ?? r.url ?? "";
+    const tail = note ? ` — ${note}` : "";
+    return `- ${platform ? `**${platform}**：` : ""}${q}${tail}`;
   }).join("\n") + `\n\n> 平台搜索建议仅供人工核验，非实时库存价格。`;
 }
 
