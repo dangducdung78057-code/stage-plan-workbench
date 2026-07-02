@@ -238,10 +238,11 @@ export default function ProjectDetail() {
             size="sm"
             onClick={handleGenerate}
             disabled={busy}
-            title={hasPrivacyConfirmation ? "生成 Mock 排产" : "请先完成用户/隐私确认"}
+            title={hasPrivacyConfirmation ? (aiOn ? "生成 AI 排产（失败回退 mock）" : "生成 Mock 排产") : "请先完成用户/隐私确认"}
             className="w-full md:w-auto justify-center"
           >
-            <Sparkles className="h-4 w-4 mr-1" />生成 Mock 排产
+            <Sparkles className="h-4 w-4 mr-1" />{aiOn ? "生成 AI 排产" : "生成 Mock 排产"}
+            {aiOn && <span className="ml-2 kbd-route whitespace-nowrap">AI</span>}
             {!hasPrivacyConfirmation && <span className="ml-2 kbd-route whitespace-nowrap">需确认</span>}
           </Button>
         </div>
