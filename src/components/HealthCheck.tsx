@@ -593,6 +593,9 @@ export function HealthCheck() {
           isolated_experimental_warnings: gateResult.isolatedExperimentalWarnings,
           warn_count_by_layer: gateResult.warnCountByLayer,
           capability_counts: snap.counts,
+          freeze_status: frozen.status,
+          freeze_id: frozen.id,
+          freeze_persisted: frozen.persisted,
         };
         const { data: inserted } = await supabase.from("health_check_runs").insert({
           user_id: user.id,
