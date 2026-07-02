@@ -47,6 +47,7 @@ export function HealthCheck() {
   const [compareIds, setCompareIds] = useState<[string | null, string | null]>([null, null]);
   const [snapshot, setSnapshot] = useState<CapabilitySnapshot | null>(null);
   const [gate, setGate] = useState<GateResult | null>(null);
+  const [freeze, setFreeze] = useState<FreezePersisted | null>(null);
   type PdfProbe = { status: Status; reason: string; detail: string; ms?: number };
   const [pdfProbes, setPdfProbes] = useState<{ disabled: PdfProbe; enabled: PdfProbe; error: PdfProbe } | null>(null);
 
