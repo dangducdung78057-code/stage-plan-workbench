@@ -521,66 +521,108 @@ export default function ProjectWizard() {
                               <Check className="h-3 w-3" />所有校验通过
                             </div>
                           ) : (
-                            issues.map((it, idx) => (
-                              <button
-                                key={idx}
-                                type="button"
-                                onClick={() => jumpTo(it)}
-                                className="w-full flex items-center gap-2 px-2 py-1.5 text-left hover:bg-muted/60 transition-colors"
-                                title="点击定位到对应字段"
-                              >
-                                <span
-                                  className={[
-                                    "text-[10px] font-mono px-1 py-0.5 rounded shrink-0",
-                                    it.severity === "error"
-                                      ? "bg-destructive/10 text-destructive"
-                                      : "bg-warning/15 text-warning",
-                                  ].join(" ")}
-                                >
-                                  step {it.step + 1}
-                                </span>
-                                <span className="text-xs font-medium shrink-0">{it.label}</span>
-                                <span className="text-[11px] text-muted-foreground truncate">{it.message}</span>
-                              </button>
-                            ))
-                          )}
-                          {issues.length > 0 && (
-                            <div className="px-2 py-1.5 flex items-center justify-between bg-muted/60">
+                            <>
+                              {/* Filter toggle */}
+                              <div className="px-2 py-1.5 flex items-center gap-1.5 bg-muted/60 border-b border-border/40">
+                                {(["all", "error", "warning"] as const).map((f) => {
+                                  const filter = popoverIssueFilter[d.id] ?? "all";
+                                  const active = filter === f;
+                                  const count = f === "all" ? issues.length : issues.filter((i) => i.severity === f).length;
+                                  return (
+                                    <button
+                                      key={f}
+                                      type="button"
+                                      onClick={() => {
+                                        setPopoverIssueFilter((s) => ({ ...s, [d.id]: f }));
+                                        setPopoverNavIndex((s) => ({ ...s, [d.id]: 0 }));
+                                      }}
+                                      className={[
+                                        "text-[11px] px-2 py-0.5 rounded-md border transition-colors",
+                                        active
+                                          ? "border-primary bg-primary/10 text-primary font-medium"
+                                          : "border-border bg-background hover:bg-muted text-muted-foreground",
+                                      ].join(" ")}
+                                    >
+                                      {f === "all" ? "全部" : f === "error" ? "错误" : "警告"}
+                                      <span className="ml-1 font-mono">{count}</span>
+                                    </button>
+                                  );
+                                })}
+                              </div>
                               {(() => {
-                                const navIdx = Math.max(0, Math.min((popoverNavIndex[d.id] ?? 0), issues.length - 1));
+                                const filter = popoverIssueFilter[d.id] ?? "all";
+                                const filtered = filter === "all" ? issues : issues.filter((i) => i.severity === filter);
+                                if (filtered.length === 0) {
+                                  return (
+                                    <div className="px-2 py-2 text-[11px] text-muted-foreground">
+                                      当前筛选下无问题项
+                                    </div>
+                                  );
+                                }
                                 return (
                                   <>
-                                    <button
-                                      type="button"
-                                      disabled={navIdx === 0}
-                                      onClick={() => {
-                                        const prev = Math.max(0, navIdx - 1);
-                                        setPopoverNavIndex((s) => ({ ...s, [d.id]: prev }));
-                                        jumpTo(issues[prev]);
-                                      }}
-                                      className="inline-flex items-center gap-0.5 text-[11px] px-2 py-1 rounded-md border border-border bg-background hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                                    >
-                                      <ChevronLeft className="h-3 w-3" />上一问题
-                                    </button>
-                                    <span className="text-[11px] font-mono text-muted-foreground">
-                                      {navIdx + 1} / {issues.length}
-                                    </span>
-                                    <button
-                                      type="button"
-                                      disabled={navIdx >= issues.length - 1}
-                                      onClick={() => {
-                                        const next = Math.min(issues.length - 1, navIdx + 1);
-                                        setPopoverNavIndex((s) => ({ ...s, [d.id]: next }));
-                                        jumpTo(issues[next]);
-                                      }}
-                                      className="inline-flex items-center gap-0.5 text-[11px] px-2 py-1 rounded-md border border-border bg-background hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                                    >
-                                      下一问题<ChevronRight className="h-3 w-3" />
-                                    </button>
+                                    {filtered.map((it, idx) => (
+                                      <button
+                                        key={`${it.fieldId}-${idx}`}
+                                        type="button"
+                                        onClick={() => jumpTo(it)}
+                                        className="w-full flex items-center gap-2 px-2 py-1.5 text-left hover:bg-muted/60 transition-colors"
+                                        title="点击定位到对应字段"
+                                      >
+                                        <span
+                                          className={[
+                                            "text-[10px] font-mono px-1 py-0.5 rounded shrink-0",
+                                            it.severity === "error"
+                                              ? "bg-destructive/10 text-destructive"
+                                              : "bg-warning/15 text-warning",
+                                          ].join(" ")}
+                                        >
+                                          step {it.step + 1}
+                                        </span>
+                                        <span className="text-xs font-medium shrink-0">{it.label}</span>
+                                        <span className="text-[11px] text-muted-foreground truncate">{it.message}</span>
+                                      </button>
+                                    ))}
+                                    <div className="px-2 py-1.5 flex items-center justify-between bg-muted/60 border-t border-border/40">
+                                      {(() => {
+                                        const navIdx = Math.max(0, Math.min((popoverNavIndex[d.id] ?? 0), filtered.length - 1));
+                                        return (
+                                          <>
+                                            <button
+                                              type="button"
+                                              disabled={navIdx === 0}
+                                              onClick={() => {
+                                                const prev = Math.max(0, navIdx - 1);
+                                                setPopoverNavIndex((s) => ({ ...s, [d.id]: prev }));
+                                                jumpTo(filtered[prev]);
+                                              }}
+                                              className="inline-flex items-center gap-0.5 text-[11px] px-2 py-1 rounded-md border border-border bg-background hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                                            >
+                                              <ChevronLeft className="h-3 w-3" />上一问题
+                                            </button>
+                                            <span className="text-[11px] font-mono text-muted-foreground">
+                                              {navIdx + 1} / {filtered.length}
+                                            </span>
+                                            <button
+                                              type="button"
+                                              disabled={navIdx >= filtered.length - 1}
+                                              onClick={() => {
+                                                const next = Math.min(filtered.length - 1, navIdx + 1);
+                                                setPopoverNavIndex((s) => ({ ...s, [d.id]: next }));
+                                                jumpTo(filtered[next]);
+                                              }}
+                                              className="inline-flex items-center gap-0.5 text-[11px] px-2 py-1 rounded-md border border-border bg-background hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                                            >
+                                              下一问题<ChevronRight className="h-3 w-3" />
+                                            </button>
+                                          </>
+                                        );
+                                      })()}
+                                    </div>
                                   </>
                                 );
                               })()}
-                            </div>
+                            </>
                           )}
                         </div>
                       )}
