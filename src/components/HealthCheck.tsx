@@ -529,9 +529,10 @@ export function HealthCheck() {
       (a, c) => ({ ...a, [c.status]: (a[c.status] ?? 0) + 1 }),
       {} as Record<Status, number>,
     );
+    let newRunId: string | null = null;
     if (user?.id) {
       try {
-        await supabase.from("health_check_runs").insert({
+        const { data: inserted } = await supabase.from("health_check_runs").insert({
           user_id: user.id,
           baseline: STAGEOS_VERSION,
           route: typeof window !== "undefined" ? window.location.pathname : null,
@@ -542,7 +543,9 @@ export function HealthCheck() {
           warn_count: summaryLocal.warn ?? 0,
           fail_count: summaryLocal.fail ?? 0,
           skip_count: summaryLocal.skip ?? 0,
-        });
+        }).select("id").single();
+        newRunId = (inserted as any)?.id ?? null;
+        setLastRunId(newRunId);
         void loadRecent();
       } catch {
         /* non-fatal */
