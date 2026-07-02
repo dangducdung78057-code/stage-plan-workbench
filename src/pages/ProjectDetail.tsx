@@ -421,9 +421,9 @@ export default function ProjectDetail() {
 
 function MetaCard({ label, value, mono }: { label: string; value: React.ReactNode; mono?: any }) {
   return (
-    <div className="panel p-3">
-      <div className="text-xs text-muted-foreground">{label}</div>
-      <div className={`mt-1 text-sm font-medium ${mono ? "font-mono" : ""}`}>{value}</div>
+    <div className="panel p-3 min-w-0">
+      <div className="text-xs text-muted-foreground break-words">{label}</div>
+      <div className={`mt-1 text-sm font-medium break-words ${mono ? "font-mono" : ""}`}>{value}</div>
     </div>
   );
 }
