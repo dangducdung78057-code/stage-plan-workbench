@@ -8,10 +8,10 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   SCHOOL_STAGES, PROGRAM_TYPES, REHEARSAL_FREQUENCIES,
-  validateStageInput, type StageInputData,
+  validateStageInputDetailed, type StageInputData,
 } from "@/lib/stageos";
 import { toast } from "sonner";
-import { Plus, Trash2, ArrowLeft, AlertTriangle } from "lucide-react";
+import { Plus, Trash2, ArrowLeft, AlertTriangle, AlertCircle } from "lucide-react";
 
 type Student = NonNullable<StageInputData["students"]>[number];
 
