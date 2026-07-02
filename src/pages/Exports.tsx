@@ -8,13 +8,10 @@ import { useFlags } from "@/lib/featureFlags";
 import {
   buildFilename,
   renderMarkdown,
-  renderPrintableHtml,
   downloadBlob,
-  openPrintWindow,
-  canPrint,
 } from "@/lib/exportRender";
 import { toast } from "sonner";
-import { FileDown, Printer, Eye, Loader2 } from "lucide-react";
+import { FileDown, Eye, Loader2 } from "lucide-react";
 
 type Row = {
   id: string; project_id: string; version: number; format: string;
@@ -80,53 +77,19 @@ export default function Exports() {
     }
   }
 
-  async function handlePdf(row: Row) {
-    setBusy(row.id + ":pdf");
-    try {
-      if (!(await guard(row))) return;
-      if (!canPrint()) {
-        toast.error("当前浏览器不支持直接打印，请先下载 Markdown。");
-        return;
-      }
-      const title = projectTitles[row.project_id];
-      const fn = buildFilename("pdf", title, row.version, row.project_id);
-      const html = renderPrintableHtml(row.payload, row.format, {
-        projectTitle: title,
-        version: row.version,
-        createdAt: new Date(row.created_at).toLocaleString("zh-CN", { hour12: false }),
-        filenameTitle: fn.replace(/\.pdf$/, ""),
-      });
-      toast.info("正在打开打印对话框，请选择“另存为 PDF”。");
-      try {
-        await openPrintWindow(html);
-      } catch (err: any) {
-        if (err?.message === "PRINT_UNSUPPORTED") {
-          toast.error("当前浏览器不支持直接打印，请先下载 Markdown。");
-        } else {
-          throw err;
-        }
-      }
-    } catch (e) {
-      console.error(e);
-      toast.error("PDF 生成失败，请先下载 Markdown。");
-    } finally {
-      setBusy(null);
-    }
-  }
-
   const showMd = flags.markdownDownload;
-  const showPdf = flags.pdfExport;
 
   return (
     <div className="p-4 md:p-6 space-y-4">
       <div>
         <h1 className="text-xl font-semibold">导出记录</h1>
         <p className="text-sm text-muted-foreground">所有历史导出的 JSON / Markdown 载荷。</p>
-        {!showMd && !showPdf && (
+        {!showMd && (
           <p className="text-xs text-muted-foreground mt-1">
-            在 <span className="font-mono">设置 → 分支能力开关</span> 中开启 Markdown / PDF 下载。
+            在 <span className="font-mono">设置 → 分支能力开关</span> 中开启 Markdown 下载。
           </p>
         )}
+        <p className="text-xs text-muted-foreground mt-1">PDF 导出暂未完成，请先下载 Markdown。</p>
       </div>
       <div className="panel">
         <div className="panel-header">
@@ -160,13 +123,6 @@ export default function Exports() {
                           : <><FileDown className="h-3.5 w-3.5 mr-1" />MD</>}
                       </Button>
                     )}
-                    {showPdf && (
-                      <Button variant="outline" size="sm" disabled={busy === r.id + ":pdf"} onClick={() => handlePdf(r)}>
-                        {busy === r.id + ":pdf"
-                          ? <><Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />生成中…</>
-                          : <><Printer className="h-3.5 w-3.5 mr-1" />打印/PDF</>}
-                      </Button>
-                    )}
                   </div>
                 </td>
               </tr>
@@ -189,13 +145,6 @@ export default function Exports() {
                       {busy === r.id + ":md"
                         ? <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />生成中…</>
                         : <><FileDown className="h-3.5 w-3.5 mr-1.5" />下载 Markdown</>}
-                    </Button>
-                  )}
-                  {showPdf && (
-                    <Button variant="outline" size="sm" className="w-full justify-center" disabled={busy === r.id + ":pdf"} onClick={() => handlePdf(r)}>
-                      {busy === r.id + ":pdf"
-                        ? <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />生成中，请在对话框中选择保存…</>
-                        : <><Printer className="h-3.5 w-3.5 mr-1.5" />打印 / 保存为 PDF</>}
                     </Button>
                   )}
                 </div>
