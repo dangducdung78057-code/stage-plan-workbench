@@ -51,6 +51,9 @@ export default function SettingsPage() {
         setProcProvider(nextProc.procurementProvider);
         setProcHttpUrl(nextProc.procurementApiBaseUrl);
         saveLocalProcurementSettings(nextProc, false);
+        const nextWebhook = normalizeWebhookSettings(data, readLocalWebhookSettings());
+        setWebhook(nextWebhook);
+        saveLocalWebhookSettings(nextWebhook);
       }
       const [{ count: p }, { count: s }, { count: e }, { count: c }] = await Promise.all([
         supabase.from("projects").select("id", { count: "exact", head: true }),
