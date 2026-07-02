@@ -185,19 +185,29 @@ export default function ProjectDetail() {
           {snapshots.length > 1 && (
             <div className="panel">
               <div className="panel-header"><h3 className="text-sm font-semibold">历史快照</h3></div>
-              <table className="ops-table">
-                <thead><tr><th>版本</th><th>模式</th><th>生成时间</th><th>合计</th></tr></thead>
-                <tbody>
-                  {snapshots.map((s) => (
-                    <tr key={s.id}>
-                      <td className="font-mono">v{s.version}</td>
-                      <td><ToneBadge tone="info">{s.mode}</ToneBadge></td>
-                      <td className="font-mono text-xs text-muted-foreground">{new Date(s.generated_at).toLocaleString("zh-CN", { hour12: false })}</td>
-                      <td className="font-mono">¥ {s.costume_plan?.totalEstimate ?? "—"}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <div className="hidden md:block">
+                <table className="ops-table">
+                  <thead><tr><th>版本</th><th>模式</th><th>生成时间</th><th>合计</th></tr></thead>
+                  <tbody>
+                    {snapshots.map((s) => (
+                      <tr key={s.id}>
+                        <td className="font-mono">v{s.version}</td>
+                        <td><ToneBadge tone="info">{s.mode}</ToneBadge></td>
+                        <td className="font-mono text-xs text-muted-foreground">{new Date(s.generated_at).toLocaleString("zh-CN", { hour12: false })}</td>
+                        <td className="font-mono">¥ {s.costume_plan?.totalEstimate ?? "—"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <MobileCardList>
+                {snapshots.map((s) => (
+                  <MobileCard key={s.id} title={<span className="font-mono">v{s.version}</span>} right={<ToneBadge tone="info">{s.mode}</ToneBadge>}>
+                    <MobileField label="生成时间" value={new Date(s.generated_at).toLocaleString("zh-CN", { hour12: false })} mono />
+                    <MobileField label="合计" value={`¥ ${s.costume_plan?.totalEstimate ?? "—"}`} mono />
+                  </MobileCard>
+                ))}
+              </MobileCardList>
             </div>
           )}
         </TabsContent>
