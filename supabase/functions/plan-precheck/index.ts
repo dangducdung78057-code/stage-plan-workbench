@@ -1,7 +1,6 @@
 // StageOS plan generation precheck.
 // Enforces order: auth -> permission -> confirmation -> validation.
-// Business rejections return status 200 with { ok:false, errorCode, message }
-// so the Supabase JS client does not throw for expected gating outcomes.
+// Business rejections return stable JSON with an HTTP business status.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 
@@ -30,11 +29,15 @@ function validateStageInput(data: StageInputData): string[] {
   return issues;
 }
 
-function reject(errorCode: string, message: string, intendedStatus: number, extra: Record<string, unknown> = {}) {
+function jsonResponse(payload: Record<string, unknown>, status = 200) {
   return new Response(
-    JSON.stringify({ ok: false, errorCode, message, intendedStatus, ...extra }),
-    { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    JSON.stringify(payload),
+    { status, headers: { ...corsHeaders, "Content-Type": "application/json" } },
   );
+}
+
+function reject(code: string, message: string, status: number, extra: Record<string, unknown> = {}) {
+  return jsonResponse({ ok: false, code, message, ...extra }, status);
 }
 
 Deno.serve(async (req) => {
@@ -65,13 +68,14 @@ Deno.serve(async (req) => {
     if (!project) return reject("FORBIDDEN", "无权访问该项目。", 403);
 
     // 3) Privacy / user confirmation gate.
-    const { data: confirmed } = await supabase
+    const { data: confirmed, error: cErr } = await supabase
       .from("confirmation_records")
       .select("id, status, confirmed_at")
       .eq("project_id", projectId)
       .eq("status", "confirmed")
       .order("confirmed_at", { ascending: false })
       .limit(1);
+    if (cErr) throw cErr;
     if (!confirmed || confirmed.length === 0) {
       return reject(
         "CONFIRMATION_REQUIRED",
@@ -81,27 +85,25 @@ Deno.serve(async (req) => {
     }
 
     // 4) Data validation (only after confirmation passes).
-    const { data: si } = await supabase
+    const { data: si, error: siErr } = await supabase
       .from("stage_inputs").select("data").eq("project_id", projectId).maybeSingle();
+    if (siErr) throw siErr;
     const issues = validateStageInput((si?.data ?? {}) as StageInputData);
     if (issues.length > 0) {
       return reject(
         "VALIDATION_REQUIRED",
-        "请先解决数据校验提示,再生成排产。",
+        "请先解决数据校验提示，再生成排产。",
         422,
         { issues },
       );
     }
 
-    return new Response(JSON.stringify({ ok: true }), {
-      status: 200,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return jsonResponse({ ok: true });
   } catch (e) {
     // System errors keep a non-2xx status so client can treat them differently.
-    return new Response(
-      JSON.stringify({ ok: false, errorCode: "INTERNAL", message: (e as Error).message ?? "internal error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    return jsonResponse(
+      { ok: false, code: "INTERNAL", message: (e as Error).message ?? "internal error" },
+      500,
     );
   }
 });
