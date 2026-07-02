@@ -104,8 +104,10 @@ export function useProcurementSettings() {
 export function procurementSettingsDetail(settings: ProcurementSettings, apiMode?: string): string {
   return [
     `apiMode=${apiMode ?? "mock"}`,
+    `procurementCandidates=${settings.procurementCandidatesEnabled}`,
     `procurementCandidatesEnabled=${settings.procurementCandidatesEnabled}`,
     `procurementProviderEnabled=${settings.procurementProviderEnabled}`,
+    `procurementExportAttachment=${settings.procurementExportAttachmentEnabled}`,
     `procurementExportAttachmentEnabled=${settings.procurementExportAttachmentEnabled}`,
     `procurementProvider=${settings.procurementProvider}`,
   ].join(", ");
