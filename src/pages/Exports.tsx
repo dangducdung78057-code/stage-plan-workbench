@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { ToneBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
@@ -10,10 +10,19 @@ import {
   renderMarkdown,
   renderPrintableHtml,
   downloadBlob,
-  downloadPdf,
+  renderPdfBlob,
 } from "@/lib/exportRender";
+import {
+  buildStoragePath,
+  uploadExportFile,
+  listMyExportFiles,
+  getSignedUrl,
+  deleteExportFile,
+  type StorageFileEntry,
+} from "@/lib/exportStorage";
+import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
-import { FileDown, Eye, Loader2, FileText } from "lucide-react";
+import { FileDown, Eye, Loader2, FileText, Cloud, Link2, Trash2, RefreshCcw } from "lucide-react";
 
 type Row = {
   id: string; project_id: string; version: number; format: string;
@@ -21,11 +30,15 @@ type Row = {
 };
 
 export default function Exports() {
+  const { user } = useAuth();
   const [rows, setRows] = useState<Row[]>([]);
   const [projectTitles, setProjectTitles] = useState<Record<string, string>>({});
   const [open, setOpen] = useState<Row | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [files, setFiles] = useState<StorageFileEntry[]>([]);
+  const [filesLoading, setFilesLoading] = useState(false);
   const flags = useFlags();
+  const storageOn = flags.storageUpload;
 
   useEffect(() => {
     (async () => {
@@ -38,6 +51,22 @@ export default function Exports() {
       }
     })();
   }, []);
+
+  const refreshFiles = useCallback(async () => {
+    if (!user?.id || !storageOn) { setFiles([]); return; }
+    setFilesLoading(true);
+    try {
+      const f = await listMyExportFiles(user.id);
+      setFiles(f);
+    } catch (e: any) {
+      console.error(e);
+      toast.error(`Storage 列表失败：${e?.message ?? "unknown"}`);
+    } finally {
+      setFilesLoading(false);
+    }
+  }, [user?.id, storageOn]);
+
+  useEffect(() => { refreshFiles(); }, [refreshFiles]);
 
   async function guard(row: Row): Promise<boolean> {
     const { data: u } = await supabase.auth.getUser();
@@ -58,6 +87,21 @@ export default function Exports() {
     return true;
   }
 
+  async function maybeUploadToStorage(row: Row, ext: "md" | "pdf", blob: Blob, contentType: string) {
+    if (!storageOn || !user?.id) return;
+    try {
+      const path = buildStoragePath({
+        userId: user.id, projectId: row.project_id, exportId: row.id, version: row.version, ext,
+      });
+      await uploadExportFile({ path, data: blob, contentType });
+      toast.success(`已同步到 Storage · ${ext.toUpperCase()}`);
+      refreshFiles();
+    } catch (e: any) {
+      console.error(e);
+      toast.error(`Storage 同步失败：${e?.message ?? "unknown"}`);
+    }
+  }
+
   async function handleMarkdown(row: Row) {
     setBusy(row.id + ":md");
     try {
@@ -69,8 +113,10 @@ export default function Exports() {
         createdAt: new Date(row.created_at).toLocaleString("zh-CN", { hour12: false }),
       });
       const fn = buildFilename("md", title, row.version, row.project_id);
+      const blob = new Blob([md], { type: "text/markdown;charset=utf-8" });
       downloadBlob(md, fn, "text/markdown;charset=utf-8");
       toast.success("Markdown 已开始下载");
+      await maybeUploadToStorage(row, "md", blob, "text/markdown;charset=utf-8");
     } catch (e) {
       console.error(e);
       toast.error("下载失败，请稍后重试");
@@ -92,13 +138,40 @@ export default function Exports() {
         createdAt,
         filenameTitle: fn.replace(/\.pdf$/, ""),
       });
-      await downloadPdf(html, fn);
+      const blob = await renderPdfBlob(html);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url; a.download = fn;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
       toast.success("PDF 已生成并下载");
+      await maybeUploadToStorage(row, "pdf", blob, "application/pdf");
     } catch (e) {
       console.error(e);
       toast.error("PDF 生成失败，请改用 Markdown 或稍后重试");
     } finally {
       setBusy(null);
+    }
+  }
+
+  async function copySignedUrl(path: string) {
+    try {
+      const url = await getSignedUrl(path, 3600);
+      await navigator.clipboard.writeText(url);
+      toast.success("签名链接已复制（1 小时内有效）");
+    } catch (e: any) {
+      toast.error(`获取链接失败：${e?.message ?? "unknown"}`);
+    }
+  }
+
+  async function removeFile(path: string) {
+    if (!confirm(`确认删除 Storage 文件？\n${path}`)) return;
+    try {
+      await deleteExportFile(path);
+      toast.success("已删除");
+      refreshFiles();
+    } catch (e: any) {
+      toast.error(`删除失败：${e?.message ?? "unknown"}`);
     }
   }
 
@@ -118,7 +191,13 @@ export default function Exports() {
         {showPdf && (
           <p className="text-xs text-muted-foreground mt-1">PDF 采用 html2pdf 光栅化渲染，中文原样输出。</p>
         )}
+        {storageOn && (
+          <p className="text-xs text-muted-foreground mt-1">
+            Storage 同步已开启：下载的 MD / PDF 会同时写入私有 bucket <span className="font-mono">stageos-exports</span>，按 <span className="font-mono">user_id</span> 前缀隔离。
+          </p>
+        )}
       </div>
+
       <div className="panel">
         <div className="panel-header">
           <h2 className="text-sm font-semibold">全部记录</h2>
@@ -199,6 +278,53 @@ export default function Exports() {
           ))}
         </MobileCardList>
       </div>
+
+      {storageOn && (
+        <div className="panel">
+          <div className="panel-header">
+            <h2 className="text-sm font-semibold flex items-center gap-1.5">
+              <Cloud className="h-3.5 w-3.5" />Storage 副本
+            </h2>
+            <div className="flex items-center gap-2">
+              <span className="kbd-route">stageos-exports</span>
+              <Button variant="ghost" size="sm" onClick={refreshFiles} disabled={filesLoading}>
+                {filesLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCcw className="h-3.5 w-3.5" />}
+              </Button>
+            </div>
+          </div>
+          <div className="panel-body">
+            {files.length === 0 ? (
+              <div className="text-xs text-muted-foreground py-4 text-center">
+                暂无 Storage 副本。下载 MD / PDF 时会自动同步。
+              </div>
+            ) : (
+              <ul className="divide-y border rounded bg-surface text-sm">
+                {files.map((f) => (
+                  <li key={f.path} className="px-3 py-2 flex flex-col sm:flex-row sm:items-center gap-2">
+                    <div className="min-w-0 flex-1">
+                      <div className="font-mono text-xs break-all">{f.name}</div>
+                      <div className="text-[11px] text-muted-foreground font-mono break-all">
+                        {f.path}
+                        {typeof f.size === "number" && <> · {f.size} B</>}
+                        {f.updatedAt && <> · {new Date(f.updatedAt).toLocaleString("zh-CN", { hour12: false })}</>}
+                      </div>
+                    </div>
+                    <div className="flex gap-1 shrink-0">
+                      <Button variant="outline" size="sm" onClick={() => copySignedUrl(f.path)}>
+                        <Link2 className="h-3.5 w-3.5 mr-1" />复制链接
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => removeFile(f.path)}>
+                        <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                      </Button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+      )}
+
       <Dialog open={!!open} onOpenChange={(o) => !o && setOpen(null)}>
         <DialogContent className="max-w-3xl max-h-[80vh] overflow-auto">
           <DialogHeader><DialogTitle>导出内容 · {open?.format.toUpperCase()} v{open?.version}</DialogTitle></DialogHeader>
