@@ -9,6 +9,7 @@ import { searchWithFallback, type ProviderDisplayId, type ProviderWarningCode } 
 const PROVIDER_BADGE: Record<ProviderDisplayId, { label: string; tone: "success" | "info" | "warning" }> = {
   local: { label: "本地目录", tone: "success" },
   http: { label: "HTTP", tone: "info" },
+  "http-mock": { label: "http-mock", tone: "info" },
   "fallback-local": { label: "fallback-local", tone: "warning" },
 };
 
@@ -107,7 +108,7 @@ export function ProcurementDisclaimer() {
       <div className="panel-body flex items-start gap-2 text-xs">
         <ShoppingBag className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
         <div className="text-muted-foreground">
-          <strong className="text-foreground">采购候选 v3.1 · 只读</strong>：候选商品为模拟/检索建议，非实时库存价格，需人工核验。不自动下单、不承诺库存或价格。远程 provider 失败时会自动回退到本地目录。
+          <strong className="text-foreground">采购候选 v3.2 · 只读</strong>：候选商品为模拟/检索建议，非实时库存价格，需人工核验。不自动下单、不承诺库存或价格。远程 provider 失败时会自动回退到本地目录；http-mock endpoint 仅供联调。
         </div>
       </div>
     </div>

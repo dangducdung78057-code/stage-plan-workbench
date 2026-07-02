@@ -9,7 +9,7 @@ import { renderMarkdown, renderPrintableHtml, renderPdfBlob, renderPngBlob, vali
 import { CheckCircle2, XCircle, Loader2, AlertTriangle, Copy, Download as DownloadIcon, History } from "lucide-react";
 import { toast } from "sonner";
 
-const STABLE_BASELINE = "stageos-v3.1-procurement-provider-fallback-pass";
+const STABLE_BASELINE = "stageos-v3.2-procurement-http-mock-provider-pass";
 
 type Status = "pass" | "fail" | "warn" | "skip";
 type Check = { id: string; label: string; status: Status; detail?: string; ms?: number };
@@ -342,7 +342,7 @@ export function HealthCheck() {
     } | null = null;
 
     if (!getFlag("procurement")) {
-      push({ id: "procurementProvider", label: "采购 provider (v3.1 抽象层)", status: "skip", detail: "flag off" });
+      push({ id: "procurementProvider", label: "采购 provider (v3.2 抽象层 + http-mock)", status: "skip", detail: "flag off" });
     } else {
       try {
         const { searchWithFallback, getHttpUrl } = await import("@/lib/procurementProvider");
@@ -377,7 +377,7 @@ export function HealthCheck() {
           } else {
             push({
               id: "procurementProvider",
-              label: "采购 provider (http)",
+              label: r.providerId === "http-mock" ? "采购 provider (http-mock)" : "采购 provider (http)",
               status: r.candidates.length > 0 ? "pass" : "warn",
               detail: base,
             });
@@ -385,7 +385,7 @@ export function HealthCheck() {
         }
       } catch (e: any) {
         // 抽象层理论上不抛，兜底 warn
-        push({ id: "procurementProvider", label: "采购 provider (v3.1 抽象层)", status: "warn", detail: `provider 异常: ${e?.message ?? "unknown"}` });
+        push({ id: "procurementProvider", label: "采购 provider (v3.2 抽象层)", status: "warn", detail: `provider 异常: ${e?.message ?? "unknown"}` });
       }
     }
     // 暴露给 summary 文本使用

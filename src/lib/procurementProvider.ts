@@ -8,8 +8,8 @@ import type { Candidate } from "./procurementCatalog";
 export type ProcurementProviderMode = "local" | "http";
 // 向后兼容别名（v3.0 命名）
 export type ProcurementProviderId = ProcurementProviderMode;
-// 展示用 provider 徽章 id：local / http / fallback-local
-export type ProviderDisplayId = "local" | "http" | "fallback-local";
+// 展示用 provider 徽章 id：local / http / http-mock / fallback-local
+export type ProviderDisplayId = "local" | "http" | "http-mock" | "fallback-local";
 
 export type ProviderWarningCode =
   | "HTTP_NOT_CONFIGURED"
@@ -77,7 +77,30 @@ class HttpProviderError extends Error {
   }
 }
 
-export function makeHttpProvider(url: string): ProcurementProvider {
+function buildHttpHeaders(url: string): Record<string, string> {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  try {
+    const u = new URL(url);
+    const supaUrl = (import.meta as any).env?.VITE_SUPABASE_URL as string | undefined;
+    const supaKey = (import.meta as any).env?.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined;
+    if (supaUrl && supaKey && u.origin === new URL(supaUrl).origin) {
+      headers["apikey"] = supaKey;
+      headers["Authorization"] = `Bearer ${supaKey}`;
+    }
+  } catch { /* noop */ }
+  return headers;
+}
+
+export type HttpProviderResult = {
+  candidates: Candidate[];
+  providerId?: string; // 允许 endpoint 返回自定义 id，例如 http-mock
+};
+
+export function makeHttpProvider(url: string): {
+  id: "http";
+  label: string;
+  search(item: PlanItem, ctx: MatchContext): Promise<HttpProviderResult>;
+} {
   return {
     id: "http",
     label: "HTTP (预留)",
@@ -89,8 +112,8 @@ export function makeHttpProvider(url: string): ProcurementProvider {
       try {
         res = await fetch(url, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ item, ctx }),
+          headers: buildHttpHeaders(url),
+          body: JSON.stringify({ item, ctx, query: `${item?.category ?? ""} ${item?.description ?? ""}`.trim() }),
           signal: ctrl.signal,
         });
       } catch (e: any) {
@@ -116,11 +139,11 @@ export function makeHttpProvider(url: string): ProcurementProvider {
       }
       const arr: Candidate[] = json.candidates.filter(isValidCandidate).slice(0, 3);
       if (arr.length === 0) {
-        // 区分 schema 合法但空 vs schema 不合法
         if (json.candidates.length > 0) throw new HttpProviderError("HTTP_SCHEMA_INVALID");
         throw new HttpProviderError("HTTP_EMPTY_CANDIDATES");
       }
-      return arr;
+      const providerId = typeof json.providerId === "string" ? json.providerId : undefined;
+      return { candidates: arr, providerId };
     },
   };
 }
@@ -149,10 +172,8 @@ export function setHttpUrl(v: string) {
   window.dispatchEvent(new CustomEvent("stageos:procurementProvider"));
 }
 
-export function resolveProvider(): ProcurementProvider {
-  const mode = getProviderMode();
-  if (mode === "http") return makeHttpProvider(getHttpUrl());
-  return LocalCatalogProvider;
+export function resolveProviderMode(): ProcurementProviderMode {
+  return getProviderMode();
 }
 
 export async function searchWithFallback(
@@ -171,7 +192,6 @@ export async function searchWithFallback(
         fallbackUsed: false,
       };
     } catch (e: any) {
-      // 极端兜底：本地目录异常仍再跑一次同步匹配
       return {
         candidates: matchCandidates(item, ctx),
         providerMode: "local",
@@ -186,11 +206,13 @@ export async function searchWithFallback(
   // http primary
   const http = makeHttpProvider(getHttpUrl());
   try {
-    const c = await http.search(item, ctx);
+    const r = await http.search(item, ctx);
+    const displayId: ProviderDisplayId =
+      r.providerId === "http-mock" ? "http-mock" : "http";
     return {
-      candidates: c,
+      candidates: r.candidates,
       providerMode: "http",
-      providerId: "http",
+      providerId: displayId,
       fallbackUsed: false,
     };
   } catch (e: any) {

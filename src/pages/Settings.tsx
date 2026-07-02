@@ -126,12 +126,12 @@ export default function SettingsPage() {
 
       <div className="panel">
         <div className="panel-header">
-          <h2 className="text-sm font-semibold">采购 provider (v3.0 只读)</h2>
+          <h2 className="text-sm font-semibold">采购 provider (v3.2 只读 + http-mock 联调)</h2>
           <span className="kbd-route">procurement</span>
         </div>
         <div className="panel-body space-y-3">
           <p className="text-xs text-muted-foreground">
-            provider 抽象层：默认 <span className="font-mono">local</span>（本地目录）。切换到 <span className="font-mono">http</span> 时会走通用 HTTP 壳，失败自动回退 local 并标记 warn。仅只读检索，不下单不承诺库存。
+            默认 <span className="font-mono">local</span>（本地目录）。切换到 <span className="font-mono">http</span> 时会走通用 HTTP 壳，成功且 schema 合法则不回退；失败自动回退 local 并标记 warn。可填入内置 <span className="font-mono">procurement-search-mock</span> endpoint 进行联调。仅只读检索，不下单、不承诺库存。
           </p>
           <div className="space-y-1.5">
             <Label className="text-xs text-muted-foreground">procurementProvider</Label>
@@ -145,11 +145,11 @@ export default function SettingsPage() {
               }}
             >
               <option value="local">local (本地目录, 推荐)</option>
-              <option value="http">http (通用壳, 预留)</option>
+              <option value="http">http (通用壳, 支持 http-mock)</option>
             </select>
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs text-muted-foreground">procurementHttpUrl</Label>
+            <Label className="text-xs text-muted-foreground">procurementApiBaseUrl / procurementHttpUrl</Label>
             <Input
               value={procHttpUrl}
               onChange={(e) => setProcHttpUrl(e.target.value)}
@@ -157,6 +157,30 @@ export default function SettingsPage() {
               placeholder="https://example.com/procurement/search"
               disabled={procProvider !== "http"}
             />
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                className="h-7 px-2 text-xs rounded border bg-background hover:bg-muted disabled:opacity-50"
+                disabled={procProvider !== "http"}
+                onClick={() => {
+                  const base = (import.meta as any).env?.VITE_SUPABASE_URL as string | undefined;
+                  if (!base) { toast.error("未检测到 Cloud endpoint"); return; }
+                  const u = `${base}/functions/v1/procurement-search-mock`;
+                  setProcHttpUrl(u); setHttpUrl(u);
+                  toast.success("已填入内置 mock endpoint");
+                }}
+              >
+                填入内置 mock endpoint
+              </button>
+              <button
+                type="button"
+                className="h-7 px-2 text-xs rounded border bg-background hover:bg-muted disabled:opacity-50"
+                disabled={procProvider !== "http"}
+                onClick={() => { setProcHttpUrl(""); setHttpUrl(""); toast.success("已清空 endpoint（下次将走 fallback-local）"); }}
+              >
+                清空
+              </button>
+            </div>
             <p className="text-xs text-muted-foreground">
               留空或不可达时自动回退 local。需先开启「采购候选商品 v1」flag。
             </p>
