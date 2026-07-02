@@ -162,20 +162,69 @@ export type Risk = { level: "low" | "medium" | "high"; title: string; detail: st
 export type ScheduleItem = { daysBefore: number; task: string; owner: string };
 export type PlatformSearchItem = { platform: string; query: string; url: string; note: string };
 
-export function validateStageInput(data: StageInputData) {
-  const issues: string[] = [];
-  const { performerCount, maleCount, femaleCount, students } = data;
-  if (typeof performerCount === "number") {
-    if (typeof maleCount === "number" && typeof femaleCount === "number") {
-      if (maleCount + femaleCount !== performerCount) {
-        issues.push(
-          `人数校验:男(${maleCount}) + 女(${femaleCount}) = ${maleCount + femaleCount},与总人数 ${performerCount} 不一致。`,
-        );
-      }
-    }
-    if (students && students.length > 0 && students.length !== performerCount) {
-      issues.push(`学生行数(${students.length})与总人数(${performerCount})不一致。`);
+export function validateStageInputDetailed(data: StageInputData): { errors: string[]; warnings: string[] } {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+  const { performerCount, maleCount, femaleCount, perPersonBudget, students, rehearsalFrequencyPerWeek } = data;
+
+  const isNonNegInt = (n: unknown): n is number =>
+    typeof n === "number" && Number.isFinite(n) && Number.isInteger(n) && n >= 0;
+
+  if (performerCount !== undefined) {
+    if (!isNonNegInt(performerCount) || performerCount <= 0) {
+      errors.push(`总人数 performerCount 必须为正整数,当前:${performerCount}`);
     }
   }
-  return issues;
+  if (maleCount !== undefined && !isNonNegInt(maleCount)) {
+    errors.push(`男生数 maleCount 必须为非负整数,当前:${maleCount}`);
+  }
+  if (femaleCount !== undefined && !isNonNegInt(femaleCount)) {
+    errors.push(`女生数 femaleCount 必须为非负整数,当前:${femaleCount}`);
+  }
+  if (typeof perPersonBudget === "number" && (!Number.isFinite(perPersonBudget) || perPersonBudget < 0)) {
+    errors.push(`人均预算必须为非负数,当前:${perPersonBudget}`);
+  }
+  if (rehearsalFrequencyPerWeek !== undefined && ![2, 3, 5].includes(rehearsalFrequencyPerWeek as number)) {
+    errors.push(`彩排频次必须为 2 / 3 / 5,当前:${rehearsalFrequencyPerWeek}`);
+  }
+
+  if (typeof performerCount === "number" && typeof maleCount === "number" && typeof femaleCount === "number") {
+    if (maleCount + femaleCount !== performerCount) {
+      errors.push(
+        `人数校验:男(${maleCount}) + 女(${femaleCount}) = ${maleCount + femaleCount},与总人数 ${performerCount} 不一致。`,
+      );
+    }
+  } else if (typeof performerCount === "number" && (typeof maleCount === "number") !== (typeof femaleCount === "number")) {
+    warnings.push("男生数与女生数需成对填写,否则无法校验总人数一致性。");
+  }
+
+  if (typeof performerCount === "number" && students && students.length > 0 && students.length !== performerCount) {
+    warnings.push(`学生行数(${students.length})与总人数(${performerCount})不一致。`);
+  }
+
+  if (students && students.length > 0) {
+    const ids = new Set<string>();
+    students.forEach((s, i) => {
+      if (!s.studentId?.trim()) errors.push(`第 ${i + 1} 行 studentId 必填。`);
+      else if (ids.has(s.studentId)) errors.push(`studentId 重复:${s.studentId}`);
+      else ids.add(s.studentId);
+      if (!Number.isFinite(s.heightCm) || s.heightCm <= 0) {
+        errors.push(`第 ${i + 1} 行 heightCm 需为正数。`);
+      }
+    });
+    if (typeof maleCount === "number" && typeof femaleCount === "number") {
+      const m = students.filter((s) => s.gender === "male").length;
+      const f = students.filter((s) => s.gender === "female").length;
+      if (students.length === (performerCount ?? students.length) && (m !== maleCount || f !== femaleCount)) {
+        warnings.push(`学生性别分布(男${m}/女${f})与 maleCount/femaleCount(${maleCount}/${femaleCount})不一致。`);
+      }
+    }
+  }
+
+  return { errors, warnings };
+}
+
+export function validateStageInput(data: StageInputData): string[] {
+  const { errors, warnings } = validateStageInputDetailed(data);
+  return [...errors, ...warnings];
 }

@@ -8,10 +8,10 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   SCHOOL_STAGES, PROGRAM_TYPES, REHEARSAL_FREQUENCIES,
-  validateStageInput, type StageInputData,
+  validateStageInputDetailed, type StageInputData,
 } from "@/lib/stageos";
 import { toast } from "sonner";
-import { Plus, Trash2, ArrowLeft, AlertTriangle } from "lucide-react";
+import { Plus, Trash2, ArrowLeft, AlertTriangle, AlertCircle } from "lucide-react";
 
 type Student = NonNullable<StageInputData["students"]>[number];
 
@@ -34,7 +34,7 @@ export default function ProjectEditor() {
     })();
   }, [id]);
 
-  const issues = validateStageInput(data);
+  const { errors, warnings } = validateStageInputDetailed(data);
 
   const set = <K extends keyof StageInputData>(k: K, v: StageInputData[K]) =>
     setData((d) => ({ ...d, [k]: v }));
@@ -55,12 +55,22 @@ export default function ProjectEditor() {
 
   async function save() {
     if (!title.trim()) { toast.error("请填写项目标题"); return; }
+    if (errors.length > 0) {
+      toast.error(`存在 ${errors.length} 项校验错误,请先修正`);
+      return;
+    }
     setSaving(true);
     try {
       const { data: userData } = await supabase.auth.getUser();
       const uid = userData.user?.id;
       if (!uid) { toast.error("未登录"); setSaving(false); return; }
       let projectId = id;
+      const validationSnapshot = {
+        checkedAt: new Date().toISOString(),
+        errors,
+        warnings,
+      };
+      const persistedData = { ...data, __validation: validationSnapshot } as StageInputData & { __validation: typeof validationSnapshot };
       if (isEdit && id) {
         await supabase.from("projects").update({
           title, status,
@@ -76,7 +86,7 @@ export default function ProjectEditor() {
         if (error) throw error;
         projectId = created.id;
       }
-      await supabase.from("stage_inputs").upsert({ project_id: projectId!, user_id: uid, data: data as any } as any);
+      await supabase.from("stage_inputs").upsert({ project_id: projectId!, user_id: uid, data: persistedData as any } as any);
       toast.success(isEdit ? "已更新" : "已创建");
       navigate(`/projects/${projectId}`);
     } catch (e: any) {
@@ -92,17 +102,31 @@ export default function ProjectEditor() {
           <h1 className="text-xl font-semibold">{isEdit ? "编辑项目" : "新建项目"}</h1>
           <span className="kbd-route">{isEdit ? "PUT /projects/:id" : "POST /projects"}</span>
         </div>
-        <Button size="sm" onClick={save} disabled={saving}>{saving ? "保存中…" : "保存项目"}</Button>
+        <Button size="sm" onClick={save} disabled={saving || errors.length > 0}>{saving ? "保存中…" : errors.length > 0 ? `修正 ${errors.length} 项错误` : "保存项目"}</Button>
       </div>
 
-      {issues.length > 0 && (
+      {errors.length > 0 && (
+        <div className="panel border-destructive/40 bg-destructive/5">
+          <div className="panel-body flex items-start gap-2 text-sm">
+            <AlertCircle className="h-4 w-4 text-destructive mt-0.5" />
+            <div>
+              <div className="font-medium text-destructive">校验错误(阻止保存)</div>
+              <ul className="mt-1 list-disc list-inside text-muted-foreground text-xs space-y-0.5">
+                {errors.map((i) => <li key={i}>{i}</li>)}
+              </ul>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {warnings.length > 0 && (
         <div className="panel border-warning/40 bg-warning/5">
           <div className="panel-body flex items-start gap-2 text-sm">
             <AlertTriangle className="h-4 w-4 text-warning mt-0.5" />
             <div>
               <div className="font-medium text-warning">数据校验提示</div>
               <ul className="mt-1 list-disc list-inside text-muted-foreground text-xs space-y-0.5">
-                {issues.map((i) => <li key={i}>{i}</li>)}
+                {warnings.map((i) => <li key={i}>{i}</li>)}
               </ul>
             </div>
           </div>
