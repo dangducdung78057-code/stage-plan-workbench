@@ -730,9 +730,50 @@ export function HealthCheck() {
 
         {done && (
           <div className={"rounded border px-2.5 py-1.5 text-xs " + (failed ? "border-destructive/40 bg-destructive/5 text-destructive" : "border-success/40 bg-success/5 text-success")}>
-            {failed ? "存在失败项，请查看下方详情。" : "全部关键项通过，v2 基线正常。"}
+            {failed ? "存在失败项，请查看下方详情。" : "全部关键项通过。"}
           </div>
         )}
+
+        {snapshot && (
+          <div className="border rounded bg-surface">
+            <div className="px-3 py-1.5 border-b flex items-center gap-2 text-xs flex-wrap">
+              <span className="font-semibold">Capability Snapshot</span>
+              <span className="text-muted-foreground font-mono">system_capabilities · SSoT</span>
+              {(() => {
+                const g = computeReleaseGate(snapshot);
+                const tone =
+                  g.gate === "G3" ? "success" :
+                  g.gate === "G2" ? "warning" :
+                  g.gate === "G1" ? "warning" : "destructive";
+                return <ToneBadge tone={tone as any}>gate {g.gate}</ToneBadge>;
+              })()}
+              <span className="text-[11px] text-muted-foreground ml-auto font-mono">
+                L0={snapshot.counts.L0} · L1={snapshot.counts.L1} · L2={snapshot.counts.L2} · WARN={snapshot.counts.WARN} · FAIL={snapshot.counts.FAIL}
+              </span>
+            </div>
+            {snapshot.error ? (
+              <div className="px-3 py-2 text-xs text-destructive font-mono">读取失败: {snapshot.error}</div>
+            ) : snapshot.rows.length === 0 ? (
+              <div className="px-3 py-2 text-xs text-muted-foreground">快照为空</div>
+            ) : (
+              <ul className="divide-y text-xs">
+                {snapshot.rows.map((r) => (
+                  <li key={r.module} className="px-3 py-1.5 flex items-center gap-2">
+                    <ToneBadge tone={r.layer === "L0" ? "success" : r.layer === "L1" ? "muted" : "warning"}>{r.layer}</ToneBadge>
+                    <span className="font-mono min-w-0 flex-1 truncate">{r.module}</span>
+                    {!r.enabled && <span className="text-[10px] text-muted-foreground">disabled</span>}
+                    {r.notes && <span className="text-[10px] text-muted-foreground truncate hidden sm:inline max-w-[240px]">{r.notes}</span>}
+                    <StatusTag status={r.status.toLowerCase() as Status} />
+                  </li>
+                ))}
+              </ul>
+            )}
+            <div className="px-3 py-1.5 border-t text-[10px] text-muted-foreground font-mono">
+              loadedAt: {snapshot.loadedAt} · 版本号仅为标签，不参与 Gate 判定
+            </div>
+          </div>
+        )}
+
 
         <ul className="divide-y border rounded bg-surface">
           {checks.length === 0 && !running && (
