@@ -125,7 +125,7 @@
 
   /* Checkpoint banner — shown once at build-time */
   .checkpoint-banner::before {
-    content: "CHECKPOINT: stageos-v3.3-procurement-export-attachment-pass";
+    content: "CHECKPOINT: stageos-v3.4-pdf-tri-state-pass";
     display: block;
     font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     font-size: 10px;
