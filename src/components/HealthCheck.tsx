@@ -567,6 +567,10 @@ export function HealthCheck() {
           gate_rule: gateResult.rule,
           gate_reason: gateResult.reason,
           gate_triggers: gateResult.triggers,
+          system_warn_modules: gateResult.systemWarnModules,
+          gate_triggering_warn_modules: gateResult.gateTriggeringWarnModules,
+          isolated_experimental_warnings: gateResult.isolatedExperimentalWarnings,
+          warn_count_by_layer: gateResult.warnCountByLayer,
           capability_counts: snap.counts,
         };
         const { data: inserted } = await supabase.from("health_check_runs").insert({
@@ -598,6 +602,10 @@ export function HealthCheck() {
             gate_level: gateResult.gate,
             gate_rule: gateResult.rule,
             gate_reason: gateResult.reason,
+            warn_count_by_layer: gateResult.warnCountByLayer,
+            system_warn_modules: gateResult.systemWarnModules,
+            gate_triggering_warn_modules: gateResult.gateTriggeringWarnModules,
+            isolated_experimental_warnings: gateResult.isolatedExperimentalWarnings.map((w) => w.module),
           },
         });
       } catch {
