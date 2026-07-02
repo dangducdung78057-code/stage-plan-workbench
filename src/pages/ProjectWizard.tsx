@@ -305,7 +305,7 @@ export default function ProjectWizard() {
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [allIssues]);
+  }, [allIssues, drafts, activeId, popoverIssueFilter]);
 
   // Clamp index when issue list changes
   useEffect(() => {
