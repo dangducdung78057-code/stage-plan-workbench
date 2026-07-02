@@ -13,6 +13,7 @@ import {
   loadCapabilitySnapshot, computeReleaseGate, gateTone,
   type CapabilitySnapshot, type GateResult,
 } from "@/lib/capabilitySnapshot";
+import { persistFreeze, freezeTone, type FreezePersisted } from "@/lib/releaseFreeze";
 
 
 type Status = "pass" | "fail" | "warn" | "skip";
@@ -46,6 +47,7 @@ export function HealthCheck() {
   const [compareIds, setCompareIds] = useState<[string | null, string | null]>([null, null]);
   const [snapshot, setSnapshot] = useState<CapabilitySnapshot | null>(null);
   const [gate, setGate] = useState<GateResult | null>(null);
+  const [freeze, setFreeze] = useState<FreezePersisted | null>(null);
   type PdfProbe = { status: Status; reason: string; detail: string; ms?: number };
   const [pdfProbes, setPdfProbes] = useState<{ disabled: PdfProbe; enabled: PdfProbe; error: PdfProbe } | null>(null);
 
@@ -65,6 +67,7 @@ export function HealthCheck() {
     setChecks([]);
     setSnapshot(null);
     setGate(null);
+    setFreeze(null);
     setStartedAt(new Date().toLocaleString());
     const out: Check[] = [];
     const push = (c: Check) => { out.push(c); setChecks([...out]); };
@@ -95,6 +98,24 @@ export function HealthCheck() {
       label: `Release Gate · ${gateResult.gate}`,
       status: gateResult.gate === "G0" ? "fail" : gateResult.gate === "G3" ? "pass" : "warn",
       detail: `[${gateResult.rule}] ${gateResult.reason}`,
+    });
+
+    // 1b. Release Freeze 判定（G3=frozen · G2=candidate_frozen · G1/G0=rejected）
+    //     基于 system_capabilities snapshot + Gate，不依赖版本号；结果写入 release_freezes。
+    const frozen = await persistFreeze({
+      baseline: STAGEOS_VERSION,
+      snapshot: snap,
+      gate: gateResult,
+      userId: user?.id ?? null,
+    });
+    setFreeze(frozen);
+    push({
+      id: "release_freeze",
+      label: `Release Freeze · ${frozen.status}`,
+      status: frozen.status === "frozen" ? "pass" : frozen.status === "candidate_frozen" ? "warn" : "fail",
+      detail:
+        `gate=${frozen.gate} [${frozen.rule}] · ` +
+        (frozen.persisted ? `persisted id=${frozen.id ?? "-"}` : `not persisted${frozen.error ? `: ${frozen.error}` : ""}`),
     });
 
 
@@ -572,6 +593,9 @@ export function HealthCheck() {
           isolated_experimental_warnings: gateResult.isolatedExperimentalWarnings,
           warn_count_by_layer: gateResult.warnCountByLayer,
           capability_counts: snap.counts,
+          freeze_status: frozen.status,
+          freeze_id: frozen.id,
+          freeze_persisted: frozen.persisted,
         };
         const { data: inserted } = await supabase.from("health_check_runs").insert({
           user_id: user.id,
@@ -606,6 +630,8 @@ export function HealthCheck() {
             system_warn_modules: gateResult.systemWarnModules,
             gate_triggering_warn_modules: gateResult.gateTriggeringWarnModules,
             isolated_experimental_warnings: gateResult.isolatedExperimentalWarnings.map((w) => w.module),
+            freeze_status: frozen.status,
+            freeze_id: frozen.id,
           },
         });
       } catch {
@@ -646,6 +672,11 @@ export function HealthCheck() {
           `isolated_experimental_warnings: ${gate.isolatedExperimentalWarnings.map((w) => w.module).join(", ")}  [tag: isolated experimental warning]`,
         );
       }
+    }
+    if (freeze) {
+      lines.push("");
+      lines.push(`Release Freeze: ${freeze.status}  (gate=${freeze.gate}, rule ${freeze.rule})`);
+      lines.push(`  persisted: ${freeze.persisted}${freeze.id ? ` · id=${freeze.id}` : ""}${freeze.error ? ` · error=${freeze.error}` : ""}`);
     }
     if (snapshot && !snapshot.error && snapshot.rows.length > 0) {
       const c = snapshot.counts;
@@ -819,6 +850,30 @@ export function HealthCheck() {
                   {gate.isolatedExperimentalWarnings.map((w) => w.module).join(", ")}
                 </div>
               )}
+            </div>
+          </div>
+        )}
+
+        {freeze && (
+          <div className={
+            "rounded border px-3 py-2 text-xs flex items-start gap-2 " +
+            (freeze.status === "frozen"
+              ? "border-success/40 bg-success/5"
+              : freeze.status === "candidate_frozen"
+                ? "border-warning/40 bg-warning/5"
+                : "border-destructive/40 bg-destructive/5")
+          }>
+            <ToneBadge tone={freezeTone(freeze.status) as any}>{freeze.status}</ToneBadge>
+            <div className="min-w-0 flex-1 space-y-0.5">
+              <div className="font-semibold text-sm">Release Freeze · {freeze.status}</div>
+              <div className="font-mono text-[11px] break-words">
+                gate={freeze.gate} · [{freeze.rule}] {freeze.reason}
+              </div>
+              <div className="font-mono text-[10px] text-muted-foreground break-words">
+                baseline={freeze.baseline} (label only) · persisted={String(freeze.persisted)}
+                {freeze.id ? ` · id=${freeze.id}` : ""}
+                {freeze.error ? ` · error=${freeze.error}` : ""}
+              </div>
             </div>
           </div>
         )}
