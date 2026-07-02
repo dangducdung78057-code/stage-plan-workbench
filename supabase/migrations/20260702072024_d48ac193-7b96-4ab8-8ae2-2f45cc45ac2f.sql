@@ -1,0 +1,1 @@
+ALTER TABLE public.plan_snapshots ADD COLUMN IF NOT EXISTS provider_status text;

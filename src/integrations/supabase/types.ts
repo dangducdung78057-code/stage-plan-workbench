@@ -118,6 +118,7 @@ export type Database = {
           mode: string
           platform_search: Json
           project_id: string
+          provider_status: string | null
           reverse_schedule: Json
           risks: Json
           user_id: string | null
@@ -130,6 +131,7 @@ export type Database = {
           mode?: string
           platform_search?: Json
           project_id: string
+          provider_status?: string | null
           reverse_schedule?: Json
           risks?: Json
           user_id?: string | null
@@ -142,6 +144,7 @@ export type Database = {
           mode?: string
           platform_search?: Json
           project_id?: string
+          provider_status?: string | null
           reverse_schedule?: Json
           risks?: Json
           user_id?: string | null
