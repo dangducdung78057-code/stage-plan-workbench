@@ -36,6 +36,20 @@ export default function ProjectEditor() {
 
   const { errors, warnings } = validateStageInputDetailed(data);
 
+  // 字段级联动提示:根据关键字把整体 errors/warnings 分派到对应输入下方。
+  const pickHints = (keywords: string[]) => ({
+    errors: errors.filter((m) => keywords.some((k) => m.includes(k))),
+    warnings: warnings.filter((m) => keywords.some((k) => m.includes(k))),
+  });
+  const hints = {
+    performerCount: pickHints(["performerCount", "总人数", "人数校验", "学生行数"]),
+    maleCount: pickHints(["maleCount", "男生", "人数校验", "性别分布"]),
+    femaleCount: pickHints(["femaleCount", "女生", "人数校验", "性别分布"]),
+    perPersonBudget: pickHints(["人均预算", "perPersonBudget"]),
+    rehearsal: pickHints(["彩排频次", "rehearsalFrequency"]),
+    students: pickHints(["studentId", "heightCm", "学生行数", "性别分布"]),
+  };
+
   const set = <K extends keyof StageInputData>(k: K, v: StageInputData[K]) =>
     setData((d) => ({ ...d, [k]: v }));
 
