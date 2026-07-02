@@ -37,7 +37,7 @@ export default function Exports() {
           <h2 className="text-sm font-semibold">全部记录</h2>
           <span className="kbd-route">GET /export</span>
         </div>
-        <table className="ops-table">
+        <div className="overflow-x-auto"><table className="ops-table">
           <thead>
             <tr>
               <th>项目</th><th>版本</th><th>格式</th><th>时间</th><th>大小</th><th className="w-24">操作</th>
