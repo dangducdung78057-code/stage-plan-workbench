@@ -227,10 +227,13 @@ export default function ProjectDetail() {
         version: latest.version, format, payload,
       } as any);
       await supabase.from("projects").update({ status: "exported" }).eq("id", project.id);
-      const blob = new Blob([payload], { type: format === "json" ? "application/json" : "text/markdown" });
+      const isJson = format === "json";
+      const mime = isJson ? "application/json;charset=utf-8" : "text/markdown;charset=utf-8";
+      const body = isJson ? payload : (payload.startsWith("\uFEFF") ? payload : "\uFEFF" + payload);
+      const blob = new Blob([body], { type: mime });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
-      a.href = url; a.download = `${project.title}-v${latest.version}.${format === "json" ? "json" : "md"}`;
+      a.href = url; a.download = `${project.title}-v${latest.version}.${isJson ? "json" : "md"}`;
       a.click(); URL.revokeObjectURL(url);
       toast.success(`已导出 ${format.toUpperCase()}`);
       load();
