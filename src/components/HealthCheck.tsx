@@ -10,7 +10,7 @@ import { renderMarkdown, renderPrintableHtml, renderPdfBlob, renderPngBlob, vali
 import { CheckCircle2, XCircle, Loader2, AlertTriangle, Copy, Download as DownloadIcon, History } from "lucide-react";
 import { toast } from "sonner";
 
-const STABLE_BASELINE = "stageos-v3.3-procurement-export-attachment-pass";
+const STABLE_BASELINE = "stageos-v3.4-pdf-tri-state-pass";
 
 type Status = "pass" | "fail" | "warn" | "skip";
 type Check = { id: string; label: string; status: Status; detail?: string; ms?: number };
@@ -207,25 +207,45 @@ export function HealthCheck() {
       projectTitle: "健康检查样本", version: 0, createdAt: new Date().toISOString(), filenameTitle: "healthcheck",
     });
 
-    // 11. PDF 导出：flag off 时 skip；开启时必须 HTML 校验通过且生成非空 blob
+    // 11. PDF 导出 (v3.4 三态): 显式 PASS/SKIP/WARN + 原因
+    let pdfDetail: { status: Status; reason: string; detail: string };
     if (!getFlag("pdfExport")) {
-      push({ id: "pdf", label: "PDF 导出（实验版）", status: "skip", detail: "flag off" });
+      pdfDetail = {
+        status: "skip",
+        reason: "PDF disabled by config",
+        detail: "pdfExport flag 未开启（Settings → 分支能力开关）",
+      };
     } else if (!validatePrintableHtml(sampleHtml)) {
-      push({ id: "pdf", label: "PDF 导出（实验版）", status: "fail", detail: "printable html invalid" });
+      pdfDetail = {
+        status: "warn",
+        reason: "PDF generation failed",
+        detail: "printable html invalid",
+      };
     } else {
       try {
         const { result, ms } = await timed(async () => await renderPdfBlob(sampleHtml));
-        push({
-          id: "pdf",
-          label: "PDF 导出（实验版）",
-          status: result && result.size > 1024 ? "pass" : "fail",
-          detail: `bytes=${result?.size ?? 0}`,
-          ms,
-        });
+        const bytes = result?.size ?? 0;
+        if (result && bytes > 1024) {
+          pdfDetail = { status: "pass", reason: "PDF success", detail: `bytes=${bytes}` };
+          push({ id: "pdf", label: "PDF 导出（实验版）", status: "pass", detail: `PDF success — bytes=${bytes}`, ms });
+        } else {
+          pdfDetail = { status: "warn", reason: "PDF generation failed", detail: `bytes=${bytes}` };
+        }
       } catch (e: any) {
-        push({ id: "pdf", label: "PDF 导出（实验版）", status: "fail", detail: e?.message });
+        pdfDetail = { status: "warn", reason: "PDF generation failed", detail: e?.message ?? "unknown error" };
       }
     }
+    if (pdfDetail.status !== "pass") {
+      push({
+        id: "pdf",
+        label: "PDF 导出（实验版）",
+        status: pdfDetail.status,
+        detail: `${pdfDetail.reason} — ${pdfDetail.detail}`,
+      });
+    }
+    (checks as any).__pdfDetail = pdfDetail;
+
+
 
     // 11b. PNG 导出：实际渲染一次非空 blob 且 printable HTML 内容完整（项目标题/方案表格/风险/隐私声明）才 pass
     if (!getFlag("pngExport")) {
@@ -514,6 +534,18 @@ export function HealthCheck() {
       lines.push(`  candidates: ${pd.candidates}`);
       if (pd.warningCode) lines.push(`  warningCode: ${pd.warningCode}`);
     }
+    const pdfd = (checks as any).__pdfDetail as
+      | { status: Status; reason: string; detail: string }
+      | null
+      | undefined;
+    if (pdfd) {
+      lines.push("");
+      lines.push("PDF 模块状态:");
+      lines.push(`  status: ${pdfd.status}`);
+      lines.push(`  reason: ${pdfd.reason}`);
+      lines.push(`  detail: ${pdfd.detail}`);
+    }
+
     lines.push("");
     lines.push(
       `汇总: pass=${summary.pass ?? 0} warn=${summary.warn ?? 0} fail=${summary.fail ?? 0} skip=${summary.skip ?? 0}`,
