@@ -75,8 +75,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <header className="h-11 border-b bg-surface px-3 md:px-5 flex items-center gap-2 md:gap-3 text-[13px]">
           <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="md:hidden h-8 w-8 shrink-0">
-                <Menu className="h-4 w-4" />
+              <Button variant="ghost" size="icon" className="md:hidden h-8 w-8 shrink-0" aria-label="打开导航菜单">
+                <Menu className="h-4 w-4" aria-hidden="true" />
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="p-0 w-64 bg-sidebar border-sidebar-border">

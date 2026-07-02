@@ -687,18 +687,21 @@ export default function ProjectWizard() {
                         <div className="flex items-center gap-0.5">
                           <Button variant="ghost" size="icon" className="h-6 w-6"
                             title="重命名"
+                            aria-label="重命名草稿"
                             onClick={() => { setRenamingId(d.id); setRenameValue(d.name); }}>
-                            <Pencil className="h-3 w-3" />
+                            <Pencil className="h-3 w-3" aria-hidden="true" />
                           </Button>
                           <Button variant="ghost" size="icon" className="h-6 w-6"
                             title="另存为副本"
+                            aria-label="另存为副本"
                             onClick={() => duplicateDraft(d.id)}>
-                            <Copy className="h-3 w-3" />
+                            <Copy className="h-3 w-3" aria-hidden="true" />
                           </Button>
                           <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive hover:text-destructive"
                             title="删除草稿"
+                            aria-label="删除草稿"
                             onClick={() => deleteDraft(d.id)}>
-                            <Trash2 className="h-3 w-3" />
+                            <Trash2 className="h-3 w-3" aria-hidden="true" />
                           </Button>
                         </div>
                       </div>
@@ -963,7 +966,7 @@ export default function ProjectWizard() {
                         </td>
                         <td><Input className="h-7 font-mono text-xs" type="number" value={s.heightCm} onChange={(e) => updateStudent(i, { heightCm: Number(e.target.value) })} /></td>
                         <td><Input className="h-7" value={s.roleLabel ?? ""} onChange={(e) => updateStudent(i, { roleLabel: e.target.value })} placeholder="如:领唱 / 领舞" /></td>
-                        <td><Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => removeStudent(i)}><Trash2 className="h-3.5 w-3.5" /></Button></td>
+                        <td><Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => removeStudent(i)} aria-label={`删除第 ${i + 1} 行学生`}><Trash2 className="h-3.5 w-3.5" aria-hidden="true" /><span className="sr-only">删除学生</span></Button></td>
                       </tr>
                     ))}
                   </tbody>
