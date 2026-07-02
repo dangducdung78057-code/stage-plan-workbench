@@ -343,6 +343,10 @@ export default function ProjectDetail() {
         </div>
       )}
 
+      <ValidationHistoryPanel input={input} />
+
+
+
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <MetaCard label="学段" value={stageLabel} />
         <MetaCard label="节目类型" value={programLabel} mono={input?.programType} />
