@@ -262,7 +262,48 @@ export default function ProjectWizard() {
         })}
       </ol>
 
+      {/* Validation summary — click any issue to jump straight to the field */}
+      {allIssues.length > 0 && (
+        <div className="panel border-warning/40 bg-warning/5">
+          <div className="panel-header">
+            <h2 className="text-sm font-semibold text-warning inline-flex items-center gap-1.5">
+              <AlertTriangle className="h-4 w-4" />
+              校验汇总 · 共 {allIssues.length} 项
+            </h2>
+            <span className="text-[11px] text-muted-foreground font-mono">click to jump</span>
+          </div>
+          <div className="panel-body">
+            <ul className="divide-y divide-border/60">
+              {allIssues.map((it, i) => (
+                <li key={i}>
+                  <button
+                    type="button"
+                    onClick={() => jumpToIssue(it)}
+                    className="w-full flex items-center gap-3 py-2 text-left hover:bg-warning/5 rounded px-1 -mx-1 transition-colors"
+                  >
+                    <span
+                      className={[
+                        "text-[10px] font-mono px-1.5 py-0.5 rounded shrink-0",
+                        it.severity === "error"
+                          ? "bg-destructive/10 text-destructive"
+                          : "bg-warning/15 text-warning",
+                      ].join(" ")}
+                    >
+                      step {it.step + 1}
+                    </span>
+                    <span className="text-sm font-medium shrink-0">{it.label}</span>
+                    <span className="text-xs text-muted-foreground truncate flex-1">{it.message}</span>
+                    <span className="text-xs text-primary hover:underline shrink-0">定位 →</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      )}
+
       {/* Step body */}
+
       <div className="panel">
         <div className="panel-header">
           <h2 className="text-sm font-semibold">
