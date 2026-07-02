@@ -592,18 +592,8 @@ export function HealthCheck() {
       lines.push(`  reason: ${pdfd.reason}`);
       lines.push(`  detail: ${pdfd.detail}`);
     }
-    const probes = (checks as any).__pdfProbes as
-      | { disabled: any; enabled: any; error: any }
-      | null
-      | undefined;
-    if (probes) {
-      lines.push("");
-      lines.push("PDF 三态用例:");
-      for (const k of ["disabled", "enabled", "error"] as const) {
-        const p = probes[k];
-        lines.push(`  ${k}: status=${p.status} reason=${p.reason} detail=${p.detail}`);
-      }
-    }
+    // PDF 三态探针仅在 debug 面板展示，不进入验收摘要（避免同模块多状态冲突）
+
 
     lines.push("");
     lines.push(
