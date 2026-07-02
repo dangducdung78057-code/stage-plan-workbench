@@ -796,14 +796,27 @@ export function HealthCheck() {
                 : "border-warning/40 bg-warning/5")
           }>
             <ToneBadge tone={gateTone(gate.gate) as any}>{gate.gate}</ToneBadge>
-            <div className="min-w-0 flex-1">
+            <div className="min-w-0 flex-1 space-y-0.5">
               <div className="font-semibold text-sm">Release Gate · {gate.gate}</div>
-              <div className="font-mono text-[11px] mt-0.5 break-words">
+              <div className="font-mono text-[11px] break-words">
                 [{gate.rule}] {gate.reason}
               </div>
+              <div className="font-mono text-[10px] text-muted-foreground break-words">
+                warn_by_layer: L0={gate.warnCountByLayer.L0} · L1={gate.warnCountByLayer.L1} · L2={gate.warnCountByLayer.L2}
+                {" · "}system_warn(unique)={gate.systemWarnModules.length}
+                {" · "}gate_triggering_warn={gate.gateTriggeringWarnModules.length}
+              </div>
               {gate.triggers.length > 0 && (
-                <div className="font-mono text-[10px] text-muted-foreground mt-0.5 break-words">
+                <div className="font-mono text-[10px] text-muted-foreground break-words">
                   triggers: {gate.triggers.join(", ")}
+                </div>
+              )}
+              {gate.isolatedExperimentalWarnings.length > 0 && (
+                <div className="font-mono text-[10px] text-muted-foreground break-words">
+                  <span className="inline-block px-1 py-0.5 mr-1 rounded bg-warning/10 text-warning border border-warning/30">
+                    isolated experimental warning
+                  </span>
+                  {gate.isolatedExperimentalWarnings.map((w) => w.module).join(", ")}
                 </div>
               )}
             </div>
@@ -817,7 +830,7 @@ export function HealthCheck() {
               <span className="text-muted-foreground font-mono">system_capabilities · SSoT</span>
               {gate && <ToneBadge tone={gateTone(gate.gate) as any}>gate {gate.gate}</ToneBadge>}
               <span className="text-[11px] text-muted-foreground ml-auto font-mono">
-                L0={snapshot.counts.L0} · L1={snapshot.counts.L1} · L2={snapshot.counts.L2} · WARN={snapshot.counts.WARN} · FAIL={snapshot.counts.FAIL}
+                L0={snapshot.counts.L0}(W{snapshot.counts.L0_WARN}/F{snapshot.counts.L0_FAIL}) · L1={snapshot.counts.L1}(W{snapshot.counts.L1_WARN}/F{snapshot.counts.L1_FAIL}) · L2={snapshot.counts.L2}(W{snapshot.counts.L2_WARN}/F{snapshot.counts.L2_FAIL}) · WARN(unique)={snapshot.counts.warnUnique} · FAIL={snapshot.counts.FAIL}
               </span>
             </div>
             {snapshot.error ? (
