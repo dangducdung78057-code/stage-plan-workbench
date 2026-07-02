@@ -1,5 +1,5 @@
 // StageOS domain constants and helpers
-export const STAGEOS_VERSION = "stageos-v4.0-outbound-webhook-layer" as const;
+export const STAGEOS_VERSION = "stageos-v4.1-webhook-signature" as const;
 
 export const SCHOOL_STAGES = [
   { value: "primary", label: "小学" },
