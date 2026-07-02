@@ -301,52 +301,53 @@ export function downloadBlob(content: string, filename: string, mime: string) {
 }
 
 export function canPrint(): boolean {
-  return typeof window !== "undefined" && typeof window.print === "function";
+  return typeof window !== "undefined";
 }
 
-export function openPrintWindow(html: string): Promise<void> {
-  return new Promise((resolve, reject) => {
-    if (!canPrint()) { reject(new Error("PRINT_UNSUPPORTED")); return; }
-    try {
-      const iframe = document.createElement("iframe");
-      iframe.style.position = "fixed";
-      iframe.style.right = "0";
-      iframe.style.bottom = "0";
-      iframe.style.width = "0";
-      iframe.style.height = "0";
-      iframe.style.border = "0";
-      iframe.setAttribute("aria-hidden", "true");
-      document.body.appendChild(iframe);
+/**
+ * Real PDF download via html2pdf.js (html2canvas + jsPDF).
+ * Rasterizes rendered HTML — Chinese text renders through the browser's font stack,
+ * no PDF-embedded font needed. Produces an actual .pdf file, not a print dialog.
+ */
+export async function downloadPdf(html: string, filename: string): Promise<void> {
+  if (typeof window === "undefined") throw new Error("PDF_UNSUPPORTED");
+  // Dynamic import — keeps html2pdf.js out of the initial bundle.
+  const mod: any = await import("html2pdf.js");
+  const html2pdf = mod.default ?? mod;
 
-      let settled = false;
-      const done = (err?: any) => {
-        if (settled) return;
-        settled = true;
-        setTimeout(() => { try { iframe.remove(); } catch {} }, 500);
-        err ? reject(err) : resolve();
-      };
+  // Off-screen host so the DOM has real width for html2canvas to measure.
+  const host = document.createElement("div");
+  host.style.position = "fixed";
+  host.style.left = "-10000px";
+  host.style.top = "0";
+  host.style.width = "794px"; // ~A4 @ 96dpi
+  host.style.background = "#ffffff";
+  // Strip outer <!doctype>/<html>/<head> — html2canvas only renders <body>.
+  const bodyMatch = /<body[^>]*>([\s\S]*?)<\/body>/i.exec(html);
+  const styleMatch = /<style[^>]*>([\s\S]*?)<\/style>/i.exec(html);
+  host.innerHTML =
+    (styleMatch ? `<style>${styleMatch[1]}</style>` : "") +
+    (bodyMatch ? bodyMatch[1] : html);
+  document.body.appendChild(host);
 
-      iframe.onload = () => {
-        try {
-          const w = iframe.contentWindow;
-          if (!w || typeof w.print !== "function") throw new Error("PRINT_UNSUPPORTED");
-          w.addEventListener("afterprint", () => done());
-          w.focus();
-          w.print();
-          // Fallback resolve if afterprint doesn't fire
-          setTimeout(() => done(), 60_000);
-        } catch (e) {
-          done(e);
-        }
-      };
-
-      const doc = iframe.contentDocument;
-      if (!doc) throw new Error("no contentDocument");
-      doc.open();
-      doc.write(html);
-      doc.close();
-    } catch (e) {
-      reject(e);
-    }
-  });
+  try {
+    await html2pdf()
+      .from(host)
+      .set({
+        margin: [10, 10, 12, 10],
+        filename,
+        image: { type: "jpeg", quality: 0.95 },
+        html2canvas: {
+          scale: 2,
+          useCORS: true,
+          backgroundColor: "#ffffff",
+          logging: false,
+        },
+        jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+        pagebreak: { mode: ["css", "legacy"] },
+      })
+      .save();
+  } finally {
+    try { host.remove(); } catch { /* noop */ }
+  }
 }
