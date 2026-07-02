@@ -124,6 +124,26 @@ export default function ProjectWizard() {
   };
   const goPrev = () => setStep((s) => Math.max(0, s - 1));
 
+  const allIssues = useMemo(() => collectIssues(title, data), [title, data]);
+
+  const jumpToIssue = (issue: WizardIssue) => {
+    setStep(issue.step);
+    // Wait for step body to render, then focus + highlight the field.
+    setTimeout(() => {
+      const el = document.getElementById(issue.fieldId)
+        ?? document.querySelector<HTMLElement>(`[data-field-wrapper="${issue.fieldId}"]`);
+      if (!el) return;
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      (el as HTMLElement).focus?.();
+      const wrapper = el.closest<HTMLElement>("[data-field-wrapper]") ?? el;
+      wrapper.classList.add("ring-2", "ring-warning", "rounded-md", "transition-shadow");
+      window.setTimeout(() => {
+        wrapper.classList.remove("ring-2", "ring-warning", "rounded-md");
+      }, 1600);
+    }, 80);
+  };
+
+
   async function submit() {
     if (!title.trim()) { toast.error("请填写项目标题"); return; }
     setSubmitting(true);
@@ -242,7 +262,48 @@ export default function ProjectWizard() {
         })}
       </ol>
 
+      {/* Validation summary — click any issue to jump straight to the field */}
+      {allIssues.length > 0 && (
+        <div className="panel border-warning/40 bg-warning/5">
+          <div className="panel-header">
+            <h2 className="text-sm font-semibold text-warning inline-flex items-center gap-1.5">
+              <AlertTriangle className="h-4 w-4" />
+              校验汇总 · 共 {allIssues.length} 项
+            </h2>
+            <span className="text-[11px] text-muted-foreground font-mono">click to jump</span>
+          </div>
+          <div className="panel-body">
+            <ul className="divide-y divide-border/60">
+              {allIssues.map((it, i) => (
+                <li key={i}>
+                  <button
+                    type="button"
+                    onClick={() => jumpToIssue(it)}
+                    className="w-full flex items-center gap-3 py-2 text-left hover:bg-warning/5 rounded px-1 -mx-1 transition-colors"
+                  >
+                    <span
+                      className={[
+                        "text-[10px] font-mono px-1.5 py-0.5 rounded shrink-0",
+                        it.severity === "error"
+                          ? "bg-destructive/10 text-destructive"
+                          : "bg-warning/15 text-warning",
+                      ].join(" ")}
+                    >
+                      step {it.step + 1}
+                    </span>
+                    <span className="text-sm font-medium shrink-0">{it.label}</span>
+                    <span className="text-xs text-muted-foreground truncate flex-1">{it.message}</span>
+                    <span className="text-xs text-primary hover:underline shrink-0">定位 →</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      )}
+
       {/* Step body */}
+
       <div className="panel">
         <div className="panel-header">
           <h2 className="text-sm font-semibold">
@@ -258,20 +319,20 @@ export default function ProjectWizard() {
         <div className="panel-body space-y-4">
           {step === 0 && (
             <div className="grid grid-cols-2 gap-4">
-              <Field label="项目标题" required>
-                <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="如:2026 春季合唱汇演 · 高一 3 班" />
+              <Field label="项目标题" required htmlFor="w-title">
+                <Input id="w-title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="如:2026 春季合唱汇演 · 高一 3 班" />
               </Field>
-              <Field label="学段 schoolStage" required>
+              <Field label="学段 schoolStage" required htmlFor="w-schoolStage">
                 <Select value={data.schoolStage} onValueChange={(v) => set("schoolStage", v)}>
-                  <SelectTrigger><SelectValue placeholder="选择学段" /></SelectTrigger>
+                  <SelectTrigger id="w-schoolStage"><SelectValue placeholder="选择学段" /></SelectTrigger>
                   <SelectContent>
                     {SCHOOL_STAGES.map((s) => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </Field>
-              <Field label="节目类型 programType" required>
+              <Field label="节目类型 programType" required htmlFor="w-programType">
                 <Select value={data.programType} onValueChange={(v) => set("programType", v)}>
-                  <SelectTrigger><SelectValue placeholder="选择节目类型" /></SelectTrigger>
+                  <SelectTrigger id="w-programType"><SelectValue placeholder="选择节目类型" /></SelectTrigger>
                   <SelectContent className="max-h-72">
                     {PROGRAM_TYPES.map((s) => (
                       <SelectItem key={s.value} value={s.value}>
@@ -281,21 +342,21 @@ export default function ProjectWizard() {
                   </SelectContent>
                 </Select>
               </Field>
-              <Field label="节目主题 programTheme" required>
-                <Input value={data.programTheme ?? ""} onChange={(e) => set("programTheme", e.target.value)} placeholder="如:光的礼赞" />
+              <Field label="节目主题 programTheme" required htmlFor="w-programTheme">
+                <Input id="w-programTheme" value={data.programTheme ?? ""} onChange={(e) => set("programTheme", e.target.value)} placeholder="如:光的礼赞" />
               </Field>
-              <Field label="场地类型 venueType">
-                <Input value={data.venueType ?? ""} onChange={(e) => set("venueType", e.target.value)} placeholder="室内剧场 / 露天舞台 …" />
+              <Field label="场地类型 venueType" htmlFor="w-venueType">
+                <Input id="w-venueType" value={data.venueType ?? ""} onChange={(e) => set("venueType", e.target.value)} placeholder="室内剧场 / 露天舞台 …" />
               </Field>
-              <Field label="演出日期 performanceDate" required>
-                <Input type="date" value={data.performanceDate ?? ""} onChange={(e) => set("performanceDate", e.target.value)} />
+              <Field label="演出日期 performanceDate" required htmlFor="w-performanceDate">
+                <Input id="w-performanceDate" type="date" value={data.performanceDate ?? ""} onChange={(e) => set("performanceDate", e.target.value)} />
               </Field>
-              <Field label="彩排频次(次/周)" required>
+              <Field label="彩排频次(次/周)" required htmlFor="w-rehearsalFrequencyPerWeek">
                 <Select
                   value={String(data.rehearsalFrequencyPerWeek ?? "")}
                   onValueChange={(v) => set("rehearsalFrequencyPerWeek", Number(v) as 2 | 3 | 5)}
                 >
-                  <SelectTrigger><SelectValue placeholder="选择彩排频次" /></SelectTrigger>
+                  <SelectTrigger id="w-rehearsalFrequencyPerWeek"><SelectValue placeholder="选择彩排频次" /></SelectTrigger>
                   <SelectContent>
                     {REHEARSAL_FREQUENCIES.map((n) => <SelectItem key={n} value={String(n)}>{n} 次/周</SelectItem>)}
                   </SelectContent>
@@ -307,17 +368,17 @@ export default function ProjectWizard() {
           {step === 1 && (
             <>
               <div className="grid grid-cols-4 gap-4">
-                <Field label="总人数 performerCount" required>
-                  <Input type="number" value={data.performerCount ?? ""} onChange={(e) => set("performerCount", e.target.value ? Number(e.target.value) : undefined)} />
+                <Field label="总人数 performerCount" required htmlFor="w-performerCount">
+                  <Input id="w-performerCount" type="number" value={data.performerCount ?? ""} onChange={(e) => set("performerCount", e.target.value ? Number(e.target.value) : undefined)} />
                 </Field>
-                <Field label="男生数 maleCount" required>
-                  <Input type="number" value={data.maleCount ?? ""} onChange={(e) => set("maleCount", e.target.value ? Number(e.target.value) : undefined)} />
+                <Field label="男生数 maleCount" required htmlFor="w-maleCount">
+                  <Input id="w-maleCount" type="number" value={data.maleCount ?? ""} onChange={(e) => set("maleCount", e.target.value ? Number(e.target.value) : undefined)} />
                 </Field>
-                <Field label="女生数 femaleCount" required>
-                  <Input type="number" value={data.femaleCount ?? ""} onChange={(e) => set("femaleCount", e.target.value ? Number(e.target.value) : undefined)} />
+                <Field label="女生数 femaleCount" required htmlFor="w-femaleCount">
+                  <Input id="w-femaleCount" type="number" value={data.femaleCount ?? ""} onChange={(e) => set("femaleCount", e.target.value ? Number(e.target.value) : undefined)} />
                 </Field>
-                <Field label="人均预算 perPersonBudget (元)" required>
-                  <Input type="number" value={data.perPersonBudget ?? ""} onChange={(e) => set("perPersonBudget", e.target.value ? Number(e.target.value) : undefined)} />
+                <Field label="人均预算 perPersonBudget (元)" required htmlFor="w-perPersonBudget">
+                  <Input id="w-perPersonBudget" type="number" value={data.perPersonBudget ?? ""} onChange={(e) => set("perPersonBudget", e.target.value ? Number(e.target.value) : undefined)} />
                 </Field>
               </div>
               <CountsHint data={data} />
@@ -326,22 +387,23 @@ export default function ProjectWizard() {
 
           {step === 2 && (
             <div className="grid grid-cols-2 gap-4">
-              <Field label="屏幕主题色 screenThemeColor" required>
-                <Input value={data.screenThemeColor ?? ""} onChange={(e) => set("screenThemeColor", e.target.value)} placeholder="如:靛蓝 / #1E3A8A" />
+              <Field label="屏幕主题色 screenThemeColor" required htmlFor="w-screenThemeColor">
+                <Input id="w-screenThemeColor" value={data.screenThemeColor ?? ""} onChange={(e) => set("screenThemeColor", e.target.value)} placeholder="如:靛蓝 / #1E3A8A" />
               </Field>
-              <Field label="灯光风格 lightingStyle" required>
-                <Input value={data.lightingStyle ?? ""} onChange={(e) => set("lightingStyle", e.target.value)} placeholder="如:暖调聚光 / 冷色氛围" />
+              <Field label="灯光风格 lightingStyle" required htmlFor="w-lightingStyle">
+                <Input id="w-lightingStyle" value={data.lightingStyle ?? ""} onChange={(e) => set("lightingStyle", e.target.value)} placeholder="如:暖调聚光 / 冷色氛围" />
               </Field>
               <div className="col-span-2">
-                <Field label="特殊期待 specialExpectation">
-                  <Textarea rows={3} value={data.specialExpectation ?? ""} onChange={(e) => set("specialExpectation", e.target.value)} placeholder="如:主色需契合校徽色系;避免过多亮片" />
+                <Field label="特殊期待 specialExpectation" htmlFor="w-specialExpectation">
+                  <Textarea id="w-specialExpectation" rows={3} value={data.specialExpectation ?? ""} onChange={(e) => set("specialExpectation", e.target.value)} placeholder="如:主色需契合校徽色系;避免过多亮片" />
                 </Field>
               </div>
             </div>
           )}
 
+
           {step === 3 && (
-            <div className="space-y-3">
+            <div id="w-students-panel" data-field-wrapper="w-students-panel" tabIndex={-1} className="space-y-3 outline-none">
               <div className="flex items-center justify-between">
                 <p className="text-xs text-muted-foreground">
                   仅使用 studentId 匿名标识,不采集真实姓名。学生行数需与总人数一致时才通过校验;为空则跳过此校验。
@@ -448,35 +510,70 @@ export default function ProjectWizard() {
   );
 }
 
-function validateStep(step: number, title: string, d: StageInputData): { blockers: string[] } {
-  const b: string[] = [];
-  if (step === 0) {
-    if (!title.trim()) b.push("项目标题");
-    if (!d.schoolStage) b.push("学段");
-    if (!d.programType) b.push("节目类型");
-    if (!d.programTheme?.trim()) b.push("节目主题");
-    if (!d.performanceDate) b.push("演出日期");
-    if (!d.rehearsalFrequencyPerWeek) b.push("彩排频次");
-  } else if (step === 1) {
-    if (typeof d.performerCount !== "number" || d.performerCount <= 0) b.push("总人数");
-    if (typeof d.maleCount !== "number") b.push("男生数");
-    if (typeof d.femaleCount !== "number") b.push("女生数");
-    if (typeof d.perPersonBudget !== "number" || d.perPersonBudget <= 0) b.push("人均预算");
-    if (
-      typeof d.performerCount === "number" &&
-      typeof d.maleCount === "number" &&
-      typeof d.femaleCount === "number" &&
-      d.maleCount + d.femaleCount !== d.performerCount
-    ) b.push("男女之和 = 总人数");
-  } else if (step === 2) {
-    if (!d.screenThemeColor?.trim()) b.push("屏幕主题色");
-    if (!d.lightingStyle?.trim()) b.push("灯光风格");
-  } else if (step === 3) {
-    if (d.students && d.students.length > 0 && typeof d.performerCount === "number"
-      && d.students.length !== d.performerCount) b.push("学生行数 = 总人数(或清空)");
+export type WizardIssue = {
+  step: number;
+  fieldId: string;
+  label: string;
+  message: string;
+  severity: "error" | "warning";
+};
+
+function collectIssues(title: string, d: StageInputData): WizardIssue[] {
+  const out: WizardIssue[] = [];
+  const err = (step: number, fieldId: string, label: string, message: string) =>
+    out.push({ step, fieldId, label, message, severity: "error" });
+  const warn = (step: number, fieldId: string, label: string, message: string) =>
+    out.push({ step, fieldId, label, message, severity: "warning" });
+
+  // Step 0
+  if (!title.trim()) err(0, "w-title", "项目标题", "必填,用于工作台识别项目");
+  if (!d.schoolStage) err(0, "w-schoolStage", "学段", "必选:primary / junior / senior");
+  if (!d.programType) err(0, "w-programType", "节目类型", "必选");
+  if (!d.programTheme?.trim()) err(0, "w-programTheme", "节目主题", "必填");
+  if (!d.performanceDate) err(0, "w-performanceDate", "演出日期", "必填,用于生成倒排计划");
+  if (!d.rehearsalFrequencyPerWeek) err(0, "w-rehearsalFrequencyPerWeek", "彩排频次", "必选:2 / 3 / 5");
+
+  // Step 1
+  if (typeof d.performerCount !== "number" || d.performerCount <= 0)
+    err(1, "w-performerCount", "总人数 performerCount", "必填,正整数");
+  if (typeof d.maleCount !== "number") err(1, "w-maleCount", "男生数 maleCount", "必填");
+  if (typeof d.femaleCount !== "number") err(1, "w-femaleCount", "女生数 femaleCount", "必填");
+  if (typeof d.perPersonBudget !== "number" || d.perPersonBudget <= 0)
+    err(1, "w-perPersonBudget", "人均预算 perPersonBudget", "必填,正数");
+  if (
+    typeof d.performerCount === "number" &&
+    typeof d.maleCount === "number" &&
+    typeof d.femaleCount === "number" &&
+    d.maleCount + d.femaleCount !== d.performerCount
+  ) {
+    err(1, "w-maleCount",
+      "人数校验",
+      `男(${d.maleCount}) + 女(${d.femaleCount}) = ${d.maleCount + d.femaleCount},与总人数 ${d.performerCount} 不一致`);
   }
-  return { blockers: b };
+
+  // Step 2
+  if (!d.screenThemeColor?.trim()) err(2, "w-screenThemeColor", "屏幕主题色 screenThemeColor", "必填");
+  if (!d.lightingStyle?.trim()) err(2, "w-lightingStyle", "灯光风格 lightingStyle", "必填");
+
+  // Step 3 (roster)
+  if (
+    d.students && d.students.length > 0 &&
+    typeof d.performerCount === "number" &&
+    d.students.length !== d.performerCount
+  ) {
+    warn(3, "w-students-panel",
+      "学生名录行数",
+      `已填 ${d.students.length} 行,与总人数 ${d.performerCount} 不一致(清空或补齐)`);
+  }
+
+  return out;
 }
+
+function validateStep(step: number, title: string, d: StageInputData): { blockers: string[] } {
+  const items = collectIssues(title, d).filter((i) => i.step === step);
+  return { blockers: items.map((i) => i.label) };
+}
+
 
 function CountsHint({ data }: { data: StageInputData }) {
   const { performerCount, maleCount, femaleCount } = data;
@@ -519,13 +616,14 @@ function ReviewSummary({ title, data }: { title: string; data: StageInputData })
   );
 }
 
-function Field({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
+function Field({ label, required, htmlFor, children }: { label: string; required?: boolean; htmlFor?: string; children: React.ReactNode }) {
   return (
-    <div className="space-y-1.5">
-      <Label className="text-xs text-muted-foreground">
+    <div className="space-y-1.5" data-field-wrapper={htmlFor}>
+      <Label htmlFor={htmlFor} className="text-xs text-muted-foreground">
         {label}{required && <span className="text-destructive ml-0.5">*</span>}
       </Label>
       {children}
     </div>
   );
 }
+
