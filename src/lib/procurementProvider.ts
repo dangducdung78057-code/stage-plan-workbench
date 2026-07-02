@@ -172,10 +172,8 @@ export function setHttpUrl(v: string) {
   window.dispatchEvent(new CustomEvent("stageos:procurementProvider"));
 }
 
-export function resolveProvider(): ProcurementProvider {
-  const mode = getProviderMode();
-  if (mode === "http") return makeHttpProvider(getHttpUrl());
-  return LocalCatalogProvider;
+export function resolveProviderMode(): ProcurementProviderMode {
+  return getProviderMode();
 }
 
 export async function searchWithFallback(
@@ -194,7 +192,6 @@ export async function searchWithFallback(
         fallbackUsed: false,
       };
     } catch (e: any) {
-      // 极端兜底：本地目录异常仍再跑一次同步匹配
       return {
         candidates: matchCandidates(item, ctx),
         providerMode: "local",
@@ -209,11 +206,13 @@ export async function searchWithFallback(
   // http primary
   const http = makeHttpProvider(getHttpUrl());
   try {
-    const c = await http.search(item, ctx);
+    const r = await http.search(item, ctx);
+    const displayId: ProviderDisplayId =
+      r.providerId === "http-mock" ? "http-mock" : "http";
     return {
-      candidates: c,
+      candidates: r.candidates,
       providerMode: "http",
-      providerId: "http",
+      providerId: displayId,
       fallbackUsed: false,
     };
   } catch (e: any) {
