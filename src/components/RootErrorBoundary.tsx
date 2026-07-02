@@ -27,7 +27,7 @@ export class RootErrorBoundary extends Component<{ children: ReactNode }, State>
   render() {
     if (!this.state.error) return this.props.children;
     return (
-      <div className="min-h-screen bg-background text-foreground grid place-items-center p-6">
+      <div className="min-h-dvh bg-background text-foreground grid place-items-center p-6">
         <div className="w-full max-w-md border rounded-md bg-surface p-5 space-y-3">
           <div className="text-sm font-semibold">应用出错</div>
           <div className="text-xs text-muted-foreground font-mono break-all">
