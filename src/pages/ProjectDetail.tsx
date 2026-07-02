@@ -118,11 +118,13 @@ export default function ProjectDetail() {
 
       const { costumePlan, risks, reverseSchedule, platformSearch } = generateMockPlan(input);
       const nextVersion = (snapshots[0]?.version ?? 0) + 1;
+      const { data: userData } = await supabase.auth.getUser();
+      const uid = userData.user?.id;
       const { error } = await supabase.from("plan_snapshots").insert({
-        project_id: project.id, version: nextVersion, mode: "mock",
+        project_id: project.id, user_id: uid, version: nextVersion, mode: "mock",
         costume_plan: costumePlan as any, risks: risks as any,
         reverse_schedule: reverseSchedule as any, platform_search: platformSearch as any,
-      });
+      } as any);
       if (error) throw error;
       await supabase.from("projects").update({ status: "planning" }).eq("id", project.id);
       toast.success(`已生成 v${nextVersion} 服装总表(mock)`);
@@ -136,13 +138,15 @@ export default function ProjectDetail() {
     if (!project) return;
     setBusy(true);
     try {
+      const { data: userData } = await supabase.auth.getUser();
+      const uid = userData.user?.id;
       // Privacy/user confirmation can be recorded before a snapshot exists;
       // snapshot-level confirmation attaches the latest snapshot when available.
       await supabase.from("confirmation_records").insert({
-        project_id: project.id, snapshot_id: latest?.id ?? null,
+        project_id: project.id, user_id: uid, snapshot_id: latest?.id ?? null,
         status: newStatus, notes: notes || null,
         confirmed_at: newStatus === "confirmed" ? new Date().toISOString() : null,
-      });
+      } as any);
       const projectStatus = newStatus === "confirmed" ? "confirmed" : newStatus === "needs_revision" ? "needs_revision" : "planning";
       await supabase.from("projects").update({ status: projectStatus }).eq("id", project.id);
       toast.success("已更新确认状态");
