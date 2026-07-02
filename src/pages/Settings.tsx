@@ -8,6 +8,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { STAGEOS_VERSION } from "@/lib/stageos";
 import { toast } from "sonner";
 import { CheckCircle2, XCircle } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { FLAG_META, useFlags, setFlag, type FeatureFlag } from "@/lib/featureFlags";
 import { HealthCheck } from "@/components/HealthCheck";
 
