@@ -134,6 +134,10 @@ export default function Workspace() {
             e.preventDefault();
             itemRefs.current[0]?.focus();
           }}
+          onCloseAutoFocus={(e) => {
+            e.preventDefault();
+            guideTriggerRef.current?.focus();
+          }}
         >
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
