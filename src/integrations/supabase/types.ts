@@ -14,7 +14,217 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      confirmation_records: {
+        Row: {
+          confirmed_at: string | null
+          created_at: string
+          id: string
+          notes: string | null
+          project_id: string
+          snapshot_id: string | null
+          status: string
+        }
+        Insert: {
+          confirmed_at?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          project_id: string
+          snapshot_id?: string | null
+          status?: string
+        }
+        Update: {
+          confirmed_at?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          project_id?: string
+          snapshot_id?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "confirmation_records_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "confirmation_records_snapshot_id_fkey"
+            columns: ["snapshot_id"]
+            isOneToOne: false
+            referencedRelation: "plan_snapshots"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      export_records: {
+        Row: {
+          created_at: string
+          format: string
+          id: string
+          payload: string
+          project_id: string
+          snapshot_id: string | null
+          version: number
+        }
+        Insert: {
+          created_at?: string
+          format: string
+          id?: string
+          payload: string
+          project_id: string
+          snapshot_id?: string | null
+          version?: number
+        }
+        Update: {
+          created_at?: string
+          format?: string
+          id?: string
+          payload?: string
+          project_id?: string
+          snapshot_id?: string | null
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "export_records_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "export_records_snapshot_id_fkey"
+            columns: ["snapshot_id"]
+            isOneToOne: false
+            referencedRelation: "plan_snapshots"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      plan_snapshots: {
+        Row: {
+          costume_plan: Json
+          generated_at: string
+          id: string
+          mode: string
+          platform_search: Json
+          project_id: string
+          reverse_schedule: Json
+          risks: Json
+          version: number
+        }
+        Insert: {
+          costume_plan?: Json
+          generated_at?: string
+          id?: string
+          mode?: string
+          platform_search?: Json
+          project_id: string
+          reverse_schedule?: Json
+          risks?: Json
+          version?: number
+        }
+        Update: {
+          costume_plan?: Json
+          generated_at?: string
+          id?: string
+          mode?: string
+          platform_search?: Json
+          project_id?: string
+          reverse_schedule?: Json
+          risks?: Json
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plan_snapshots_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      projects: {
+        Row: {
+          created_at: string
+          id: string
+          performance_date: string | null
+          performer_count: number | null
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          performance_date?: string | null
+          performer_count?: number | null
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          performance_date?: string | null
+          performer_count?: number | null
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      settings: {
+        Row: {
+          api_base_url: string | null
+          api_mode: string
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          api_base_url?: string | null
+          api_mode?: string
+          id: string
+          updated_at?: string
+        }
+        Update: {
+          api_base_url?: string | null
+          api_mode?: string
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      stage_inputs: {
+        Row: {
+          data: Json
+          project_id: string
+          updated_at: string
+        }
+        Insert: {
+          data?: Json
+          project_id: string
+          updated_at?: string
+        }
+        Update: {
+          data?: Json
+          project_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stage_inputs_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: true
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
