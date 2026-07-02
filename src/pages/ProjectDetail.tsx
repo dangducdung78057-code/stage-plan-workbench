@@ -57,14 +57,39 @@ export default function ProjectDetail() {
 
   useEffect(() => { load(); }, [id]);
 
+  const hasPrivacyConfirmation = confirmations.some((c) => c.status === "confirmed");
+
   async function handleGenerate() {
     if (!input || !project) return;
-    if (issues.length > 0) {
-      toast.warning("请先解决数据校验提示,再生成排产。");
-      return;
-    }
     setBusy(true);
     try {
+      // Precheck order: auth -> permission -> confirmation -> validation.
+      // Backend enforces the same order via the plan-precheck edge function.
+      const { data: pre, error: preErr } = await supabase.functions.invoke("plan-precheck", {
+        body: { projectId: project.id },
+      });
+      if (preErr || !pre?.ok) {
+        const code = pre?.code ?? "INTERNAL";
+        if (code === "AUTH_REQUIRED") {
+          toast.error("请先登录后再生成排产。");
+          return;
+        }
+        if (code === "FORBIDDEN") {
+          toast.error("无权访问该项目。");
+          return;
+        }
+        if (code === "PRIVACY_CONFIRMATION_REQUIRED") {
+          toast.warning("请先完成用户确认/隐私确认后再生成排产。");
+          return;
+        }
+        if (code === "VALIDATION_REQUIRED") {
+          toast.warning("请先解决数据校验提示,再生成排产。");
+          return;
+        }
+        toast.error("生成前置校验失败:" + (pre?.message ?? preErr?.message ?? code));
+        return;
+      }
+
       const { costumePlan, risks, reverseSchedule, platformSearch } = generateMockPlan(input);
       const nextVersion = (snapshots[0]?.version ?? 0) + 1;
       const { error } = await supabase.from("plan_snapshots").insert({
@@ -81,11 +106,13 @@ export default function ProjectDetail() {
   }
 
   async function handleConfirm(newStatus: "draft" | "needs_revision" | "confirmed") {
-    if (!project || !latest) { toast.error("请先生成排产快照"); return; }
+    if (!project) return;
     setBusy(true);
     try {
+      // Privacy/user confirmation can be recorded before a snapshot exists;
+      // snapshot-level confirmation attaches the latest snapshot when available.
       await supabase.from("confirmation_records").insert({
-        project_id: project.id, snapshot_id: latest.id,
+        project_id: project.id, snapshot_id: latest?.id ?? null,
         status: newStatus, notes: notes || null,
         confirmed_at: newStatus === "confirmed" ? new Date().toISOString() : null,
       });
