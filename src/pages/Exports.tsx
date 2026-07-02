@@ -23,7 +23,7 @@ import {
 } from "@/lib/exportStorage";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
-import { FileDown, Eye, Loader2, FileText, Cloud, Link2, Trash2, RefreshCcw, Image as ImageIcon } from "lucide-react";
+import { FileDown, Eye, Loader2, FileText, Cloud, Link2, Trash2, RefreshCcw, Image as ImageIcon, RotateCw } from "lucide-react";
 
 type Row = {
   id: string; project_id: string; version: number; format: string;
