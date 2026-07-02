@@ -1,11 +1,15 @@
 // Renders export payloads to Markdown and printable HTML.
 // Never throws; missing sections show a placeholder.
 
-import { PROGRAM_TYPES, SCHOOL_STAGES } from "@/lib/stageos";
+import { PROGRAM_TYPES, SCHOOL_STAGES, STAGEOS_VERSION } from "@/lib/stageos";
 
 const MISSING = "_（本快照缺少此字段）_";
 const HTML_MISSING = "（本快照缺少此字段）";
 const MIN_RENDER_BLOB_SIZE = 1024;
+
+function watermarkLine(): string {
+  return `StageOS · ${STAGEOS_VERSION} · 导出于 ${new Date().toISOString()}`;
+}
 
 /**
  * Unified enum localizer used by Markdown / PDF / PNG export chains.
