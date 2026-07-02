@@ -135,10 +135,14 @@ export default function Exports() {
       exportedAt: new Date().toISOString(),
     };
 
-    // v3.3 · 采购候选商品导出附加（受 procurement flag 控制；provider 遵循用户设置，含 fallback）
+    // v3.3 · 采购候选商品导出附加（受全局 procurementExportAttachmentEnabled 控制；provider 遵循全局设置，含 fallback）
     try {
-      const { getFlag } = await import("@/lib/featureFlags");
-      if (getFlag("procurement")) {
+      const { readProcurementSettings } = await import("@/lib/procurementSettings");
+      const { setProviderMode, setHttpUrl } = await import("@/lib/procurementProvider");
+      const { settings } = await readProcurementSettings();
+      if (settings.procurementExportAttachmentEnabled) {
+        setProviderMode(settings.procurementProvider);
+        setHttpUrl(settings.procurementApiBaseUrl);
         const { resolveExportProcurement } = await import("@/lib/procurementExport");
         const ctx = {
           programType: input?.programType ?? input?.program_type ?? p?.program_type,

@@ -4,6 +4,7 @@
 
 import { matchCandidates, type PlanItem, type MatchContext } from "./procurementMatch";
 import type { Candidate } from "./procurementCatalog";
+import { readLocalProcurementSettings, saveLocalProcurementSettings } from "./procurementSettings";
 
 export type ProcurementProviderMode = "local" | "http";
 // 向后兼容别名（v3.0 命名）
@@ -152,24 +153,23 @@ const MODE_KEY = "stageos.procurement.providerMode";
 const URL_KEY = "stageos.procurement.httpUrl";
 
 export function getProviderMode(): ProcurementProviderMode {
-  if (typeof localStorage === "undefined") return "local";
-  const v = localStorage.getItem(MODE_KEY);
-  return v === "http" ? "http" : "local";
+  return readLocalProcurementSettings().procurementProvider;
 }
 
 export function setProviderMode(v: ProcurementProviderMode) {
-  localStorage.setItem(MODE_KEY, v);
-  window.dispatchEvent(new CustomEvent("stageos:procurementProvider"));
+  if (typeof localStorage === "undefined") return;
+  const next = { ...readLocalProcurementSettings(), procurementProvider: v };
+  saveLocalProcurementSettings(next);
 }
 
 export function getHttpUrl(): string {
-  if (typeof localStorage === "undefined") return "";
-  return localStorage.getItem(URL_KEY) ?? "";
+  return readLocalProcurementSettings().procurementApiBaseUrl;
 }
 
 export function setHttpUrl(v: string) {
-  localStorage.setItem(URL_KEY, v);
-  window.dispatchEvent(new CustomEvent("stageos:procurementProvider"));
+  if (typeof localStorage === "undefined") return;
+  const next = { ...readLocalProcurementSettings(), procurementApiBaseUrl: v };
+  saveLocalProcurementSettings(next);
 }
 
 export function resolveProviderMode(): ProcurementProviderMode {
