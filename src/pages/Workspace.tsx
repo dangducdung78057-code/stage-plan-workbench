@@ -57,8 +57,13 @@ export default function Workspace() {
     itemRefs.current[activeSlide]?.scrollIntoView({ block: "nearest", behavior: "smooth" });
   }, [guideOpen, activeSlide]);
 
-  const moveSlide = (delta: number) =>
-    setActiveSlide((i) => Math.min(SLIDE_OUTLINE.length - 1, Math.max(0, i + delta)));
+  const focusSlide = (next: number) => {
+    const clamped = Math.min(SLIDE_OUTLINE.length - 1, Math.max(0, next));
+    setActiveSlide(clamped);
+    itemRefs.current[clamped]?.focus();
+  };
+  const moveSlide = (delta: number) => focusSlide(activeSlide + delta);
+
 
 
   useEffect(() => {
