@@ -8,7 +8,9 @@ function safeSegment(s: string) {
 
 /**
  * Deterministic path scoped to the current user:
- *   {user_id}/{project_id}/v{version}-{export_id}.{ext}
+ *   {user_id}/{project_id}/v{version}-{export_id}-{timestamp}.{ext}
+ * The trailing timestamp guarantees each upload lands on a NEW object so
+ * previously issued signed URLs cannot serve stale (corrupted) bytes.
  * The leading {user_id} folder is enforced by the storage RLS policies.
  */
 export function buildStoragePath(opts: {
@@ -17,8 +19,10 @@ export function buildStoragePath(opts: {
   exportId: string;
   version: number;
   ext: "md" | "pdf" | "png" | "json";
+  timestamp?: number;
 }) {
-  return `${opts.userId}/${safeSegment(opts.projectId)}/v${opts.version}-${safeSegment(opts.exportId)}.${opts.ext}`;
+  const ts = opts.timestamp ?? Date.now();
+  return `${opts.userId}/${safeSegment(opts.projectId)}/v${opts.version}-${safeSegment(opts.exportId)}-${ts}.${opts.ext}`;
 }
 
 export async function uploadExportFile(opts: {

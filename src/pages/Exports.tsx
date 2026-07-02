@@ -130,15 +130,34 @@ export default function Exports() {
     return { payload, format: "json", projectTitle };
   }
 
+  async function purgeStaleReplicas(row: Row, ext: "md" | "pdf" | "png") {
+    if (!user?.id) return;
+    try {
+      const prefix = `${user.id}/${row.project_id}`;
+      const { data } = await supabase.storage.from("stageos-exports").list(prefix, { limit: 100 });
+      const stale = (data ?? [])
+        .filter((f: any) => f?.id && typeof f.name === "string")
+        .filter((f: any) => f.name.endsWith(`.${ext}`) && f.name.includes(`-${row.id}`))
+        .map((f: any) => `${prefix}/${f.name}`);
+      if (stale.length) {
+        await supabase.storage.from("stageos-exports").remove(stale);
+      }
+    } catch (e) {
+      console.warn("[Storage] purgeStaleReplicas failed", e);
+    }
+  }
+
   async function maybeUploadToStorage(row: Row, ext: "md" | "pdf" | "png", blob: Blob, contentType: string) {
     if (!storageOn || !user?.id) return;
     try {
+      await purgeStaleReplicas(row, ext);
       const path = buildStoragePath({
         userId: user.id, projectId: row.project_id, exportId: row.id, version: row.version, ext,
+        timestamp: Date.now(),
       });
       await uploadExportFile({ path, data: blob, contentType });
       toast.success(`已同步到 Storage · ${ext.toUpperCase()}`);
-      refreshFiles();
+      await refreshFiles();
     } catch (e: any) {
       console.error(e);
       toast.error(`Storage 同步失败：${e?.message ?? "unknown"}`);
@@ -156,15 +175,25 @@ export default function Exports() {
         version: row.version,
         createdAt: new Date(row.created_at).toLocaleString("zh-CN", { hour12: false }),
       });
+      // Single UTF-8 BOM string used for BOTH the local download and the Storage upload.
+      const mdWithBom = md.startsWith("\uFEFF") ? md : "\uFEFF" + md;
+      const fn = buildFilename("md", title, row.version, row.project_id);
+      const utf8Blob = new Blob([mdWithBom], { type: "text/markdown;charset=utf-8" });
+
       console.info("[StageOS Markdown Debug] project.title", title);
       console.info("[StageOS Markdown Debug] snapshot.project.title", (source.payload as any)?.snapshot?.project?.title ?? (source.payload as any)?.project?.title);
       console.info("[StageOS Markdown Debug] renderMarkdown.firstLine", md.split(/\r?\n/, 1)[0]?.replace(/^#\s*/, ""));
-      const fn = buildFilename("md", title, row.version, row.project_id);
-      const mdWithBom = md.startsWith("\uFEFF") ? md : "\uFEFF" + md;
-      const blob = new Blob([mdWithBom], { type: "text/markdown;charset=utf-8" });
-      downloadBlob(md, fn, "text/markdown;charset=utf-8");
+      console.info("[StageOS Markdown Debug] blob.size", utf8Blob.size, "type", utf8Blob.type);
+
+      // Local download: reuse the exact same UTF-8 Blob (no re-encoding path).
+      const url = URL.createObjectURL(utf8Blob);
+      const a = document.createElement("a");
+      a.href = url; a.download = fn;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
       toast.success("Markdown 已开始下载");
-      await maybeUploadToStorage(row, "md", blob, "text/markdown;charset=utf-8");
+
+      await maybeUploadToStorage(row, "md", utf8Blob, "text/markdown;charset=utf-8");
     } catch (e) {
       console.error(e);
       toast.error("下载失败，请稍后重试");
