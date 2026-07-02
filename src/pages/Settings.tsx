@@ -15,6 +15,12 @@ import {
   getProviderMode, setProviderMode, getHttpUrl, setHttpUrl,
   type ProcurementProviderId,
 } from "@/lib/procurementProvider";
+import {
+  readLocalProcurementSettings,
+  normalizeProcurementSettings,
+  saveLocalProcurementSettings,
+  type ProcurementSettings,
+} from "@/lib/procurementSettings";
 
 export default function SettingsPage() {
   const { user, signOut } = useAuth();
@@ -24,11 +30,20 @@ export default function SettingsPage() {
   const [counts, setCounts] = useState({ projects: 0, snapshots: 0, exports: 0, confirmations: 0 });
   const [procProvider, setProcProvider] = useState<ProcurementProviderId>(() => getProviderMode());
   const [procHttpUrl, setProcHttpUrl] = useState<string>(() => getHttpUrl());
+  const [procSettings, setProcSettings] = useState<ProcurementSettings>(() => readLocalProcurementSettings());
 
   useEffect(() => {
     (async () => {
       const { data } = await supabase.from("settings").select("*").eq("id", "global").maybeSingle();
-      if (data) { setApiMode(data.api_mode); setApiBaseUrl(data.api_base_url ?? ""); }
+      if (data) {
+        setApiMode(data.api_mode);
+        setApiBaseUrl(data.api_base_url ?? "");
+        const nextProc = normalizeProcurementSettings(data, readLocalProcurementSettings());
+        setProcSettings(nextProc);
+        setProcProvider(nextProc.procurementProvider);
+        setProcHttpUrl(nextProc.procurementApiBaseUrl);
+        saveLocalProcurementSettings(nextProc, false);
+      }
       const [{ count: p }, { count: s }, { count: e }, { count: c }] = await Promise.all([
         supabase.from("projects").select("id", { count: "exact", head: true }),
         supabase.from("plan_snapshots").select("id", { count: "exact", head: true }),
@@ -40,8 +55,38 @@ export default function SettingsPage() {
   }, []);
 
   async function save() {
-    await supabase.from("settings").upsert({ id: "global", api_mode: apiMode, api_base_url: apiBaseUrl || null });
+    const nextProc: ProcurementSettings = {
+      ...procSettings,
+      procurementProvider: procProvider,
+      procurementApiBaseUrl: procHttpUrl,
+    };
+    saveLocalProcurementSettings(nextProc);
+    setProviderMode(nextProc.procurementProvider);
+    setHttpUrl(nextProc.procurementApiBaseUrl);
+    setFlag("procurement", nextProc.procurementCandidatesEnabled);
+    const { error } = await supabase.from("settings").upsert({
+      id: "global",
+      api_mode: apiMode,
+      api_base_url: apiBaseUrl || null,
+      procurement_candidates_enabled: nextProc.procurementCandidatesEnabled,
+      procurement_provider_enabled: nextProc.procurementProviderEnabled,
+      procurement_export_attachment_enabled: nextProc.procurementExportAttachmentEnabled,
+      procurement_provider: nextProc.procurementProvider,
+      procurement_api_base_url: nextProc.procurementApiBaseUrl || null,
+    } as any);
+    if (error) { toast.error(`设置保存失败：${error.message}`); return; }
+    setProcSettings(nextProc);
     toast.success("设置已保存");
+  }
+
+  function patchProcSettings(patch: Partial<ProcurementSettings>) {
+    setProcSettings((prev) => {
+      const next = { ...prev, ...patch };
+      if (patch.procurementProvider) setProcProvider(patch.procurementProvider);
+      if (typeof patch.procurementApiBaseUrl === "string") setProcHttpUrl(patch.procurementApiBaseUrl);
+      saveLocalProcurementSettings(next);
+      return next;
+    });
   }
 
   return (
@@ -126,13 +171,33 @@ export default function SettingsPage() {
 
       <div className="panel">
         <div className="panel-header">
-          <h2 className="text-sm font-semibold">采购 provider (v3.2 只读 + http-mock 联调)</h2>
+          <h2 className="text-sm font-semibold">采购设置 (v3.3 正向验收)</h2>
           <span className="kbd-route">procurement</span>
         </div>
         <div className="panel-body space-y-3">
           <p className="text-xs text-muted-foreground">
-            默认 <span className="font-mono">local</span>（本地目录）。切换到 <span className="font-mono">http</span> 时会走通用 HTTP 壳，成功且 schema 合法则不回退；失败自动回退 local 并标记 warn。可填入内置 <span className="font-mono">procurement-search-mock</span> endpoint 进行联调。仅只读检索，不下单、不承诺库存。
+            下列字段会同步写入全局设置并镜像到本机缓存，HealthCheck 直接读取全局设置；不会再被旧 <span className="font-mono">procurement</span> flag 默认值覆盖。
           </p>
+          <div className="grid grid-cols-1 gap-2">
+            <ProcSwitch
+              label="procurementCandidatesEnabled"
+              desc="开启服装方案行内候选商品清单。"
+              checked={procSettings.procurementCandidatesEnabled}
+              onCheckedChange={(v) => patchProcSettings({ procurementCandidatesEnabled: v })}
+            />
+            <ProcSwitch
+              label="procurementProviderEnabled"
+              desc="开启采购 provider 抽象层；http 失败仍 fallback-local + warn。"
+              checked={procSettings.procurementProviderEnabled}
+              onCheckedChange={(v) => patchProcSettings({ procurementProviderEnabled: v })}
+            />
+            <ProcSwitch
+              label="procurementExportAttachmentEnabled"
+              desc="开启 Markdown / PDF / PNG 导出候选商品清单章节。"
+              checked={procSettings.procurementExportAttachmentEnabled}
+              onCheckedChange={(v) => patchProcSettings({ procurementExportAttachmentEnabled: v })}
+            />
+          </div>
           <div className="space-y-1.5">
             <Label className="text-xs text-muted-foreground">procurementProvider</Label>
             <select
@@ -140,7 +205,7 @@ export default function SettingsPage() {
               value={procProvider}
               onChange={(e) => {
                 const v = e.target.value as ProcurementProviderId;
-                setProcProvider(v); setProviderMode(v);
+                setProcProvider(v); setProviderMode(v); patchProcSettings({ procurementProvider: v });
                 toast.success(`provider 已切换：${v}`);
               }}
             >
@@ -152,8 +217,8 @@ export default function SettingsPage() {
             <Label className="text-xs text-muted-foreground">procurementApiBaseUrl / procurementHttpUrl</Label>
             <Input
               value={procHttpUrl}
-              onChange={(e) => setProcHttpUrl(e.target.value)}
-              onBlur={() => { setHttpUrl(procHttpUrl); }}
+              onChange={(e) => { setProcHttpUrl(e.target.value); patchProcSettings({ procurementApiBaseUrl: e.target.value }); }}
+              onBlur={() => { setHttpUrl(procHttpUrl); patchProcSettings({ procurementApiBaseUrl: procHttpUrl }); }}
               placeholder="https://example.com/procurement/search"
               disabled={procProvider !== "http"}
             />
@@ -166,7 +231,7 @@ export default function SettingsPage() {
                   const base = (import.meta as any).env?.VITE_SUPABASE_URL as string | undefined;
                   if (!base) { toast.error("未检测到 Cloud endpoint"); return; }
                   const u = `${base}/functions/v1/procurement-search-mock`;
-                  setProcHttpUrl(u); setHttpUrl(u);
+                  setProcHttpUrl(u); setHttpUrl(u); patchProcSettings({ procurementApiBaseUrl: u });
                   toast.success("已填入内置 mock endpoint");
                 }}
               >
@@ -176,15 +241,22 @@ export default function SettingsPage() {
                 type="button"
                 className="h-7 px-2 text-xs rounded border bg-background hover:bg-muted disabled:opacity-50"
                 disabled={procProvider !== "http"}
-                onClick={() => { setProcHttpUrl(""); setHttpUrl(""); toast.success("已清空 endpoint（下次将走 fallback-local）"); }}
+                onClick={() => { setProcHttpUrl(""); setHttpUrl(""); patchProcSettings({ procurementApiBaseUrl: "" }); toast.success("已清空 endpoint（下次将走 fallback-local）"); }}
               >
                 清空
               </button>
             </div>
             <p className="text-xs text-muted-foreground">
-              留空或不可达时自动回退 local。需先开启「采购候选商品 v1」flag。
+              留空或不可达时自动回退 local。正向验收请使用 <span className="font-mono">http</span> + 内置 mock endpoint。
             </p>
           </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <KV k="procurementCandidatesEnabled" v={String(procSettings.procurementCandidatesEnabled)} mono />
+            <KV k="procurementProviderEnabled" v={String(procSettings.procurementProviderEnabled)} mono />
+            <KV k="procurementExportAttachmentEnabled" v={String(procSettings.procurementExportAttachmentEnabled)} mono />
+            <KV k="procurementProvider" v={procProvider} mono />
+          </div>
+          <Button size="sm" onClick={save}>保存采购设置</Button>
         </div>
       </div>
 
@@ -244,6 +316,18 @@ function KV({ k, v, mono }: { k: string; v: React.ReactNode; mono?: boolean }) {
     <div className="border rounded px-2.5 py-1.5 bg-surface">
       <div className="text-[11px] text-muted-foreground">{k}</div>
       <div className={"text-sm break-all " + (mono ? "font-mono" : "")}>{v}</div>
+    </div>
+  );
+}
+
+function ProcSwitch({ label, desc, checked, onCheckedChange }: { label: string; desc: string; checked: boolean; onCheckedChange: (v: boolean) => void }) {
+  return (
+    <div className="flex items-center justify-between gap-3 border rounded px-2.5 py-2 bg-surface">
+      <div className="min-w-0 flex-1">
+        <div className="text-sm font-medium font-mono">{label}</div>
+        <div className="text-xs text-muted-foreground mt-0.5">{desc}</div>
+      </div>
+      <Switch checked={checked} onCheckedChange={onCheckedChange} />
     </div>
   );
 }
