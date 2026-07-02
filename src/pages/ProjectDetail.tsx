@@ -439,6 +439,7 @@ export default function ProjectDetail() {
         </div>
 
         <TabsContent value="plan" className="space-y-4 mt-4">
+          <h2 className="sr-only">服装总表工作区</h2>
           {!latest && (
             <div className="panel panel-body text-sm text-muted-foreground text-center py-10">
               尚未生成排产。点击右上角 <b>生成 Mock 排产</b>。<br />
