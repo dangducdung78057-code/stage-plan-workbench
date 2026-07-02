@@ -181,28 +181,31 @@ export default function ProjectDetail() {
   const stageLabel = SCHOOL_STAGES.find((s) => s.value === input?.schoolStage)?.label ?? "—";
 
   return (
-    <div className="p-6 space-y-4 max-w-6xl">
-      <div className="flex items-start justify-between">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <Button asChild variant="ghost" size="sm"><Link to="/projects"><ArrowLeft className="h-4 w-4 mr-1" />返回</Link></Button>
-            <h1 className="text-xl font-semibold">{project.title}</h1>
-            <StatusBadge status={project.status} />
+    <div className="p-4 md:p-6 space-y-4 max-w-6xl min-w-0">
+      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+        <div className="min-w-0 flex-1">
+          <div className="mb-1">
+            <Button asChild variant="ghost" size="sm" className="-ml-2 mb-1 md:mb-0 md:mr-1"><Link to="/projects"><ArrowLeft className="h-4 w-4 mr-1" />返回</Link></Button>
           </div>
-          <div className="text-xs text-muted-foreground font-mono">
+          <div className="flex flex-wrap items-center gap-2 mb-1 min-w-0">
+            <h1 className="text-lg md:text-xl font-semibold break-words leading-snug min-w-0 flex-1">{project.title}</h1>
+            <StatusBadge status={project.status} className="shrink-0" />
+          </div>
+          <div className="text-xs text-muted-foreground font-mono break-all">
             id: {project.id.slice(0, 8)} · 更新 {new Date(project.updated_at).toLocaleString("zh-CN", { hour12: false })}
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Button asChild variant="outline" size="sm"><Link to={`/projects/${id}/edit`}>编辑输入</Link></Button>
+        <div className="flex flex-col gap-2 w-full md:flex-row md:w-auto md:items-center md:shrink-0">
+          <Button asChild variant="outline" size="sm" className="w-full md:w-auto justify-center"><Link to={`/projects/${id}/edit`}>编辑输入</Link></Button>
           <Button
             size="sm"
             onClick={handleGenerate}
             disabled={busy}
             title={hasPrivacyConfirmation ? "生成 Mock 排产" : "请先完成用户/隐私确认"}
+            className="w-full md:w-auto justify-center"
           >
             <Sparkles className="h-4 w-4 mr-1" />生成 Mock 排产
-            {!hasPrivacyConfirmation && <span className="ml-2 kbd-route">需确认</span>}
+            {!hasPrivacyConfirmation && <span className="ml-2 kbd-route whitespace-nowrap">需确认</span>}
           </Button>
         </div>
       </div>
