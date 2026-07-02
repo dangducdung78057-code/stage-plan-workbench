@@ -23,7 +23,7 @@ const DEFAULTS: Record<FeatureFlag, boolean> = {
 
 export const FLAG_META: Record<FeatureFlag, { label: string; desc: string; wired: boolean }> = {
   markdownDownload: { label: "Markdown 真实下载", desc: "导出页启用 .md 文件浏览器下载。", wired: true },
-  pdfExport: { label: "PDF 导出（打印版）", desc: "通过浏览器打印对话框保存 PDF，中文安全。", wired: true },
+  pdfExport: { label: "PDF 导出（计划中 / 未启用）", desc: "PDF 导出暂未完成，请先下载 Markdown。", wired: false },
   pngExport: { label: "PNG 图片导出", desc: "计划中：排产快照渲染为 PNG。", wired: false },
   storageUpload: { label: "Storage 文件存储", desc: "计划中：Supabase Storage 持久化导出物。", wired: false },
   aiProvider: { label: "AI 生成 provider", desc: "计划中：替换 mockPlan.ts 为真实模型。", wired: false },
@@ -36,7 +36,7 @@ function read(): Record<FeatureFlag, boolean> {
   try {
     const raw = localStorage.getItem(KEY);
     if (!raw) return { ...DEFAULTS };
-    return { ...DEFAULTS, ...JSON.parse(raw) };
+    return { ...DEFAULTS, ...JSON.parse(raw), pdfExport: false };
   } catch {
     return { ...DEFAULTS };
   }
@@ -47,7 +47,7 @@ export function getFlag(f: FeatureFlag): boolean {
 }
 
 export function setFlag(f: FeatureFlag, v: boolean) {
-  const next = { ...read(), [f]: v };
+  const next = { ...read(), [f]: f === "pdfExport" ? false : v };
   localStorage.setItem(KEY, JSON.stringify(next));
   window.dispatchEvent(new CustomEvent("stageos:flags"));
 }
