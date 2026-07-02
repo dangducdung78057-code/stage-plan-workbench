@@ -28,10 +28,15 @@ jobs:
             ${{ runner.os }}-bun-
 
       - name: Cache node_modules
+        id: node_modules_cache
         uses: actions/cache@v4
         with:
           path: node_modules
-          key: ${{ runner.os }}-node_modules-${{ hashFiles('bun.lock', 'bun.lockb') }}
+          # 精确 key 命中时可完全跳过 install;否则回退到最近一次同 OS 的 node_modules
+          # 作为增量起点,再由 bun install 补齐差异。
+          key: ${{ runner.os }}-node_modules-${{ hashFiles('bun.lock', 'bun.lockb', 'package.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node_modules-
 
       - name: Cache Vite build cache
         uses: actions/cache@v4
@@ -41,8 +46,13 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-vite-
 
-      - name: Install dependencies
+      - name: Install dependencies (skip if node_modules cache hit exactly)
+        if: steps.node_modules_cache.outputs.cache-hit != 'true'
         run: bun install --frozen-lockfile
+
+      - name: Verify install (cache hit)
+        if: steps.node_modules_cache.outputs.cache-hit == 'true'
+        run: bun install --frozen-lockfile --no-progress --production=false --dry-run || bun install --frozen-lockfile
 
       - name: Type check
         run: bunx tsgo --noEmit
