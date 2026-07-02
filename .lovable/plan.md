@@ -1,27 +1,60 @@
-## 现象
-刷新后手机白屏，控制台空白。本地 headless 验证应用能正常渲染到 `/auth`，说明代码没崩，是**兜底 UI 不足**加上**预览域名鉴权**共同造成的观感白屏。
 
-## 可能原因
-1. Lovable 的 `id-preview--*.lovable.app` 预览链接需要在同一浏览器中登录 Lovable 账号；未登录时会看到接近空白的中间页。这不是应用 bug，请在手机浏览器里先登录一次 Lovable。
-2. `AuthProvider` 首次拉 session 期间，`ProtectedRoute` / `Auth` 只渲染一行「加载中…」的小字，手机上视觉上接近白屏。
-3. 全应用没有顶层 ErrorBoundary，任何渲染期异常直接空 body，控制台里在生产 preview 里也未必看得到。
+## Scope
 
-## 计划改动（仅前端表现层）
+Upgrade `src/pages/Exports.tsx` so existing `export_records` rows can be downloaded as real `.md` and `.pdf` files. No changes to project creation, confirmation, mock generation, or the export-record persistence flow. No new tables, no new edge functions.
 
-1. **顶层加载兜底**：`src/hooks/useAuth.tsx` 保持逻辑不变；在 `src/components/ProtectedRoute.tsx` 与 `src/pages/Auth.tsx` 里把 loading 态换成全屏居中的骨架：StageOS logo + 「正在恢复会话…」+ spinner，覆盖 `min-h-screen bg-background`，避免手机上像白屏。
+## 1. Feature flag
 
-2. **全局错误边界**：新增 `src/components/RootErrorBoundary.tsx`（class 组件），在 `src/App.tsx` 里包住 `<BrowserRouter>`。捕获后展示：错误摘要 + 「刷新」+「清除本地会话并重试」按钮（后者调用 `localStorage.clear()` 再 `location.reload()`，可自救 supabase token 损坏导致的死循环）。
+New file `src/lib/featureFlags.ts` — reads flags from `localStorage` with defaults `false`. Flags: `pdfExport`, `markdownDownload`, `pngExport`, `storageUpload`, `aiProvider`, `payments`, `procurement`.
 
-3. **Auth 初始化超时保护**：`useAuth` 里给 `getSession()` 增加 6 秒超时，超时后强制 `setLoading(false)`（视为未登录，让路由跳转到 `/auth`），避免网络抖动时永久停在 loading。
+In `src/pages/Settings.tsx`, add a "分支能力开关 (v2.x)" panel with toggles that write to the same localStorage keys. Only `markdownDownload` and `pdfExport` are wired this turn; the other four are visible but disabled with a "计划中" tag. Main flow stays on baseline when flags are off.
 
-4. **`/index` 兼容**：当前 `/index` 会命中 NotFound。加一条 `<Route path="/index" element={<Navigate to="/" replace />} />`，避免旧链接被记住时看到 404 觉得像白屏。
+## 2. Markdown download
 
-5. **不改动**：认证/RLS/edge function/数据库结构 —— 保持 v2 后端化不变。
+- Compose Markdown text from the existing `payload` on the record. If `format === 'markdown'`, use `payload` directly; if `format === 'json'`, parse and pass through the same renderer used below so JSON records also produce a usable `.md`.
+- New helper `src/lib/exportRender.ts` with `renderMarkdown(payload, project)` producing sections: 项目信息 / 匿名学生数据 / 服装方案 / 风险列表 / Plan B / 倒排时间表 / 采购搜索建议 / mock 声明 / 隐私声明摘要. Missing sections render as `_（本快照缺少此字段）_` — never throw.
+- Filename: `stageos-{slug(projectTitle)}-v{version}-{yyyyMMddHHmm}.md`. `slug()` strips whitespace/punct and falls back to `project_id.slice(0,8)`.
+- Download via `Blob([text], { type: 'text/markdown;charset=utf-8' })` + object URL + `a.download` + `URL.revokeObjectURL`.
 
-## 用户侧建议（非代码）
-- 手机浏览器先访问 `lovable.dev` 登录一次，再打开预览链接。
-- 若仍白屏，长按刷新或访问 `/auth`，走新的错误边界的「清除本地会话并重试」按钮。
+## 3. PDF download (print-window fallback approach)
 
-## 验收
-- headless playwright 访问 `/`、`/index`、`/projects`：都能看到 loading 骨架或跳转到 `/auth`，不再有 body 为空的情况。
-- 手动在 localStorage 塞一个坏的 `sb-*-auth-token` 后刷新，应能看到错误边界界面而不是白屏。
+Chinese-safe strategy: skip jsPDF/embedded fonts entirely. Render the Markdown-derived content into a hidden `<iframe>` with a print-friendly HTML template using system Chinese fonts (`-apple-system, "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif`), then call `iframe.contentWindow.print()`. User picks "另存为 PDF" from the browser print dialog. This guarantees horizontal Chinese, no bundled commercial fonts, no font-license risk.
+
+- Helper `src/lib/exportRender.ts` → `renderPrintableHtml(payload, project, { title })`. Returns a full HTML doc with `<title>` matching the target PDF filename so most browsers default the save filename.
+- Trigger: `openPrintWindow(html)` creates a same-origin `<iframe>` appended off-screen, writes HTML, waits for `load`, calls `print()`, removes the iframe after `afterprint`.
+- If `window.print` is unavailable or throws (rare in-app webview), catch and toast: `"PDF 生成失败，请先下载 Markdown。"`
+- No jsPDF dependency added.
+
+## 4. Ownership + auth guard
+
+- `Exports.tsx` already relies on RLS (`export_records` policies scope to `auth.uid()`), so the initial `select *` only returns rows the user owns. Keep it.
+- Before any download, re-check: `supabase.auth.getUser()` — if null, toast "请先登录" and abort.
+- Additionally re-verify project ownership at click time by selecting `projects.user_id where id = row.project_id` and comparing to `user.id`; if mismatch or no row, toast "无权下载此记录" and abort. This defends against a stale row from a client-side tampered state.
+- No `download` action is written to `export_records` (per spec: "不一定新增"). Choose not to insert to keep the record list clean; downloads are ephemeral.
+
+## 5. Empty-payload + error UX
+
+- If `!row.payload || row.payload.length === 0`: toast "暂无可下载载荷，请先导出。" and abort.
+- All handlers wrapped in `try/catch` → `toast.error(...)`; never re-throw. RootErrorBoundary stays quiet.
+
+## 6. UI changes (Exports.tsx only)
+
+Desktop table row action cell — replace single "查看" button with a compact button group: `查看` / `下载 MD` / `下载 PDF`. Flag-gated buttons hide when their flag is off. Buttons visible only when `pdfExport`/`markdownDownload` are enabled in Settings.
+
+Mobile `MobileCard` footer — replace single link with a vertical stack of full-width buttons: `查看载荷` / `下载 Markdown` / `下载 PDF`. Uses `flex flex-col gap-2` so nothing gets truncated at 376px width. Version / time / size fields unchanged.
+
+## 7. Acceptance walkthrough
+
+1. Toggle both flags on in Settings → return to `/exports`.
+2. Click `下载 MD` on a markdown record → `.md` file downloads with all 9 sections; Chinese renders horizontally in any editor.
+3. Click `下载 PDF` → print dialog opens with rendered Chinese content; "另存为 PDF" produces a valid PDF.
+4. Sign out → visiting `/exports` redirects to `/auth` (existing `ProtectedRoute`).
+5. Sign in as account B → account A's rows are not listed (RLS) and even if forged, ownership recheck aborts the download.
+6. Refresh → records persist (unchanged storage).
+7. Project create / confirm / generate / snapshot / export flows untouched.
+
+## Technical notes
+
+- No new npm packages. No new tables. No new edge function.
+- Files touched: `src/pages/Exports.tsx`, `src/pages/Settings.tsx`, new `src/lib/featureFlags.ts`, new `src/lib/exportRender.ts`.
+- `src/lib/stageos.ts` `STAGEOS_VERSION` unchanged — this is an additive branch feature, not a baseline bump.
