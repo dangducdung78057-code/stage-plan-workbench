@@ -547,6 +547,19 @@ export function HealthCheck() {
         newRunId = (inserted as any)?.id ?? null;
         setLastRunId(newRunId);
         void loadRecent();
+        const { dispatchWebhook } = await import("@/lib/webhook");
+        dispatchWebhook("audit.completed", {
+          project_id: null,
+          summary: {
+            run_id: newRunId,
+            baseline: STAGEOS_VERSION,
+            route: typeof window !== "undefined" ? window.location.pathname : null,
+            pass: summaryLocal.pass ?? 0,
+            warn: summaryLocal.warn ?? 0,
+            fail: summaryLocal.fail ?? 0,
+            skip: summaryLocal.skip ?? 0,
+          },
+        });
       } catch {
         /* non-fatal */
       }
