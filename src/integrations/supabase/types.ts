@@ -116,8 +116,11 @@ export type Database = {
           created_at: string
           fail_count: number
           id: string
+          is_release: boolean
           items: Json
           pass_count: number
+          release_note: string | null
+          released_at: string | null
           route: string | null
           skip_count: number
           summary: Json
@@ -130,8 +133,11 @@ export type Database = {
           created_at?: string
           fail_count?: number
           id?: string
+          is_release?: boolean
           items?: Json
           pass_count?: number
+          release_note?: string | null
+          released_at?: string | null
           route?: string | null
           skip_count?: number
           summary?: Json
@@ -144,8 +150,11 @@ export type Database = {
           created_at?: string
           fail_count?: number
           id?: string
+          is_release?: boolean
           items?: Json
           pass_count?: number
+          release_note?: string | null
+          released_at?: string | null
           route?: string | null
           skip_count?: number
           summary?: Json
