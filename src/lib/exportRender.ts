@@ -740,7 +740,13 @@ function stripHtml(html: string) {
 }
 
 export function downloadBlob(content: string, filename: string, mime: string) {
-  const blob = new Blob([content], { type: mime });
+  // Force UTF-8 with BOM for text formats (markdown/csv/txt) so Windows / mobile
+  // editors don't fall back to GBK and render 中文 as "锟斤拷" / "�".
+  const isText = /^text\//i.test(mime) || /markdown|csv|plain/i.test(mime);
+  const needsBom = isText && !content.startsWith("\uFEFF");
+  const body = needsBom ? "\uFEFF" + content : content;
+  const type = /charset=/i.test(mime) ? mime : `${mime};charset=utf-8`;
+  const blob = new Blob([body], { type });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
