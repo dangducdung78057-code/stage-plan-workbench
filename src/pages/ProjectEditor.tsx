@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   SCHOOL_STAGES, PROGRAM_TYPES, REHEARSAL_FREQUENCIES,
-  validateStageInputDetailed, type StageInputData,
+  validateStageInputDetailed, appendValidationHistory, type StageInputData,
 } from "@/lib/stageos";
 import { toast } from "sonner";
 import { Plus, Trash2, ArrowLeft, AlertTriangle, AlertCircle } from "lucide-react";
@@ -70,7 +70,13 @@ export default function ProjectEditor() {
         errors,
         warnings,
       };
-      const persistedData = { ...data, __validation: validationSnapshot } as StageInputData & { __validation: typeof validationSnapshot };
+      // Load previous stage_inputs so we can append to __validationHistory instead of overwriting.
+      let prevData: StageInputData | null = null;
+      if (isEdit && id) {
+        const { data: prev } = await supabase.from("stage_inputs").select("data").eq("project_id", id).maybeSingle();
+        prevData = (prev?.data as StageInputData) ?? null;
+      }
+      const persistedData = appendValidationHistory(prevData ?? data, validationSnapshot);
       if (isEdit && id) {
         await supabase.from("projects").update({
           title, status,
