@@ -8,10 +8,12 @@ import { useFlags } from "@/lib/featureFlags";
 import {
   buildFilename,
   renderMarkdown,
+  renderPrintableHtml,
   downloadBlob,
+  downloadPdf,
 } from "@/lib/exportRender";
 import { toast } from "sonner";
-import { FileDown, Eye, Loader2 } from "lucide-react";
+import { FileDown, Eye, Loader2, FileText } from "lucide-react";
 
 type Row = {
   id: string; project_id: string; version: number; format: string;
