@@ -541,6 +541,7 @@ export default function ProjectDetail() {
         </TabsContent>
 
         <TabsContent value="export" className="space-y-4 mt-4">
+          <h2 className="sr-only">导出</h2>
           <div className="panel">
             <div className="panel-header">
               <h3 className="text-sm font-semibold">导出</h3>
