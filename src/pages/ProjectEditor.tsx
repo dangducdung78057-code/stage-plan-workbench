@@ -319,7 +319,7 @@ export default function ProjectEditor() {
         </div>
       </div>
 
-      <div className="panel">
+      <div className="panel scroll-mt-24" id="field-students" data-field="students">
         <div className="panel-header">
           <div className="flex items-center gap-2">
             <h2 className="text-sm font-semibold">学生名录(匿名)</h2>
