@@ -4,7 +4,13 @@ import { Button } from "@/components/ui/button";
 import { ToneBadge } from "@/components/StatusBadge";
 import { type PlanItem, type MatchContext } from "@/lib/procurementMatch";
 import { PLATFORM_LABELS, type Candidate } from "@/lib/procurementCatalog";
-import { searchWithFallback, type ProcurementProviderId } from "@/lib/procurementProvider";
+import { searchWithFallback, type ProviderDisplayId, type ProviderWarningCode } from "@/lib/procurementProvider";
+
+const PROVIDER_BADGE: Record<ProviderDisplayId, { label: string; tone: "success" | "info" | "warning" }> = {
+  local: { label: "本地目录", tone: "success" },
+  http: { label: "HTTP", tone: "info" },
+  "fallback-local": { label: "fallback-local", tone: "warning" },
+};
 
 export function ProcurementCandidatesToggle({
   item, ctx,
@@ -12,9 +18,10 @@ export function ProcurementCandidatesToggle({
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [candidates, setCandidates] = useState<Candidate[]>([]);
-  const [providerId, setProviderId] = useState<ProcurementProviderId>("local");
-  const [usedFallback, setUsedFallback] = useState(false);
+  const [providerId, setProviderId] = useState<ProviderDisplayId>("local");
+  const [fallbackUsed, setFallbackUsed] = useState(false);
   const [warning, setWarning] = useState<string | undefined>();
+  const [warningCode, setWarningCode] = useState<ProviderWarningCode | undefined>();
 
   useEffect(() => {
     if (!open) return;
@@ -24,12 +31,15 @@ export function ProcurementCandidatesToggle({
       if (cancelled) return;
       setCandidates(r.candidates);
       setProviderId(r.providerId);
-      setUsedFallback(r.usedFallback);
+      setFallbackUsed(r.fallbackUsed);
       setWarning(r.warning);
+      setWarningCode(r.warningCode);
       setLoading(false);
     });
     return () => { cancelled = true; };
   }, [open]);
+
+  const badge = PROVIDER_BADGE[providerId];
 
   return (
     <>
@@ -46,16 +56,18 @@ export function ProcurementCandidatesToggle({
       </Button>
       {open && (
         <div className="mt-2 space-y-2 rounded-md border border-dashed border-border bg-muted/30 p-2">
-          <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+          <div className="flex items-center gap-2 text-[11px] text-muted-foreground flex-wrap">
             <span>来源</span>
-            <ToneBadge tone={providerId === "http" ? "info" : "success"}>
-              {providerId === "http" ? "HTTP" : "本地目录"}
-            </ToneBadge>
-            {usedFallback && <ToneBadge tone="warning">已回退</ToneBadge>}
+            <ToneBadge tone={badge.tone}>{badge.label}</ToneBadge>
+            {fallbackUsed && warningCode && (
+              <ToneBadge tone="warning">{warningCode}</ToneBadge>
+            )}
             {loading && <span>加载中…</span>}
           </div>
-          {warning && (
-            <div className="text-[11px] text-amber-600 dark:text-amber-400">{warning}</div>
+          {fallbackUsed && (
+            <div className="rounded border border-amber-500/40 bg-amber-500/5 px-2 py-1.5 text-[11px] text-amber-700 dark:text-amber-400">
+              {warning ?? "远程采购 provider 不可用，已回退到本地候选目录。"}
+            </div>
           )}
           {candidates.map((c, i) => (
             <div key={i} className="rounded border border-border bg-background p-2 text-xs">
@@ -95,7 +107,7 @@ export function ProcurementDisclaimer() {
       <div className="panel-body flex items-start gap-2 text-xs">
         <ShoppingBag className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
         <div className="text-muted-foreground">
-          <strong className="text-foreground">采购候选 v3.0 · 只读</strong>：候选商品为模拟/检索建议，非实时库存价格，需人工核验。不自动下单、不承诺库存或价格。
+          <strong className="text-foreground">采购候选 v3.1 · 只读</strong>：候选商品为模拟/检索建议，非实时库存价格，需人工核验。不自动下单、不承诺库存或价格。远程 provider 失败时会自动回退到本地目录。
         </div>
       </div>
     </div>
