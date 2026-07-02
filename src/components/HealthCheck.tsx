@@ -283,7 +283,7 @@ export function HealthCheck() {
     // 8. settings 全局配置
     try {
       const { result, ms } = await timed(async () => await (
-        supabase.from("settings").select("*").eq("id", "global").maybeSingle())
+        supabase.from("settings").select("id,api_mode,api_base_url,procurement_candidates_enabled,procurement_provider_enabled,procurement_export_attachment_enabled,procurement_provider,procurement_api_base_url").eq("id", "global").maybeSingle())
       );
       if (result.error) push({ id: "settings", label: "全局设置读取", status: "fail", detail: result.error.message, ms });
       else {

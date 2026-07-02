@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { SETTINGS_SAFE_COLUMNS } from "@/lib/settingsColumns";
 
 export type ProcurementSettings = {
   procurementCandidatesEnabled: boolean;
@@ -64,7 +65,7 @@ export function saveLocalProcurementSettings(settings: ProcurementSettings, noti
 export async function readProcurementSettings(): Promise<{ settings: ProcurementSettings; source: "global" | "local"; error?: string }> {
   const local = readLocalProcurementSettings();
   try {
-    const { data, error } = await supabase.from("settings").select("*").eq("id", "global").maybeSingle();
+    const { data, error } = await supabase.from("settings").select(SETTINGS_SAFE_COLUMNS).eq("id", "global").maybeSingle();
     if (error) return { settings: local, source: "local", error: error.message };
     if (!data) return { settings: local, source: "local" };
     const settings = normalizeProcurementSettings(data, local);

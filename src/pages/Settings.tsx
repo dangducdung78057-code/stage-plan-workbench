@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { SETTINGS_SAFE_COLUMNS } from "@/lib/settingsColumns";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -42,16 +43,19 @@ export default function SettingsPage() {
 
   useEffect(() => {
     (async () => {
-      const { data } = await supabase.from("settings").select("*").eq("id", "global").maybeSingle();
+      const { data } = await supabase.from("settings").select(SETTINGS_SAFE_COLUMNS).eq("id", "global").maybeSingle();
       if (data) {
-        setApiMode(data.api_mode);
-        setApiBaseUrl(data.api_base_url ?? "");
-        const nextProc = normalizeProcurementSettings(data, readLocalProcurementSettings());
+        const row = data as any;
+        setApiMode(row.api_mode);
+        setApiBaseUrl(row.api_base_url ?? "");
+        const nextProc = normalizeProcurementSettings(row, readLocalProcurementSettings());
         setProcSettings(nextProc);
         setProcProvider(nextProc.procurementProvider);
         setProcHttpUrl(nextProc.procurementApiBaseUrl);
         saveLocalProcurementSettings(nextProc, false);
-        const nextWebhook = normalizeWebhookSettings(data, readLocalWebhookSettings());
+        // webhook_secret is admin-only — fetch via secure RPC (null for non-admins).
+        const { data: secret } = await supabase.rpc("get_webhook_secret" as any);
+        const nextWebhook = normalizeWebhookSettings({ ...row, webhook_secret: secret ?? "" }, readLocalWebhookSettings());
         setWebhook(nextWebhook);
         saveLocalWebhookSettings(nextWebhook);
       }
@@ -128,9 +132,11 @@ export default function SettingsPage() {
         webhook_enabled: webhook.webhookEnabled,
         webhook_url: webhook.webhookUrl || null,
         webhook_events: webhook.webhookEvents,
-        webhook_secret: webhook.webhookSecret || null,
       } as any);
       if (error) { toast.error(`Webhook 保存失败：${error.message}`); return; }
+      // webhook_secret is admin-only — save via secure RPC. Non-admins get a permission error.
+      const { error: secErr } = await supabase.rpc("set_webhook_secret" as any, { _secret: webhook.webhookSecret || "" });
+      if (secErr) { toast.error(`签名密钥保存失败：${secErr.message}`); return; }
       toast.success("Webhook 设置已保存");
     } finally { setWebhookSaving(false); }
   }
