@@ -42,6 +42,24 @@ type PrecheckResult = {
   issues?: string[];
 };
 
+// Map a validation message to the offending StageInputData field (best-effort, keyword-based).
+function locateValidationField(msg: string): { field: string; label: string } | null {
+  const rules: Array<{ re: RegExp; field: string; label: string }> = [
+    { re: /performerCount|总人数/, field: "performerCount", label: "总人数" },
+    { re: /maleCount|男生数|男\(/, field: "maleCount", label: "男生数" },
+    { re: /femaleCount|女生数|女\(/, field: "femaleCount", label: "女生数" },
+    { re: /人均预算|perPersonBudget/, field: "perPersonBudget", label: "人均预算" },
+    { re: /彩排频次|rehearsalFrequency/, field: "rehearsalFrequencyPerWeek", label: "彩排频次" },
+    { re: /studentId/, field: "students.studentId", label: "学生编号" },
+    { re: /heightCm/, field: "students.heightCm", label: "身高" },
+    { re: /性别分布|gender/, field: "students.gender", label: "学生性别" },
+    { re: /学生行数/, field: "students", label: "学生名单" },
+  ];
+  for (const r of rules) if (r.re.test(msg)) return { field: r.field, label: r.label };
+  return null;
+}
+
+
 export default function ProjectDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -592,16 +610,40 @@ export default function ProjectDetail() {
                 {confirmPreview && confirmPreview.errors.length > 0 && (
                   <div>
                     <div className="font-medium text-destructive mb-1">错误({confirmPreview.errors.length})</div>
-                    <ul className="list-disc pl-5 space-y-0.5">
-                      {confirmPreview.errors.map((e) => <li key={`e-${e}`} className="text-destructive">{e}</li>)}
+                    <ul className="space-y-1">
+                      {confirmPreview.errors.map((e) => {
+                        const loc = locateValidationField(e);
+                        return (
+                          <li key={`e-${e}`} className="text-destructive flex flex-wrap gap-1 items-start">
+                            {loc && (
+                              <span className="inline-block rounded bg-destructive/15 text-destructive px-1.5 py-0.5 text-[10px] font-mono shrink-0">
+                                {loc.label}·{loc.field}
+                              </span>
+                            )}
+                            <span className="flex-1">{e}</span>
+                          </li>
+                        );
+                      })}
                     </ul>
                   </div>
                 )}
                 {confirmPreview && confirmPreview.warnings.length > 0 && (
                   <div>
                     <div className="font-medium text-warning mb-1">提示({confirmPreview.warnings.length})</div>
-                    <ul className="list-disc pl-5 space-y-0.5">
-                      {confirmPreview.warnings.map((w) => <li key={`w-${w}`} className="text-warning">{w}</li>)}
+                    <ul className="space-y-1">
+                      {confirmPreview.warnings.map((w) => {
+                        const loc = locateValidationField(w);
+                        return (
+                          <li key={`w-${w}`} className="text-warning flex flex-wrap gap-1 items-start">
+                            {loc && (
+                              <span className="inline-block rounded bg-warning/15 text-warning px-1.5 py-0.5 text-[10px] font-mono shrink-0">
+                                {loc.label}·{loc.field}
+                              </span>
+                            )}
+                            <span className="flex-1">{w}</span>
+                          </li>
+                        );
+                      })}
                     </ul>
                   </div>
                 )}
