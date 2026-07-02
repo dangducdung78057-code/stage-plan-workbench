@@ -335,7 +335,7 @@ function PlanView({ snapshot }: { snapshot: Snapshot }) {
   const search = (snapshot.platform_search ?? []) as any[];
   return (
     <>
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         <PlanTable title="女生方案 femalePlan" rows={plan.femalePlan} />
         <PlanTable title="男生方案 malePlan" rows={plan.malePlan} />
         <PlanTable title="配饰 accessories" rows={plan.accessories} />
