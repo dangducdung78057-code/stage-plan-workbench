@@ -280,6 +280,10 @@ export default function Exports() {
       setTimeout(() => URL.revokeObjectURL(url), 1000);
       toast.success("PDF 已生成并下载（实验版）");
       await maybeUploadToStorage(row, "pdf", blob, "application/pdf");
+      dispatchWebhook("export.created", {
+        project_id: row.project_id,
+        summary: { format: "pdf", version: row.version, snapshot_id: row.snapshot_id, bytes: blob.size, export_id: row.id },
+      });
     } catch (e: any) {
       console.error(e);
       const msg = String(e?.message ?? "");
