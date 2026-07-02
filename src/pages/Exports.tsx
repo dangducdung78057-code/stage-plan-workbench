@@ -27,7 +27,7 @@ export default function Exports() {
   }, []);
 
   return (
-    <div className="p-6 space-y-4">
+    <div className="p-4 md:p-6 space-y-4">
       <div>
         <h1 className="text-xl font-semibold">导出记录</h1>
         <p className="text-sm text-muted-foreground">所有历史导出的 JSON / Markdown 载荷。</p>
@@ -37,7 +37,7 @@ export default function Exports() {
           <h2 className="text-sm font-semibold">全部记录</h2>
           <span className="kbd-route">GET /export</span>
         </div>
-        <table className="ops-table">
+        <div className="overflow-x-auto"><table className="ops-table">
           <thead>
             <tr>
               <th>项目</th><th>版本</th><th>格式</th><th>时间</th><th>大小</th><th className="w-24">操作</th>
@@ -56,7 +56,7 @@ export default function Exports() {
               </tr>
             ))}
           </tbody>
-        </table>
+        </table></div>
       </div>
       <Dialog open={!!open} onOpenChange={(o) => !o && setOpen(null)}>
         <DialogContent className="max-w-3xl max-h-[80vh] overflow-auto">
