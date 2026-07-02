@@ -36,6 +36,20 @@ export default function ProjectEditor() {
 
   const { errors, warnings } = validateStageInputDetailed(data);
 
+  // 字段级联动提示:根据关键字把整体 errors/warnings 分派到对应输入下方。
+  const pickHints = (keywords: string[]) => ({
+    errors: errors.filter((m) => keywords.some((k) => m.includes(k))),
+    warnings: warnings.filter((m) => keywords.some((k) => m.includes(k))),
+  });
+  const hints = {
+    performerCount: pickHints(["performerCount", "总人数", "人数校验", "学生行数"]),
+    maleCount: pickHints(["maleCount", "男生", "人数校验", "性别分布"]),
+    femaleCount: pickHints(["femaleCount", "女生", "人数校验", "性别分布"]),
+    perPersonBudget: pickHints(["人均预算", "perPersonBudget"]),
+    rehearsal: pickHints(["彩排频次", "rehearsalFrequency"]),
+    students: pickHints(["studentId", "heightCm", "学生行数", "性别分布"]),
+  };
+
   const set = <K extends keyof StageInputData>(k: K, v: StageInputData[K]) =>
     setData((d) => ({ ...d, [k]: v }));
 
@@ -166,7 +180,7 @@ export default function ProjectEditor() {
           <Field label="演出日期">
             <Input type="date" value={data.performanceDate ?? ""} onChange={(e) => set("performanceDate", e.target.value)} />
           </Field>
-          <Field label="彩排频次(次/周)">
+          <Field label="彩排频次(次/周)" hint={hints.rehearsal}>
             <Select value={String(data.rehearsalFrequencyPerWeek ?? "")} onValueChange={(v) => set("rehearsalFrequencyPerWeek", Number(v) as 2|3|5)}>
               <SelectTrigger><SelectValue placeholder="选择彩排频次" /></SelectTrigger>
               <SelectContent>{REHEARSAL_FREQUENCIES.map((n) => <SelectItem key={n} value={String(n)}>{n} 次/周</SelectItem>)}</SelectContent>
@@ -190,20 +204,21 @@ export default function ProjectEditor() {
       <div className="panel">
         <div className="panel-header"><h2 className="text-sm font-semibold">人数与预算</h2></div>
         <div className="panel-body grid grid-cols-4 gap-4">
-          <Field label="总人数 performerCount">
+          <Field label="总人数 performerCount" hint={hints.performerCount}>
             <Input type="number" value={data.performerCount ?? ""} onChange={(e) => set("performerCount", e.target.value ? Number(e.target.value) : undefined)} />
           </Field>
-          <Field label="男生数 maleCount">
+          <Field label="男生数 maleCount" hint={hints.maleCount}>
             <Input type="number" value={data.maleCount ?? ""} onChange={(e) => set("maleCount", e.target.value ? Number(e.target.value) : undefined)} />
           </Field>
-          <Field label="女生数 femaleCount">
+          <Field label="女生数 femaleCount" hint={hints.femaleCount}>
             <Input type="number" value={data.femaleCount ?? ""} onChange={(e) => set("femaleCount", e.target.value ? Number(e.target.value) : undefined)} />
           </Field>
-          <Field label="人均预算 (元)">
+          <Field label="人均预算 (元)" hint={hints.perPersonBudget}>
             <Input type="number" value={data.perPersonBudget ?? ""} onChange={(e) => set("perPersonBudget", e.target.value ? Number(e.target.value) : undefined)} />
           </Field>
         </div>
       </div>
+
 
       <div className="panel">
         <div className="panel-header"><h2 className="text-sm font-semibold">视觉与期待</h2></div>
@@ -253,7 +268,14 @@ export default function ProjectEditor() {
           </div>
           <Button variant="outline" size="sm" onClick={addStudent}><Plus className="h-3.5 w-3.5 mr-1" />添加</Button>
         </div>
+        {(hints.students.errors.length > 0 || hints.students.warnings.length > 0) && (
+          <div className="px-4 pt-2 space-y-0.5">
+            {hints.students.errors.map((m) => <div key={`se-${m}`} className="text-[11px] text-destructive">• {m}</div>)}
+            {hints.students.warnings.map((m) => <div key={`sw-${m}`} className="text-[11px] text-warning">• {m}</div>)}
+          </div>
+        )}
         <div className="overflow-x-auto">
+
           <table className="ops-table">
             <thead>
               <tr>
@@ -292,13 +314,33 @@ export default function ProjectEditor() {
   );
 }
 
-function Field({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
+function Field({
+  label, required, children, hint,
+}: {
+  label: string;
+  required?: boolean;
+  children: React.ReactNode;
+  hint?: { errors: string[]; warnings: string[] };
+}) {
+  const hasErr = (hint?.errors.length ?? 0) > 0;
+  const hasWarn = (hint?.warnings.length ?? 0) > 0;
   return (
     <div className="space-y-1.5">
-      <Label className="text-xs text-muted-foreground">
+      <Label className={`text-xs ${hasErr ? "text-destructive" : hasWarn ? "text-warning" : "text-muted-foreground"}`}>
         {label}{required && <span className="text-destructive ml-0.5">*</span>}
       </Label>
       {children}
+      {hasErr && (
+        <ul className="text-[11px] text-destructive space-y-0.5">
+          {hint!.errors.map((m) => <li key={`e-${m}`}>• {m}</li>)}
+        </ul>
+      )}
+      {hasWarn && (
+        <ul className="text-[11px] text-warning space-y-0.5">
+          {hint!.warnings.map((m) => <li key={`w-${m}`}>• {m}</li>)}
+        </ul>
+      )}
     </div>
   );
 }
+
