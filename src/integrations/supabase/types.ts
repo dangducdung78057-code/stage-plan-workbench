@@ -434,7 +434,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      sync_pdf_capability: {
+        Args: { p_enabled: boolean; p_notes: string; p_status: string }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never
