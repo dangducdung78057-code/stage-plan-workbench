@@ -207,25 +207,46 @@ export function HealthCheck() {
       projectTitle: "健康检查样本", version: 0, createdAt: new Date().toISOString(), filenameTitle: "healthcheck",
     });
 
-    // 11. PDF 导出：flag off 时 skip；开启时必须 HTML 校验通过且生成非空 blob
+    // 11. PDF 导出 (v3.4 三态): 显式 PASS/SKIP/WARN + 原因
+    let pdfDetail: { status: Status; reason: string; detail: string };
     if (!getFlag("pdfExport")) {
-      push({ id: "pdf", label: "PDF 导出（实验版）", status: "skip", detail: "flag off" });
+      pdfDetail = {
+        status: "skip",
+        reason: "PDF disabled by config",
+        detail: "pdfExport flag 未开启（Settings → 分支能力开关）",
+      };
     } else if (!validatePrintableHtml(sampleHtml)) {
-      push({ id: "pdf", label: "PDF 导出（实验版）", status: "fail", detail: "printable html invalid" });
+      pdfDetail = {
+        status: "warn",
+        reason: "PDF generation failed",
+        detail: "printable html invalid",
+      };
     } else {
       try {
         const { result, ms } = await timed(async () => await renderPdfBlob(sampleHtml));
-        push({
-          id: "pdf",
-          label: "PDF 导出（实验版）",
-          status: result && result.size > 1024 ? "pass" : "fail",
-          detail: `bytes=${result?.size ?? 0}`,
-          ms,
-        });
+        const bytes = result?.size ?? 0;
+        if (result && bytes > 1024) {
+          pdfDetail = { status: "pass", reason: "PDF success", detail: `bytes=${bytes}` };
+          push({ id: "pdf", label: "PDF 导出（实验版）", status: "pass", detail: `PDF success — bytes=${bytes}`, ms });
+        } else {
+          pdfDetail = { status: "warn", reason: "PDF generation failed", detail: `bytes=${bytes}` };
+          push({ id: "pdf", label: "PDF 导出（实验版）", status: "warn", detail: `PDF generation failed — bytes=${bytes}`, ms });
+        }
       } catch (e: any) {
-        push({ id: "pdf", label: "PDF 导出（实验版）", status: "fail", detail: e?.message });
+        pdfDetail = { status: "warn", reason: "PDF generation failed", detail: e?.message ?? "unknown error" };
+        push({ id: "pdf", label: "PDF 导出（实验版）", status: "warn", detail: `PDF generation failed — ${e?.message ?? "unknown error"}` });
       }
     }
+    if (pdfDetail.status !== "pass") {
+      push({
+        id: "pdf",
+        label: "PDF 导出（实验版）",
+        status: pdfDetail.status,
+        detail: `${pdfDetail.reason} — ${pdfDetail.detail}`,
+      });
+    }
+    (checks as any).__pdfDetail = pdfDetail;
+
 
     // 11b. PNG 导出：实际渲染一次非空 blob 且 printable HTML 内容完整（项目标题/方案表格/风险/隐私声明）才 pass
     if (!getFlag("pngExport")) {
