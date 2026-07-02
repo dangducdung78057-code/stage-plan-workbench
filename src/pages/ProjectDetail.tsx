@@ -17,6 +17,8 @@ import {
 } from "lucide-react";
 import { MobileCard, MobileCardList, MobileField } from "@/components/MobileCard";
 import { renderMarkdown } from "@/lib/exportRender";
+import { ProcurementCandidatesToggle, ProcurementDisclaimer } from "@/components/ProcurementCandidatesRow";
+import type { MatchContext } from "@/lib/procurementMatch";
 
 type Project = { id: string; title: string; status: string; performance_date: string | null; performer_count: number | null; updated_at: string };
 type Snapshot = {
