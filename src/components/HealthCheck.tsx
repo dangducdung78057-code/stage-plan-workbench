@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { STAGEOS_VERSION } from "@/lib/stageos";
 import { getFlag } from "@/lib/featureFlags";
-import { renderMarkdown, renderPrintableHtml, renderPngBlob } from "@/lib/exportRender";
+import { renderMarkdown, renderPrintableHtml, renderPdfBlob, renderPngBlob, validatePrintableHtml } from "@/lib/exportRender";
 import { CheckCircle2, XCircle, Loader2, AlertTriangle } from "lucide-react";
 
 type Status = "pass" | "fail" | "warn" | "skip";
@@ -138,31 +138,58 @@ export function HealthCheck() {
       push({ id: "md", label: "Markdown 导出能力", status: "fail", detail: e?.message });
     }
 
-    // 11. PDF 导出：已启用 html2pdf 光栅化真实下载
-    push({
-      id: "pdf",
-      label: "PDF 导出（真实下载）",
-      status: getFlag("pdfExport") ? "pass" : "skip",
-      detail: getFlag("pdfExport") ? "html2pdf.js 光栅化 · 中文原样输出" : "flag off",
+    const samplePayload = JSON.stringify({
+      project: { title: "健康检查样本", performance_date: "2026-06-30" },
+      input: { schoolStage: "primary", programType: "chorus", performerCount: 2, femaleCount: 1, maleCount: 1, performanceDate: "2026-06-30", perPersonBudget: 120 },
+      snapshot: {
+        mode: "mock",
+        generated_at: new Date().toISOString(),
+        costume_plan: {
+          femalePlan: [{ category: "上装", description: "白衬衫", qty: 1, unitEstimate: 50, subtotal: 50 }],
+          malePlan: [{ category: "上装", description: "西装背心", qty: 1, unitEstimate: 70, subtotal: 70 }],
+          accessories: [{ category: "配饰", description: "蝴蝶结", qty: 2, unitEstimate: 10, subtotal: 20 }],
+          totalEstimate: 140,
+          purchaseStrategy: ["先验样再批量下单"],
+          planB: ["改用替代面料"],
+        },
+        risks: [{ level: "medium", title: "面料缺货", detail: "需提前确认库存" }],
+        reverse_schedule: [{ daysBefore: 14, date: "2026-06-16", task: "面料到货", owner: "采购" }],
+        platform_search: [{ platform: "淘宝", query: "儿童合唱服", note: "人工核验" }],
+      },
     });
+    const sampleHtml = renderPrintableHtml(samplePayload, "json", {
+      projectTitle: "健康检查样本", version: 0, createdAt: new Date().toISOString(), filenameTitle: "healthcheck",
+    });
+
+    // 11. PDF 导出：flag off 时 skip；开启时必须 HTML 校验通过且生成非空 blob
+    if (!getFlag("pdfExport")) {
+      push({ id: "pdf", label: "PDF 导出（真实下载）", status: "skip", detail: "flag off" });
+    } else if (!validatePrintableHtml(sampleHtml)) {
+      push({ id: "pdf", label: "PDF 导出（真实下载）", status: "fail", detail: "printable html invalid" });
+    } else {
+      try {
+        const { result, ms } = await timed(async () => await renderPdfBlob(sampleHtml));
+        push({
+          id: "pdf",
+          label: "PDF 导出（真实下载）",
+          status: result && result.size > 1024 ? "pass" : "fail",
+          detail: `bytes=${result?.size ?? 0}`,
+          ms,
+        });
+      } catch (e: any) {
+        push({ id: "pdf", label: "PDF 导出（真实下载）", status: "fail", detail: e?.message });
+      }
+    }
 
     // 11b. PNG 导出：实际渲染一次非空 blob 才 pass
     if (!getFlag("pngExport")) {
       push({ id: "png", label: "PNG 导出（长图分享）", status: "skip", detail: "flag off" });
+    } else if (!validatePrintableHtml(sampleHtml)) {
+      push({ id: "png", label: "PNG 导出（长图分享）", status: "fail", detail: "printable html invalid" });
     } else {
       try {
-        const samplePayload = JSON.stringify({
-          project: { title: "健康检查样本", schoolStage: "小学", programType: "合唱", performerCount: 2, femaleCount: 1, maleCount: 1 },
-          plan: { femalePlan: ["白衬衫"], malePlan: ["西装背心"], accessories: ["蝴蝶结"], totalEstimate: 100 },
-          risks: ["面料缺货"], planB: ["改用替代面料"],
-          reverseSchedule: [{ milestone: "面料到货", date: "2026-06-01" }],
-          searchRecommendations: [{ platform: "淘宝", query: "儿童合唱服" }],
-        });
-        const html = renderPrintableHtml(samplePayload, "json", {
-          projectTitle: "健康检查样本", version: 0, createdAt: new Date().toISOString(), filenameTitle: "healthcheck",
-        });
-        const { result, ms } = await timed(async () => await renderPngBlob(html));
-        if (result && result.size > 0) {
+        const { result, ms } = await timed(async () => await renderPngBlob(sampleHtml));
+        if (result && result.size > 1024) {
           push({ id: "png", label: "PNG 导出（长图分享）", status: "pass", detail: `bytes=${result.size}`, ms });
         } else {
           push({ id: "png", label: "PNG 导出（长图分享）", status: "fail", detail: "empty blob", ms });
