@@ -143,8 +143,18 @@ Deno.serve(async (req) => {
 
   try {
     const body = await req.json().catch(() => ({}));
+
+    // Healthcheck short-circuit — must return before any uuid parse / db / auth work.
+    if (body?.healthcheck === true) {
+      return json({ ok: true, code: "AI_HEALTHCHECK_OK", mode: "healthcheck" });
+    }
+
     const projectId: string | undefined = body?.projectId;
+    const UUID_RE = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
     if (!projectId) return reject("BAD_REQUEST", "projectId 必填。", 400);
+    if (typeof projectId !== "string" || !UUID_RE.test(projectId)) {
+      return reject("BAD_REQUEST", "project_id must be uuid", 400);
+    }
 
     const authHeader = req.headers.get("Authorization") ?? "";
     if (!authHeader.startsWith("Bearer ")) return reject("UNAUTHORIZED", "请先登录后再生成排产。", 401);
