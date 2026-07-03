@@ -104,25 +104,43 @@ if (robotsOrigins.size === 1 && sitemapOrigins.size >= 1) {
   }
 }
 
-// ---------- 数组差异比对 ----------
-const robotsSet = new Set(robotsSitemapUrls);
-const sitemapSet = new Set(sitemapLocs);
+// ---------- robots.txt Sitemap 条目 ↔ 磁盘上的 sitemap 文件 数组比对 ----------
+// 当前项目中实际存在的 sitemap 文件：public/sitemap.xml
+// 期望 robots.txt 声明的 Sitemap URL 集合 = { `${origin}/sitemap.xml` }
+const expectedRobotsSitemapUrls = new Set<string>();
+for (const origin of robotsOrigins) {
+  expectedRobotsSitemapUrls.add(`${origin}/sitemap.xml`);
+}
+// 若 robots.txt 无有效 origin，退回到 sitemap.xml <loc> 的 origin
+if (expectedRobotsSitemapUrls.size === 0) {
+  for (const origin of sitemapOrigins) {
+    expectedRobotsSitemapUrls.add(`${origin}/sitemap.xml`);
+  }
+}
 
-const onlyInRobots = [...robotsSet].filter((u) => !sitemapSet.has(u)).sort();
-const onlyInSitemap = [...sitemapSet].filter((u) => !robotsSet.has(u)).sort();
+const declaredRobotsSet = new Set(robotsSitemapUrls);
+const onlyInRobots = [...declaredRobotsSet]
+  .filter((u) => !expectedRobotsSitemapUrls.has(u))
+  .sort();
+const onlyOnDisk = [...expectedRobotsSitemapUrls]
+  .filter((u) => !declaredRobotsSet.has(u))
+  .sort();
 
-if (onlyInRobots.length > 0 || onlyInSitemap.length > 0) {
-  const lines: string[] = ["robots.txt 的 `Sitemap:` 条目与 sitemap.xml 中的 <loc> URL 不一致。"];
+if (onlyInRobots.length > 0 || onlyOnDisk.length > 0) {
+  const lines: string[] = [
+    "robots.txt 的 `Sitemap:` 条目与项目中实际的 sitemap 文件不一致。",
+  ];
   if (onlyInRobots.length > 0) {
-    lines.push("  仅在 robots.txt 中出现：");
+    lines.push("  仅在 robots.txt 中声明（磁盘无对应文件）：");
     for (const u of onlyInRobots) lines.push(`    - ${u}`);
   }
-  if (onlyInSitemap.length > 0) {
-    lines.push("  仅在 sitemap.xml 中出现：");
-    for (const u of onlyInSitemap) lines.push(`    + ${u}`);
+  if (onlyOnDisk.length > 0) {
+    lines.push("  仅在磁盘存在（robots.txt 未声明）：");
+    for (const u of onlyOnDisk) lines.push(`    + ${u}`);
   }
   report(lines.join("\n"));
 }
+
 
 // ---------- 汇总 ----------
 if (errors.length > 0) {
