@@ -3,14 +3,17 @@
  *
  * 校验规则：
  * 1. robots.txt 必须至少声明一条 `Sitemap:` 指令，且所有指令均为合法 URL。
- * 2. robots.txt 中所有 `Sitemap:` URL 的 origin 必须彼此一致；sitemap.xml 中
- *    所有 <loc> 的 origin 必须与之一致（跨文件同域）。
- * 3. robots.txt 的 `Sitemap:` URL 集合 与 sitemap.xml 中 <loc> URL 集合 必须
- *    完全一致；差异（仅在 robots / 仅在 sitemap）会被逐条打印。
- * 4. `User-agent: *` 若设置 `Disallow: /`，与非空 sitemap 冲突，判定失败。
+ * 2. robots.txt 中所有 `Sitemap:` URL、以及 sitemap.xml 中所有 <loc>
+ *    必须共用同一个 origin（跨文件同域）。
+ * 3. robots.txt 的 `Sitemap:` URL 集合 必须与项目中实际存在的 sitemap 文件
+ *    集合完全一致（当前唯一文件为 public/sitemap.xml → `${origin}/sitemap.xml`）；
+ *    差异会作为 "仅在 robots" / "仅在磁盘" 的明细逐条打印。
+ * 4. sitemap.xml 中 <loc> 数组不得为空；每条 URL 需合法。
+ * 5. `User-agent: *` 若设置 `Disallow: /`，与非空 sitemap 冲突，判定失败。
  *
  * 校验失败时以非零退出码终止，供 CI / prebuild 阻断构建。
  */
+
 
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
