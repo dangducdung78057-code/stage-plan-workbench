@@ -148,7 +148,7 @@ if (errors.length > 0) {
   process.exit(1);
 }
 
-const commonCount = [...robotsSet].filter((u) => sitemapSet.has(u)).length;
 console.log(
-  `[verify-sitemap-robots] ✓ robots.txt ↔ sitemap.xml 一致（域名 ${[...robotsOrigins][0]}，共 ${commonCount} 条 URL）。`,
+  `[verify-sitemap-robots] ✓ robots.txt ↔ sitemap.xml 一致（域名 ${[...robotsOrigins][0]}，sitemap 文件 ${robotsSitemapUrls.length} 条，<loc> ${sitemapLocs.length} 条）。`,
 );
+
