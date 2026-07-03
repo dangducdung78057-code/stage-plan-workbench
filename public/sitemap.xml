@@ -1,4 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!--
+  StageOS 公开可索引页面清单。
+  所有工作台路由（/、/projects、/projects/*、/modules、/exports、/settings）均位于
+  ProtectedRoute 登录墙之后，并在 RouteHead 中带有 noindex，因此不列入 sitemap。
+  仅登录入口 /auth 对搜索引擎公开。
+-->
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://stageos-costume-craft.lovable.app/auth</loc>
