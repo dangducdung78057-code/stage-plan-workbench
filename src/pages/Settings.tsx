@@ -193,6 +193,10 @@ export default function SettingsPage() {
 
       <HealthCheck />
 
+      <PdfCapabilitySyncPanel pdfExportOn={flags.pdfExport} />
+
+
+
 
 
       <div className="panel">
