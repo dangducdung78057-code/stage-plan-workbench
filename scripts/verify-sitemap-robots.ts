@@ -104,7 +104,7 @@ export function verifySitemapRobots(input: {
     };
   }
 
-  return { ok: true };
+  return OK;
 }
 
 function main(): void {
