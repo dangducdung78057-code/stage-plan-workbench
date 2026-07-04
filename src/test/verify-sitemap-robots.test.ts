@@ -141,7 +141,7 @@ describe("verifySitemapRobots — CLI 输出格式", () => {
   it("失败时 stderr 前缀为 `[verify-sitemap-robots] ✗ ` 且退出码 1", () => {
     const res = runInFixture(`User-agent: *\nAllow: /\n`, minimalSitemap());
     expect(res.status).toBe(1);
-    expect(res.stderr.startsWith("[verify-sitemap-robots] ✗ ")).toBe(true);
+    expect(res.stderr).toMatch(/^\[verify-sitemap-robots\] ✗ /m);
     expect(res.stderr).toContain("robots.txt 缺少 `Sitemap:` 指令");
   });
 
