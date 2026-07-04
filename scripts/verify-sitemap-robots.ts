@@ -13,7 +13,12 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
-export type VerifyResult = { ok: true } | { ok: false; message: string };
+export interface VerifyResult {
+  ok: boolean;
+  message: string;
+}
+const OK: VerifyResult = { ok: true, message: "" };
+const fail = (message: string): VerifyResult => ({ ok: false, message });
 
 export function verifySitemapRobots(input: {
   robotsText: string;
