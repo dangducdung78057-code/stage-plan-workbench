@@ -193,6 +193,10 @@ export default function SettingsPage() {
 
       <HealthCheck />
 
+      <PdfCapabilitySyncPanel pdfExportOn={flags.pdfExport} />
+
+
+
 
 
       <div className="panel">
@@ -505,3 +509,102 @@ function ProcSwitch({ label, desc, checked, onCheckedChange }: { label: string; 
     </div>
   );
 }
+
+function describePdfSyncError(err: any): string {
+  const raw = (err?.message || err?.error_description || String(err ?? "")).trim();
+  const code = err?.code || err?.status;
+  if (/permission denied/i.test(raw)) {
+    return "权限不足：当前账号无法调用 sync_pdf_capability。请确认已登录，或联系管理员重新授予 authenticated EXECUTE 权限。";
+  }
+  if (/jwt|not authenticated|auth session/i.test(raw)) {
+    return "登录会话已失效，请退出后重新登录再试。";
+  }
+  if (/invalid status/i.test(raw)) {
+    return `传入的 status 非法（仅支持 PASS/WARN/FAIL/SKIP）：${raw}`;
+  }
+  if (/network|failed to fetch|timeout/i.test(raw)) {
+    return `网络异常：${raw}`;
+  }
+  return raw ? `${raw}${code ? ` [${code}]` : ""}` : "未知错误";
+}
+
+function PdfCapabilitySyncPanel({ pdfExportOn }: { pdfExportOn: boolean }) {
+  const [state, setState] = useState<"idle" | "running" | "ok" | "error">("idle");
+  const [error, setError] = useState<string | null>(null);
+  const [lastRunAt, setLastRunAt] = useState<string | null>(null);
+
+  async function run() {
+    setState("running");
+    setError(null);
+    // 手动同步：不做真实 PDF 渲染，仅按当前 flag 状态回写能力行，用于验证 RPC 权限与链路。
+    const capStatus = pdfExportOn ? "WARN" : "SKIP";
+    const capEnabled = pdfExportOn;
+    const capNotes = pdfExportOn
+      ? "manual sync (Settings) — pdfExport 已开启，请运行 HealthCheck 获取真实探测结果"
+      : "manual sync (Settings) — pdfExport 未开启";
+    try {
+      const { error: rpcErr } = await supabase.rpc("sync_pdf_capability", {
+        p_status: capStatus,
+        p_enabled: capEnabled,
+        p_notes: capNotes,
+      });
+      if (rpcErr) throw rpcErr;
+      setState("ok");
+      setLastRunAt(new Date().toISOString());
+      toast.success(`PDF capability 已同步（${capStatus}）`);
+    } catch (e: any) {
+      const msg = describePdfSyncError(e);
+      setError(msg);
+      setState("error");
+      toast.error(`PDF capability 同步失败：${msg}`);
+    }
+  }
+
+  return (
+    <div className="panel">
+      <div className="panel-header">
+        <h2 className="text-sm font-semibold">PDF capability 同步</h2>
+        <span className="kbd-route">rpc</span>
+      </div>
+      <div className="panel-body space-y-2 text-sm">
+        <p className="text-xs text-muted-foreground">
+          手动调用 <span className="font-mono">sync_pdf_capability</span> RPC，按当前 <span className="font-mono">pdfExport</span> flag 状态回写 <span className="font-mono">system_capabilities.pdf_export</span> 行；用于验证权限授予与 Release Gate 链路，不触发真实 PDF 渲染。
+        </p>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button size="sm" onClick={run} disabled={state === "running"}>
+            {state === "running" ? "同步中…" : "同步 PDF capability"}
+          </Button>
+          {state === "error" && (
+            <Button size="sm" variant="outline" onClick={run} disabled={(state as string) === "running"}>
+              重试
+            </Button>
+          )}
+          {state === "ok" && (
+            <span className="inline-flex items-center gap-1 text-xs text-success">
+              <CheckCircle2 className="h-3.5 w-3.5" />
+              同步成功
+              {lastRunAt && (
+                <span className="text-muted-foreground font-mono">
+                  · {new Date(lastRunAt).toLocaleTimeString()}
+                </span>
+              )}
+            </span>
+          )}
+        </div>
+        {state === "error" && error && (
+          <div
+            role="alert"
+            className="mt-1 flex items-start gap-2 border border-destructive/40 bg-destructive/5 text-destructive rounded px-2.5 py-2 text-xs"
+          >
+            <XCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+            <div className="min-w-0 break-words">
+              <div className="font-medium">同步失败</div>
+              <div className="mt-0.5 font-mono text-[11px] whitespace-pre-wrap">{error}</div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
