@@ -13,95 +13,138 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
-const ROOT = resolve(process.cwd());
-const ROBOTS_PATH = resolve(ROOT, "public/robots.txt");
-const SITEMAP_PATH = resolve(ROOT, "public/sitemap.xml");
-
-function fail(msg: string): never {
-  console.error(`[verify-sitemap-robots] ✗ ${msg}`);
-  process.exit(1);
+export interface VerifyResult {
+  ok: boolean;
+  message: string;
 }
+const OK: VerifyResult = { ok: true, message: "" };
+const fail = (message: string): VerifyResult => ({ ok: false, message });
 
-function readFileOrFail(path: string, label: string): string {
-  try {
-    return readFileSync(path, "utf8");
-  } catch {
-    fail(`无法读取 ${label}: ${path}`);
+export function verifySitemapRobots(input: {
+  robotsText: string;
+  sitemapText: string;
+}): VerifyResult {
+  const { robotsText, sitemapText } = input;
+
+  const sitemapDirectives = [
+    ...robotsText.matchAll(/^\s*Sitemap:\s*(\S+)\s*$/gim),
+  ].map((m) => m[1]);
+  if (sitemapDirectives.length === 0) {
+    return { ok: false, message: "robots.txt 缺少 `Sitemap:` 指令。" };
   }
+  if (new Set(sitemapDirectives).size > 1) {
+    return {
+      ok: false,
+      message: `robots.txt 声明了多个不同的 Sitemap URL：${sitemapDirectives.join(", ")}`,
+    };
+  }
+  const robotsSitemapUrl = sitemapDirectives[0];
+
+  let robotsSitemapOrigin: string;
+  let robotsSitemapPath: string;
+  try {
+    const u = new URL(robotsSitemapUrl);
+    robotsSitemapOrigin = u.origin;
+    robotsSitemapPath = u.pathname;
+  } catch {
+    return {
+      ok: false,
+      message: `robots.txt 中的 Sitemap URL 非法：${robotsSitemapUrl}`,
+    };
+  }
+
+  if (robotsSitemapPath !== "/sitemap.xml") {
+    return {
+      ok: false,
+      message: `robots.txt Sitemap 指向 ${robotsSitemapPath}，但项目中的 sitemap 位于 /sitemap.xml。`,
+    };
+  }
+
+  const uaBlocks = robotsText.split(/^\s*User-agent:/gim).slice(1);
+  for (const block of uaBlocks) {
+    const [firstLine, ...rest] = block.split("\n");
+    const agent = firstLine.trim();
+    if (agent !== "*") continue;
+    const body = rest.join("\n");
+    const disallowAll = /^\s*Disallow:\s*\/\s*$/im.test(body);
+    if (disallowAll) {
+      return {
+        ok: false,
+        message:
+          "robots.txt 对 `User-agent: *` 使用 `Disallow: /` 全站屏蔽，却同时声明了 Sitemap，配置自相矛盾。",
+      };
+    }
+  }
+
+  const locs = [...sitemapText.matchAll(/<loc>\s*([^<\s]+)\s*<\/loc>/gi)].map(
+    (m) => m[1],
+  );
+  if (locs.length === 0) {
+    return { ok: false, message: "sitemap.xml 未包含任何 <loc> 条目。" };
+  }
+
+  const mismatched: string[] = [];
+  for (const loc of locs) {
+    let origin: string;
+    try {
+      origin = new URL(loc).origin;
+    } catch {
+      return { ok: false, message: `sitemap.xml 中存在非法 URL：${loc}` };
+    }
+    if (origin !== robotsSitemapOrigin) {
+      mismatched.push(loc);
+    }
+  }
+  if (mismatched.length > 0) {
+    return {
+      ok: false,
+      message: `sitemap.xml 中以下 URL 与 robots.txt Sitemap 域名 (${robotsSitemapOrigin}) 不一致：\n  - ${mismatched.join(
+        "\n  - ",
+      )}`,
+    };
+  }
+
+  return OK;
 }
 
-const robotsText = readFileOrFail(ROBOTS_PATH, "robots.txt");
-const sitemapText = readFileOrFail(SITEMAP_PATH, "sitemap.xml");
+function main(): void {
+  const ROOT = resolve(process.cwd());
+  const ROBOTS_PATH = resolve(ROOT, "public/robots.txt");
+  const SITEMAP_PATH = resolve(ROOT, "public/sitemap.xml");
 
-// 1) 解析 robots.txt
-const sitemapDirectives = [...robotsText.matchAll(/^\s*Sitemap:\s*(\S+)\s*$/gim)].map(
-  (m) => m[1],
-);
-if (sitemapDirectives.length === 0) {
-  fail("robots.txt 缺少 `Sitemap:` 指令。");
-}
-if (new Set(sitemapDirectives).size > 1) {
-  fail(`robots.txt 声明了多个不同的 Sitemap URL：${sitemapDirectives.join(", ")}`);
-}
-const robotsSitemapUrl = sitemapDirectives[0];
+  let robotsText: string;
+  let sitemapText: string;
+  try {
+    robotsText = readFileSync(ROBOTS_PATH, "utf8");
+  } catch {
+    console.error(`[verify-sitemap-robots] ✗ 无法读取 robots.txt: ${ROBOTS_PATH}`);
+    process.exit(1);
+  }
+  try {
+    sitemapText = readFileSync(SITEMAP_PATH, "utf8");
+  } catch {
+    console.error(`[verify-sitemap-robots] ✗ 无法读取 sitemap.xml: ${SITEMAP_PATH}`);
+    process.exit(1);
+  }
 
-let robotsSitemapOrigin: string;
-let robotsSitemapPath: string;
-try {
-  const u = new URL(robotsSitemapUrl);
-  robotsSitemapOrigin = u.origin;
-  robotsSitemapPath = u.pathname;
-} catch {
-  fail(`robots.txt 中的 Sitemap URL 非法：${robotsSitemapUrl}`);
-}
+  const result = verifySitemapRobots({ robotsText, sitemapText });
+  if (!result.ok) {
+    console.error(`[verify-sitemap-robots] ✗ ${result.message}`);
+    process.exit(1);
+  }
 
-if (robotsSitemapPath !== "/sitemap.xml") {
-  fail(
-    `robots.txt Sitemap 指向 ${robotsSitemapPath}，但项目中的 sitemap 位于 /sitemap.xml。`,
+  const locs = [...sitemapText.matchAll(/<loc>\s*([^<\s]+)\s*<\/loc>/gi)];
+  const origin = new URL(
+    [...robotsText.matchAll(/^\s*Sitemap:\s*(\S+)\s*$/gim)][0][1],
+  ).origin;
+  console.log(
+    `[verify-sitemap-robots] ✓ robots.txt 与 sitemap.xml 一致（域名 ${origin}，共 ${locs.length} 条 URL）。`,
   );
 }
 
-// 检查 User-agent: * 是否 Disallow: /
-const uaBlocks = robotsText.split(/^\s*User-agent:/gim).slice(1);
-for (const block of uaBlocks) {
-  const [firstLine, ...rest] = block.split("\n");
-  const agent = firstLine.trim();
-  if (agent !== "*") continue;
-  const body = rest.join("\n");
-  const disallowAll = /^\s*Disallow:\s*\/\s*$/im.test(body);
-  if (disallowAll) {
-    fail(
-      "robots.txt 对 `User-agent: *` 使用 `Disallow: /` 全站屏蔽，却同时声明了 Sitemap，配置自相矛盾。",
-    );
-  }
+const isDirectRun =
+  typeof process.argv[1] === "string" &&
+  import.meta.url === `file://${process.argv[1]}`;
+if (isDirectRun) {
+  main();
 }
-
-// 2) 解析 sitemap.xml <loc>
-const locs = [...sitemapText.matchAll(/<loc>\s*([^<\s]+)\s*<\/loc>/gi)].map((m) => m[1]);
-if (locs.length === 0) {
-  fail("sitemap.xml 未包含任何 <loc> 条目。");
-}
-
-const mismatched: string[] = [];
-for (const loc of locs) {
-  let origin: string;
-  try {
-    origin = new URL(loc).origin;
-  } catch {
-    fail(`sitemap.xml 中存在非法 URL：${loc}`);
-  }
-  if (origin !== robotsSitemapOrigin) {
-    mismatched.push(loc);
-  }
-}
-if (mismatched.length > 0) {
-  fail(
-    `sitemap.xml 中以下 URL 与 robots.txt Sitemap 域名 (${robotsSitemapOrigin}) 不一致：\n  - ${mismatched.join(
-      "\n  - ",
-    )}`,
-  );
-}
-
-console.log(
-  `[verify-sitemap-robots] ✓ robots.txt 与 sitemap.xml 一致（域名 ${robotsSitemapOrigin}，共 ${locs.length} 条 URL）。`,
-);
