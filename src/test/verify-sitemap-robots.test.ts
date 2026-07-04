@@ -51,14 +51,14 @@ describe("verifySitemapRobots — robots.txt 失败", () => {
       sitemapText: minimalSitemap(),
     });
     expect(r.ok).toBe(false);
-    if (!r.ok) expect(r.message).toMatch(/robots\.txt 缺少 `Sitemap:` 指令/);
+expect(r.message).toMatch(/robots\.txt 缺少 `Sitemap:` 指令/);
   });
 
   it("多个不同的 Sitemap URL", () => {
     const robotsText = `User-agent: *\nAllow: /\nSitemap: https://a.com/sitemap.xml\nSitemap: https://b.com/sitemap.xml\n`;
     const r = verifySitemapRobots({ robotsText, sitemapText: minimalSitemap() });
     expect(r.ok).toBe(false);
-    if (!r.ok) {
+{
       expect(r.message).toContain("声明了多个不同的 Sitemap URL");
       expect(r.message).toContain("https://a.com/sitemap.xml");
       expect(r.message).toContain("https://b.com/sitemap.xml");
@@ -71,7 +71,7 @@ describe("verifySitemapRobots — robots.txt 失败", () => {
       sitemapText: minimalSitemap(),
     });
     expect(r.ok).toBe(false);
-    if (!r.ok) expect(r.message).toContain("Sitemap URL 非法");
+expect(r.message).toContain("Sitemap URL 非法");
   });
 
   it("Sitemap 路径不是 /sitemap.xml", () => {
@@ -88,7 +88,7 @@ describe("verifySitemapRobots — robots.txt 失败", () => {
     const robotsText = `User-agent: *\nDisallow: /\n\nSitemap: https://example.com/sitemap.xml\n`;
     const r = verifySitemapRobots({ robotsText, sitemapText: minimalSitemap() });
     expect(r.ok).toBe(false);
-    if (!r.ok) {
+{
       expect(r.message).toContain("全站屏蔽");
       expect(r.message).toContain("自相矛盾");
     }
@@ -100,7 +100,7 @@ describe("verifySitemapRobots — sitemap.xml 失败", () => {
     const sitemapText = `<?xml version="1.0"?>\n<urlset></urlset>`;
     const r = verifySitemapRobots({ robotsText: minimalRobots(), sitemapText });
     expect(r.ok).toBe(false);
-    if (!r.ok) expect(r.message).toContain("未包含任何 <loc>");
+expect(r.message).toContain("未包含任何 <loc>");
   });
 
   it("<loc> 是非法 URL", () => {
@@ -109,7 +109,7 @@ describe("verifySitemapRobots — sitemap.xml 失败", () => {
       sitemapText: minimalSitemap(["not-a-url"]),
     });
     expect(r.ok).toBe(false);
-    if (!r.ok) expect(r.message).toContain("存在非法 URL");
+expect(r.message).toContain("存在非法 URL");
   });
 
   it("<loc> 域名与 robots Sitemap 域名不一致：格式化差异输出", () => {
@@ -122,7 +122,7 @@ describe("verifySitemapRobots — sitemap.xml 失败", () => {
       ]),
     });
     expect(r.ok).toBe(false);
-    if (!r.ok) {
+{
       expect(r.message).toMatch(
         /^sitemap\.xml 中以下 URL 与 robots\.txt Sitemap 域名 \(https:\/\/example\.com\) 不一致：/,
       );
