@@ -24,23 +24,23 @@ describe("verifySitemapRobots — success", () => {
   it("接受项目真实的 robots.txt 与 sitemap.xml", () => {
     const robotsText = readFileSync(resolve(ROOT, "public/robots.txt"), "utf8");
     const sitemapText = readFileSync(resolve(ROOT, "public/sitemap.xml"), "utf8");
-    expect(verifySitemapRobots({ robotsText, sitemapText })).toEqual({ ok: true });
+    const r = verifySitemapRobots({ robotsText, sitemapText });
+    expect(r.ok).toBe(true);
+    expect(r.message).toBe("");
   });
 
   it("接受最小合法组合", () => {
-    expect(
-      verifySitemapRobots({
-        robotsText: minimalRobots(),
-        sitemapText: minimalSitemap(),
-      }),
-    ).toEqual({ ok: true });
+    const r = verifySitemapRobots({
+      robotsText: minimalRobots(),
+      sitemapText: minimalSitemap(),
+    });
+    expect(r.ok).toBe(true);
   });
 
   it("仅在 Googlebot 上 Disallow: / 不触发全站屏蔽错误", () => {
     const robotsText = `User-agent: Googlebot\nDisallow: /\n\nUser-agent: *\nAllow: /\n\nSitemap: https://example.com/sitemap.xml\n`;
-    expect(
-      verifySitemapRobots({ robotsText, sitemapText: minimalSitemap() }),
-    ).toEqual({ ok: true });
+    const r = verifySitemapRobots({ robotsText, sitemapText: minimalSitemap() });
+    expect(r.ok).toBe(true);
   });
 });
 
@@ -51,18 +51,16 @@ describe("verifySitemapRobots — robots.txt 失败", () => {
       sitemapText: minimalSitemap(),
     });
     expect(r.ok).toBe(false);
-expect(r.message).toMatch(/robots\.txt 缺少 `Sitemap:` 指令/);
+    expect(r.message).toMatch(/robots\.txt 缺少 `Sitemap:` 指令/);
   });
 
   it("多个不同的 Sitemap URL", () => {
     const robotsText = `User-agent: *\nAllow: /\nSitemap: https://a.com/sitemap.xml\nSitemap: https://b.com/sitemap.xml\n`;
     const r = verifySitemapRobots({ robotsText, sitemapText: minimalSitemap() });
     expect(r.ok).toBe(false);
-{
-      expect(r.message).toContain("声明了多个不同的 Sitemap URL");
-      expect(r.message).toContain("https://a.com/sitemap.xml");
-      expect(r.message).toContain("https://b.com/sitemap.xml");
-    }
+    expect(r.message).toContain("声明了多个不同的 Sitemap URL");
+    expect(r.message).toContain("https://a.com/sitemap.xml");
+    expect(r.message).toContain("https://b.com/sitemap.xml");
   });
 
   it("Sitemap URL 非法", () => {
@@ -71,7 +69,7 @@ expect(r.message).toMatch(/robots\.txt 缺少 `Sitemap:` 指令/);
       sitemapText: minimalSitemap(),
     });
     expect(r.ok).toBe(false);
-expect(r.message).toContain("Sitemap URL 非法");
+    expect(r.message).toContain("Sitemap URL 非法");
   });
 
   it("Sitemap 路径不是 /sitemap.xml", () => {
@@ -80,18 +78,15 @@ expect(r.message).toContain("Sitemap URL 非法");
       sitemapText: minimalSitemap(),
     });
     expect(r.ok).toBe(false);
-    if (!r.ok)
-      expect(r.message).toContain("但项目中的 sitemap 位于 /sitemap.xml");
+    expect(r.message).toContain("但项目中的 sitemap 位于 /sitemap.xml");
   });
 
   it("User-agent: * 下 Disallow: / 与 Sitemap 并存", () => {
     const robotsText = `User-agent: *\nDisallow: /\n\nSitemap: https://example.com/sitemap.xml\n`;
     const r = verifySitemapRobots({ robotsText, sitemapText: minimalSitemap() });
     expect(r.ok).toBe(false);
-{
-      expect(r.message).toContain("全站屏蔽");
-      expect(r.message).toContain("自相矛盾");
-    }
+    expect(r.message).toContain("全站屏蔽");
+    expect(r.message).toContain("自相矛盾");
   });
 });
 
@@ -100,7 +95,7 @@ describe("verifySitemapRobots — sitemap.xml 失败", () => {
     const sitemapText = `<?xml version="1.0"?>\n<urlset></urlset>`;
     const r = verifySitemapRobots({ robotsText: minimalRobots(), sitemapText });
     expect(r.ok).toBe(false);
-expect(r.message).toContain("未包含任何 <loc>");
+    expect(r.message).toContain("未包含任何 <loc>");
   });
 
   it("<loc> 是非法 URL", () => {
@@ -109,7 +104,7 @@ expect(r.message).toContain("未包含任何 <loc>");
       sitemapText: minimalSitemap(["not-a-url"]),
     });
     expect(r.ok).toBe(false);
-expect(r.message).toContain("存在非法 URL");
+    expect(r.message).toContain("存在非法 URL");
   });
 
   it("<loc> 域名与 robots Sitemap 域名不一致：格式化差异输出", () => {
@@ -122,16 +117,12 @@ expect(r.message).toContain("存在非法 URL");
       ]),
     });
     expect(r.ok).toBe(false);
-{
-      expect(r.message).toMatch(
-        /^sitemap\.xml 中以下 URL 与 robots\.txt Sitemap 域名 \(https:\/\/example\.com\) 不一致：/,
-      );
-      // 顺序保留、\n  - 前缀
-      expect(r.message).toContain("\n  - https://other.com/a");
-      expect(r.message).toContain("\n  - https://another.com/b");
-      // 同源的不应出现
-      expect(r.message).not.toContain("https://example.com/ok");
-    }
+    expect(r.message).toMatch(
+      /^sitemap\.xml 中以下 URL 与 robots\.txt Sitemap 域名 \(https:\/\/example\.com\) 不一致：/,
+    );
+    expect(r.message).toContain("\n  - https://other.com/a");
+    expect(r.message).toContain("\n  - https://another.com/b");
+    expect(r.message).not.toContain("https://example.com/ok");
   });
 });
 
