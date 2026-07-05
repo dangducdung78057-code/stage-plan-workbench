@@ -1,6 +1,6 @@
-// StageOS AI plan generation via Lovable AI Gateway.
+// StageOS AI plan generation via Vercel AI Gateway.
 // Runs the same precheck (auth -> permission -> confirmation -> validation),
-// then calls Lovable AI to produce a structured plan payload matching the mock shape.
+// then calls the AI gateway to produce a structured plan payload matching the mock shape.
 // Any AI failure is returned to the client so it can fall back to mock generation.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -78,7 +78,7 @@ async function callAiGateway(prompt: string, apiKey: string): Promise<{ ok: true
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), 25000);
   try {
-    const res = await fetch("https://ai.gateway.vercel.sh/v1/chat/completions", {
+    const res = await fetch("https://ai-gateway.vercel.sh/v1/chat/completions", {
       method: "POST",
       signal: ctrl.signal,
       headers: {
