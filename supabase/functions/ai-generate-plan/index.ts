@@ -74,11 +74,11 @@ const PLAN_SCHEMA_HINT = `
 5. 所有文本用简体中文；不要出现任何解释性话术，只返回 JSON。
 `;
 
-async function callLovableAi(prompt: string, apiKey: string): Promise<{ ok: true; data: unknown } | { ok: false; code: string; message: string }> {
+async function callAiGateway(prompt: string, apiKey: string): Promise<{ ok: true; data: unknown } | { ok: false; code: string; message: string }> {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), 25000);
   try {
-    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const res = await fetch("https://ai.gateway.vercel.sh/v1/chat/completions", {
       method: "POST",
       signal: ctrl.signal,
       headers: {
@@ -86,7 +86,7 @@ async function callLovableAi(prompt: string, apiKey: string): Promise<{ ok: true
         "Authorization": `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model: "openai/gpt-4o-mini",
         messages: [
           { role: "system", content: "你是 StageOS 服装总表排产助手，只返回 JSON。" },
           { role: "user", content: prompt },
@@ -185,12 +185,18 @@ Deno.serve(async (req) => {
     const issues = validateStageInput(input);
     if (issues.length > 0) return reject("VALIDATION_REQUIRED", "请先解决数据校验提示，再生成排产。", 422, { issues });
 
-    const apiKey = Deno.env.get("LOVABLE_API_KEY");
+    // 优先读函数密钥；未配置时回退到 RLS 全拒绝的 app_secrets 表（仅 service role 可读）
+    let apiKey = Deno.env.get("AI_GATEWAY_API_KEY") ?? Deno.env.get("LOVABLE_API_KEY") ?? "";
+    if (!apiKey) {
+      const { data: secret } = await svc
+        .from("app_secrets").select("value").eq("name", "AI_GATEWAY_API_KEY").maybeSingle();
+      apiKey = secret?.value ?? "";
+    }
     if (!apiKey) return reject("AI_NOT_CONFIGURED", "AI 网关未配置。", 503);
 
     const prompt = `请为以下学校演出项目生成服装总表方案。\n项目标题: ${project.title}\n演出日期: ${project.performance_date ?? "未定"}\nStageInput: ${JSON.stringify(input)}\n\n${PLAN_SCHEMA_HINT}`;
 
-    const ai = await callLovableAi(prompt, apiKey);
+    const ai = await callAiGateway(prompt, apiKey);
     if (!ai.ok) return json({ ok: false, code: ai.code, message: ai.message, aiFailed: true }, 502);
     const shape = validatePlanShape(ai.data);
     if (!shape.ok) return json({ ok: false, code: "AI_SHAPE_INVALID", message: `AI 输出结构不合规，缺少: ${shape.missing.join(", ")}`, missing: shape.missing, aiFailed: true }, 502);
