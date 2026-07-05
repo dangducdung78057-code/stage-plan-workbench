@@ -153,6 +153,22 @@ export default function ProjectDetail() {
         pre = { ok: false, code: "INTERNAL", message: netErr?.message ?? "network error" };
       }
 
+      // Edge Function 不可达（未部署/网络失败）时，用客户端等价校验回退，保证主流程不被阻断。
+      // 顺序与后端一致：auth -> confirmation -> validation。
+      if (!pre?.ok && (pre?.code ?? "INTERNAL") === "INTERNAL") {
+        const { data: userData } = await supabase.auth.getUser();
+        if (!userData.user) {
+          pre = { ok: false, code: "UNAUTHORIZED", message: "not signed in" };
+        } else if (!hasPrivacyConfirmation) {
+          pre = { ok: false, code: "CONFIRMATION_REQUIRED", message: "confirmation required" };
+        } else {
+          const { errors } = validateStageInputDetailed(input);
+          pre = errors.length > 0
+            ? { ok: false, code: "VALIDATION_REQUIRED", message: "validation required", issues: errors }
+            : { ok: true };
+        }
+      }
+
       if (!pre?.ok) {
         const errorCode = pre?.code ?? pre?.errorCode ?? "INTERNAL";
         const notice = { ...pre, code: errorCode };
@@ -904,7 +920,7 @@ function PlanTable({ title, rows, ctx, procurementOn }: { title: string; rows: a
           </tbody>
         </table>
       </div>
-      <MobileCardList empty="暂无条目">
+      <MobileCardList empty="暂��条目">
         {list.map((r, i) => (
           <MobileCard
             key={i}
