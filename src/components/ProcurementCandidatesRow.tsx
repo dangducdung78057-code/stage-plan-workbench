@@ -66,7 +66,7 @@ export function ProcurementCandidatesToggle({
             {loading && <span>加载中…</span>}
           </div>
           {fallbackUsed && (
-            <div className="rounded border border-amber-500/40 bg-amber-500/5 px-2 py-1.5 text-[11px] text-amber-700 dark:text-amber-400">
+            <div className="rounded border border-amber-500/40 bg-amber-500/5 px-2 py-1.5 text-[11px] text-warning">
               {warning ?? "远程采购 provider 不可用，已回退到本地候选目录。"}
             </div>
           )}
@@ -83,7 +83,7 @@ export function ProcurementCandidatesToggle({
                 <span className="font-mono">{c.keyword}</span>
               </div>
               <div className="mt-1 text-[11px] text-muted-foreground">匹配：{c.matchReason}</div>
-              <div className="text-[11px] text-amber-600 dark:text-amber-400">风险：{c.riskNote}</div>
+              <div className="text-[11px] text-warning">风险：{c.riskNote}</div>
               {c.url && (
                 <a
                   href={c.url}

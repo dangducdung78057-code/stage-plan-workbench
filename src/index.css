@@ -57,34 +57,35 @@
     --sidebar-ring: 0 0% 80%;
   }
 
+  /* 全站统一深色液态玻璃主题，.dark 与 :root 保持一致 */
   .dark {
-    --background: 215 30% 8%;
-    --foreground: 210 30% 94%;
-    --surface: 215 28% 11%;
-    --surface-muted: 215 25% 14%;
-    --card: 215 28% 11%;
-    --card-foreground: 210 30% 94%;
-    --popover: 215 28% 11%;
-    --popover-foreground: 210 30% 94%;
-    --primary: 199 85% 52%;
-    --primary-foreground: 215 30% 10%;
-    --secondary: 215 25% 18%;
-    --secondary-foreground: 210 30% 94%;
-    --muted: 215 25% 16%;
-    --muted-foreground: 214 15% 60%;
-    --accent: 199 85% 52%;
-    --accent-foreground: 215 30% 10%;
-    --destructive: 0 65% 48%;
-    --destructive-foreground: 210 40% 98%;
-    --warning: 32 92% 52%;
-    --warning-foreground: 215 30% 10%;
-    --success: 152 55% 45%;
-    --success-foreground: 215 30% 10%;
-    --info: 199 85% 52%;
-    --info-foreground: 215 30% 10%;
-    --border: 215 25% 20%;
-    --input: 215 25% 20%;
-    --ring: 199 85% 52%;
+    --background: 220 15% 3%;
+    --foreground: 0 0% 96%;
+    --surface: 220 12% 6%;
+    --surface-muted: 220 10% 9%;
+    --card: 220 12% 6%;
+    --card-foreground: 0 0% 96%;
+    --popover: 220 14% 7%;
+    --popover-foreground: 0 0% 96%;
+    --primary: 0 0% 98%;
+    --primary-foreground: 220 15% 6%;
+    --secondary: 220 10% 13%;
+    --secondary-foreground: 0 0% 92%;
+    --muted: 220 10% 12%;
+    --muted-foreground: 220 8% 62%;
+    --accent: 199 90% 60%;
+    --accent-foreground: 220 15% 6%;
+    --destructive: 0 78% 58%;
+    --destructive-foreground: 0 0% 98%;
+    --warning: 36 95% 58%;
+    --warning-foreground: 220 15% 6%;
+    --success: 152 60% 52%;
+    --success-foreground: 220 15% 6%;
+    --info: 199 90% 60%;
+    --info-foreground: 220 15% 6%;
+    --border: 0 0% 100% / 0.12;
+    --input: 0 0% 100% / 0.14;
+    --ring: 0 0% 80%;
   }
 }
 
@@ -93,9 +94,14 @@
   html, body, #root { height: 100%; }
   body {
     @apply bg-background text-foreground antialiased;
-    font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC",
+    font-family: "Barlow", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC",
       system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    /* 微弱冷光晕，让玻璃面板有可折射的层次 */
+    background-image:
+      radial-gradient(1200px 600px at 80% -10%, rgba(90, 160, 255, 0.07), transparent 60%),
+      radial-gradient(900px 500px at 10% 110%, rgba(120, 90, 255, 0.05), transparent 60%);
+    background-attachment: fixed;
   }
   .font-mono, code, kbd, samp {
     font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
@@ -175,7 +181,7 @@
 @layer components {
   .ops-table { @apply w-full text-sm; }
   .ops-table thead th {
-    @apply text-left font-medium text-muted-foreground px-3 py-2 border-b bg-surface-muted;
+    @apply text-left font-medium text-muted-foreground px-3 py-2 border-b bg-white/[0.04];
     font-size: 12px;
   }
   .ops-table tbody td { @apply px-3 py-2 border-b align-middle; }
@@ -186,7 +192,11 @@
   }
 
   .panel {
-    @apply bg-card border rounded-md;
+    @apply rounded-xl border border-white/10;
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.07);
   }
   .panel-header {
     @apply flex items-center justify-between px-4 py-2.5 border-b;
