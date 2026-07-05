@@ -19,7 +19,7 @@ export default function AuthPage() {
 
   if (loading) return <FullPageLoader />;
   if (user) {
-    const from = (loc.state as any)?.from?.pathname ?? "/";
+    const from = (loc.state as any)?.from?.pathname ?? "/workspace";
     return <Navigate to={from} replace />;
   }
 

@@ -10,7 +10,7 @@ import { toast } from "sonner";
 
 
 const nav = [
-  { to: "/", label: "工作台", icon: LayoutDashboard, route: "/workspace" },
+  { to: "/workspace", label: "工作台", icon: LayoutDashboard, route: "/workspace" },
   { to: "/projects", label: "项目", icon: FolderKanban, route: "/projects" },
   { to: "/modules", label: "模块注册表", icon: Layers, route: "/modules" },
   { to: "/exports", label: "导出记录", icon: Download, route: "/exports" },

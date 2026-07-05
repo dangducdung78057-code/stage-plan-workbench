@@ -9,6 +9,7 @@ import { AuthProvider } from "@/hooks/useAuth";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { RootErrorBoundary } from "@/components/RootErrorBoundary";
 import { RouteHead } from "@/components/RouteHead";
+import Landing from "./pages/Landing";
 import Workspace from "./pages/Workspace";
 import Projects from "./pages/Projects";
 import ProjectEditor from "./pages/ProjectEditor";
@@ -35,6 +36,7 @@ const App = () => (
               <RouteHead />
               <ScrollToTop />
               <Routes>
+                <Route path="/" element={<Landing />} />
                 <Route path="/auth" element={<AuthPage />} />
                 <Route path="/index" element={<Navigate to="/" replace />} />
                 <Route
@@ -43,7 +45,7 @@ const App = () => (
                     <ProtectedRoute>
                       <AppShell>
                         <Routes>
-                          <Route path="/" element={<Workspace />} />
+                          <Route path="/workspace" element={<Workspace />} />
                           <Route path="/projects" element={<Projects />} />
                           <Route path="/projects/new" element={<ProjectEditor />} />
                           <Route path="/projects/new/wizard" element={<ProjectWizard />} />

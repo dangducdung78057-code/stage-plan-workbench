@@ -25,6 +25,14 @@ function match(pathname: string, params: Record<string, string | undefined>): En
   }
   if (pathname === "/") {
     return {
+      title: "StageOS · 让每一场演出从容开场",
+      description:
+        "StageOS 演出服装排产工作台：项目录入、AI 服装总表、风险倒排、用户确认与多格式导出，一站式完成，全程可追溯。",
+      noindex: false,
+    };
+  }
+  if (pathname === "/workspace") {
+    return {
       title: "工作台首页 · StageOS",
       description:
         "StageOS 工作台首页：项目进度、验收状态、导出记录一目了然，快速新建演出服装排产项目并跳转至详情。",
