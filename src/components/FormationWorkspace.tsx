@@ -8,6 +8,7 @@ import {
   generateFormations, summarizeFormation,
   type FormationScheme, type FormationSlot,
 } from "@/lib/formation";
+import { FormationPreviewSheet } from "@/components/FormationPreviewSheet";
 import type { StageInputData } from "@/lib/stageos";
 
 const GROUP_COLORS: Record<FormationSlot["group"], { fill: string; label: string }> = {
@@ -86,6 +87,7 @@ export function FormationWorkspace({
   const schemes = useMemo(() => (input ? generateFormations(input) : []), [input]);
   const [activeKey, setActiveKey] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [view, setView] = useState<"top" | "front">("top");
   const active = schemes.find((s) => s.key === activeKey) ?? schemes[0];
   const confirmed = input?.confirmedFormation;
 
@@ -152,18 +154,44 @@ export function FormationWorkspace({
       </div>
 
       {active ? (
-        <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
+        <div className={view === "front" ? "space-y-4" : "grid gap-4 lg:grid-cols-[1.4fr_1fr]"}>
           <div className="liquid-glass rounded-[1.25rem] p-4">
             <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
               <div>
                 <h3 className="font-medium">{active.name}</h3>
                 <p className="text-xs text-muted-foreground">{active.suitedFor}</p>
               </div>
-              <span className="text-xs text-muted-foreground">
-                {active.slots.filter((s) => s.group !== "conductor").length} 人 · {active.rows} 排 · {active.spacingRule}
-              </span>
+              <div className="flex items-center gap-3">
+                <span className="text-xs text-muted-foreground">
+                  {active.slots.filter((s) => s.group !== "conductor").length} 人 · {active.rows} 排 · {active.spacingRule}
+                </span>
+                <div className="flex rounded-full liquid-glass p-0.5 text-xs" role="tablist" aria-label="视图切换">
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={view === "top"}
+                    onClick={() => setView("top")}
+                    className={`rounded-full px-3 py-1 transition-colors ${view === "top" ? "bg-white/15 font-medium" : "text-muted-foreground hover:text-foreground"}`}
+                  >
+                    俯视图
+                  </button>
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={view === "front"}
+                    onClick={() => setView("front")}
+                    className={`rounded-full px-3 py-1 transition-colors ${view === "front" ? "bg-white/15 font-medium" : "text-muted-foreground hover:text-foreground"}`}
+                  >
+                    2D 形象预览图
+                  </button>
+                </div>
+              </div>
             </div>
-            <StageCanvas scheme={active} />
+            {view === "top" ? (
+              <StageCanvas scheme={active} />
+            ) : input ? (
+              <FormationPreviewSheet scheme={active} input={input} />
+            ) : null}
           </div>
 
           <div className="space-y-4">
