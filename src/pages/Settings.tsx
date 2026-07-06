@@ -625,7 +625,7 @@ function PdfCapabilitySyncPanel({ pdfExportOn }: { pdfExportOn: boolean }) {
             {state === "running" ? "同步中…" : "同步 PDF capability"}
           </Button>
           {state === "error" && (
-            <Button size="sm" variant="outline" onClick={run} disabled={state === "running"}>
+            <Button size="sm" variant="outline" onClick={run} disabled={false}>
               重试
             </Button>
           )}
