@@ -50,6 +50,39 @@ function validateStageInput(data: StageInputData): string[] {
   return issues;
 }
 
+// 领域知识库：来自 StageOS 核心引擎分析报告（学段画像/价格基准/Plan B 规则/合唱队形规律）。
+const DOMAIN_KNOWLEDGE = `
+【学段画像矩阵】按学段严格套用以下约束：
+| 维度 | 小学低段(1-3) | 小学高段(4-6) | 初中 | 高中 |
+| 人均预算(元) | 40-100 | 60-150 | 100-250 | 200-600 |
+| 色彩饱和度 | 高(亮红/亮黄) | 中 | 中 | 中低(避免过艳) |
+| 款式复杂度 | 简单 | 中等 | 中偏高 | 高(可定制) |
+| 男女款区分 | 低(可同款) | 中 | 高 | 高 |
+| 现货:定制比例 | 7:3 | 5:5 | 3:7 | 2:8 |
+| 最小采购提前期 | 7天 | 14天 | 21天 | 30天 |
+| 尺码策略 | 统一大一码 | 标准码+演出前7天复测 | 标准码+身高分布统计 | 专业量体+定制 |
+| 面料偏好 | 纯棉/涤棉/针织/摇粒绒 | 纯棉/涤棉 | 混纺 | 羊毛混纺/高支棉/西服面料/丝绒 |
+小学低段避免黑色/深灰；高中避免过度卡通元素。
+
+【价格基准表】单价估算以 1688 批发档为基准（淘宝≈1.33倍，京东≈1.20倍）：
+上装：T恤定制25 / POLO定制印字45 / 卫衣定制55 / 衬衫60
+下装：五分裤50 / 百褶裙55 / 长裤55 / 西裤70
+鞋：舞蹈鞋45 / 跑步鞋60 / 板鞋70 / 皮鞋80
+配饰：中筒袜3 / 国旗贴2 / 头花4 / 手摇旗5 / 徽章5 / 加油棒6 / 彩带8 / 发光棒8 / 护腕15
+unitEstimate 应贴近上述基准（可按主题/定制程度上下浮动 30% 以内）。
+
+【预算校验】若 StageInput 含人均预算：totalEstimate 与 (人均预算×总人数) 的偏差应控制在 ±10% 内；若超出，必须在 risks 中给出 medium 以上风险说明。
+
+【Plan B 规则】planB 至少覆盖三类兜底：
+1. 物流延迟 → 同款现货替代（约为基准价 0.7 倍，淘宝现货）；
+2. 颜色偏差 → 同款备选色（优先深色系，价格不变）；
+3. 数量不足 → 关键单品单件补购（约为基准价 1.33 倍，淘宝零售）。
+
+【节目类型规律】合唱/朗诵类：队形以整体方阵为主（2-3 个队形），服装强调整体统一与色块层次，风格优先 西方古典/融合/国风；舞蹈类：男女款区分更高，需考虑动作幅度（弹性面料、舞蹈鞋）。
+
+【倒排计划锚点】reverseSchedule 必须尊重该学段最小采购提前期：定制类下单节点不得晚于演出前的最小提前期；并包含 尺码复测(约 D-7)、到货验收、彩排试穿、演出日检查 节点。
+`;
+
 const PLAN_SCHEMA_HINT = `
 返回 JSON 对象，结构如下（数字为整数元）：
 {
@@ -88,7 +121,7 @@ async function callAiGateway(prompt: string, apiKey: string): Promise<{ ok: true
       body: JSON.stringify({
         model: "openai/gpt-4o-mini",
         messages: [
-          { role: "system", content: "你是 StageOS 服装总表排产助手，只返回 JSON。" },
+          { role: "system", content: "你是 StageOS 服装总表排产专家，精通学校演出服装采购：学段画像、1688/淘宝/京东价格档、尺码策略、倒排计划与 Plan B 兜底。严格遵循用户提供的领域知识库与结构要求，只返回 JSON。" },
           { role: "user", content: prompt },
         ],
         response_format: { type: "json_object" },
@@ -194,7 +227,7 @@ Deno.serve(async (req) => {
     }
     if (!apiKey) return reject("AI_NOT_CONFIGURED", "AI 网关未配置。", 503);
 
-    const prompt = `请为以下学校演出项目生成服装总表方案。\n项目标题: ${project.title}\n演出日期: ${project.performance_date ?? "未定"}\nStageInput: ${JSON.stringify(input)}\n\n${PLAN_SCHEMA_HINT}`;
+    const prompt = `请为以下学校演出项目生成服装总表方案。\n项目标题: ${project.title}\n演出日期: ${project.performance_date ?? "未定"}\nStageInput: ${JSON.stringify(input)}\n\n${DOMAIN_KNOWLEDGE}\n${PLAN_SCHEMA_HINT}`;
 
     const ai = await callAiGateway(prompt, apiKey);
     if (!ai.ok) return json({ ok: false, code: ai.code, message: ai.message, aiFailed: true }, 502);
