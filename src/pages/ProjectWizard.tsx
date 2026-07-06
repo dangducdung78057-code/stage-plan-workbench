@@ -550,7 +550,7 @@ export default function ProjectWizard() {
                         <span>{expanded ? "收起问题摘要" : `展开问题摘要 · 共 ${issues.length} 项`}</span>
                       </button>
                       {expanded && (
-                        <div className="mt-1.5 rounded-md border border-border/60 bg-muted/40 divide-y divide-border/40">
+                        <div className="mt-1.5 rounded-xl border border-border/60 bg-muted/40 divide-y divide-border/40">
                           {issues.length === 0 ? (
                             <div className="px-2 py-2 text-[11px] text-success flex items-center gap-1">
                               <Check className="h-3 w-3" />所有校验通过
@@ -658,7 +658,7 @@ export default function ProjectWizard() {
                                                 setPopoverNavIndex((s) => ({ ...s, [d.id]: prev }));
                                                 jumpTo(filtered[prev]);
                                               }}
-                                              className="inline-flex items-center gap-0.5 text-[11px] px-2 py-1 rounded-md border border-border bg-background hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                                              className="interactive inline-flex items-center gap-0.5 text-[11px] px-2 py-1 rounded-md border border-border bg-background hover:bg-white/10 disabled:opacity-40 disabled:cursor-not-allowed"
                                             >
                                               <ChevronLeft className="h-3 w-3" />上一问题
                                             </button>
@@ -673,7 +673,7 @@ export default function ProjectWizard() {
                                                 setPopoverNavIndex((s) => ({ ...s, [d.id]: next }));
                                                 jumpTo(filtered[next]);
                                               }}
-                                              className="inline-flex items-center gap-0.5 text-[11px] px-2 py-1 rounded-md border border-border bg-background hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                                              className="interactive inline-flex items-center gap-0.5 text-[11px] px-2 py-1 rounded-md border border-border bg-background hover:bg-white/10 disabled:opacity-40 disabled:cursor-not-allowed"
                                             >
                                               下一问题<ChevronRight className="h-3 w-3" />
                                             </button>
@@ -746,7 +746,7 @@ export default function ProjectWizard() {
                 type="button"
                 onClick={() => setStep(i)}
                 className={[
-                  "w-full text-left rounded-md border px-3 py-2 transition-colors relative",
+                  "w-full text-left rounded-xl border px-3 py-2 transition-colors duration-200 relative",
                   active ? "border-primary bg-primary/5"
                     : done ? "border-success/40 bg-success/5"
                     : "border-border bg-muted/30 hover:bg-muted/50",

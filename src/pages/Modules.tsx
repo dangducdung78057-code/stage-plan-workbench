@@ -37,7 +37,7 @@ export default function Modules() {
         <div className="panel-body grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
           <div className="space-y-1.5">
             <Label className="text-xs text-muted-foreground">apiMode</Label>
-            <select className="h-9 w-full rounded border bg-background px-2 text-sm" value={apiMode} onChange={(e) => setApiMode(e.target.value)}>
+            <select className="h-9 w-full rounded-md border bg-background px-2 text-sm" value={apiMode} onChange={(e) => setApiMode(e.target.value)}>
               <option value="mock">mock (默认)</option>
               <option value="api">api (预留)</option>
             </select>

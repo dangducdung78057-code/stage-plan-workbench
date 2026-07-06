@@ -56,7 +56,7 @@ export function ProcurementCandidatesToggle({
         候选
       </Button>
       {open && (
-        <div className="mt-2 space-y-2 rounded-md border border-dashed border-border bg-muted/30 p-2">
+        <div className="mt-2 space-y-2 rounded-xl border border-dashed border-border bg-muted/30 p-2">
           <div className="flex items-center gap-2 text-[11px] text-muted-foreground flex-wrap">
             <span>来源</span>
             <ToneBadge tone={badge.tone}>{badge.label}</ToneBadge>

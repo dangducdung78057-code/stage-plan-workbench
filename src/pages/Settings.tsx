@@ -308,7 +308,7 @@ export default function SettingsPage() {
             <div className="flex flex-wrap gap-2">
               <button
                 type="button"
-                className="h-7 px-2 text-xs rounded border bg-background hover:bg-muted disabled:opacity-50"
+                className="interactive h-7 px-2 text-xs rounded-md border bg-background hover:bg-white/10 disabled:opacity-50"
                 disabled={procProvider !== "http"}
                 onClick={() => {
                   const base = (import.meta as any).env?.VITE_SUPABASE_URL as string | undefined;
@@ -322,7 +322,7 @@ export default function SettingsPage() {
               </button>
               <button
                 type="button"
-                className="h-7 px-2 text-xs rounded border bg-background hover:bg-muted disabled:opacity-50"
+                className="interactive h-7 px-2 text-xs rounded-md border bg-background hover:bg-white/10 disabled:opacity-50"
                 disabled={procProvider !== "http"}
                 onClick={() => { setProcHttpUrl(""); setHttpUrl(""); patchProcSettings({ procurementApiBaseUrl: "" }); toast.success("已清空 endpoint（下次将走 fallback-local）"); }}
               >
@@ -330,7 +330,7 @@ export default function SettingsPage() {
               </button>
             </div>
             <p className="text-xs text-muted-foreground">
-              留空或不可达时自动回退 local。正向验收请使用 <span className="font-mono">http</span> + 内置 mock endpoint。
+              留空或不可达时自动回退 local。正向验收请使用 <span className="font-mono">http</span> + 内�� mock endpoint。
             </p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">

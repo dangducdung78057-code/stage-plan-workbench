@@ -203,6 +203,32 @@
   }
   .panel-body { @apply p-4; }
 
+  /* ── 全站统一交互规范 ───────────────────────────── */
+  /* 可交互元素统一动效：颜色过渡 200ms，禁用 transition-all */
+  .interactive {
+    @apply transition-colors duration-200;
+  }
+  /* 可点击整卡：panel 悬停增亮 */
+  .panel-interactive {
+    @apply transition-colors duration-200 hover:bg-white/[0.06] cursor-pointer;
+  }
+
+  /* 分段 pill 切换（Workspace 视图切换风格，全站统一） */
+  .seg-tabs {
+    @apply inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 p-1 text-xs;
+  }
+  .seg-tab {
+    @apply rounded-full px-3 py-1 transition-colors duration-200 text-muted-foreground hover:text-foreground;
+  }
+  .seg-tab[aria-selected="true"], .seg-tab[data-active="true"] {
+    @apply bg-white/15 font-medium text-foreground;
+  }
+
+  /* 标签 chip：全圆角小标签 */
+  .chip {
+    @apply inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-2.5 py-0.5 text-xs text-muted-foreground;
+  }
+
   /* Checkpoint banner — shown once at build-time */
   .checkpoint-banner::before {
     content: "CHECKPOINT: stageos-v4.1-webhook-signature";

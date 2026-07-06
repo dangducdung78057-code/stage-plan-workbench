@@ -118,7 +118,7 @@ export function FormationWorkspace({
 
   if (!input || schemes.length === 0) {
     return (
-      <div className="liquid-glass rounded-[1.25rem] p-6 text-sm text-muted-foreground">
+      <div className="panel p-6 text-sm text-muted-foreground">
         <Users className="mb-2 h-5 w-5" aria-hidden="true" />
         暂无可用的队形数据 — 请先在「编辑 StageInput」中填写总人数(或学生名单),再回到此处生成队形方案。
       </div>
@@ -128,7 +128,7 @@ export function FormationWorkspace({
   return (
     <div className="space-y-4">
       {confirmed?.layoutName ? (
-        <div className="liquid-glass flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm">
+        <div className="panel flex items-center gap-2 px-4 py-2.5 text-sm">
           <CheckCircle2 className="h-4 w-4 text-success" aria-hidden="true" />
           <span className="text-muted-foreground">已确认队形:</span>
           <span className="font-medium">{confirmed.summary ?? confirmed.layoutName}</span>
@@ -142,10 +142,10 @@ export function FormationWorkspace({
             key={s.key}
             type="button"
             onClick={() => setActiveKey(s.key)}
-            className={`rounded-full px-4 py-1.5 text-sm transition-colors ${
+            className={`interactive rounded-full border border-white/10 px-4 py-1.5 text-sm ${
               active?.key === s.key
-                ? "liquid-glass-strong font-medium"
-                : "liquid-glass text-muted-foreground hover:text-foreground"
+                ? "bg-white/15 font-medium"
+                : "bg-white/5 text-muted-foreground hover:text-foreground hover:bg-white/10"
             }`}
             aria-pressed={active?.key === s.key}
           >
@@ -156,7 +156,7 @@ export function FormationWorkspace({
 
       {active ? (
         <div className={view === "top" ? "grid gap-4 lg:grid-cols-[1.4fr_1fr]" : "space-y-4"}>
-          <div className="liquid-glass rounded-[1.25rem] p-4">
+          <div className="panel p-4">
             <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
               <div>
                 <h3 className="font-medium">{active.name}</h3>
@@ -166,13 +166,13 @@ export function FormationWorkspace({
                 <span className="text-xs text-muted-foreground">
                   {active.slots.filter((s) => s.group !== "conductor").length} 人 · {active.rows} 排 · {active.spacingRule}
                 </span>
-                <div className="flex rounded-full liquid-glass p-0.5 text-xs" role="tablist" aria-label="视图切换">
+                <div className="seg-tabs" role="tablist" aria-label="视图切换">
                   <button
                     type="button"
                     role="tab"
                     aria-selected={view === "top"}
                     onClick={() => setView("top")}
-                    className={`rounded-full px-3 py-1 transition-colors ${view === "top" ? "bg-white/15 font-medium" : "text-muted-foreground hover:text-foreground"}`}
+                    className="seg-tab"
                   >
                     俯视图
                   </button>
@@ -181,7 +181,7 @@ export function FormationWorkspace({
                     role="tab"
                     aria-selected={view === "front"}
                     onClick={() => setView("front")}
-                    className={`rounded-full px-3 py-1 transition-colors ${view === "front" ? "bg-white/15 font-medium" : "text-muted-foreground hover:text-foreground"}`}
+                    className="seg-tab"
                   >
                     2D 形象预览图
                   </button>
@@ -190,7 +190,7 @@ export function FormationWorkspace({
                     role="tab"
                     aria-selected={view === "gallery"}
                     onClick={() => setView("gallery")}
-                    className={`rounded-full px-3 py-1 transition-colors ${view === "gallery" ? "bg-white/15 font-medium" : "text-muted-foreground hover:text-foreground"}`}
+                    className="seg-tab"
                   >
                     插画模板
                   </button>
@@ -207,7 +207,7 @@ export function FormationWorkspace({
           </div>
 
           <div className="space-y-4">
-            <div className="liquid-glass rounded-[1.25rem] p-4">
+            <div className="panel p-4">
               <h4 className="mb-2 flex items-center gap-1.5 text-sm font-medium">
                 <Footprints className="h-4 w-4" aria-hidden="true" /> 走位口令
               </h4>
@@ -220,7 +220,7 @@ export function FormationWorkspace({
                 ))}
               </ol>
             </div>
-            <div className="liquid-glass rounded-[1.25rem] p-4">
+            <div className="panel p-4">
               <h4 className="mb-2 text-sm font-medium">排布要点</h4>
               <ul className="list-disc space-y-1.5 pl-4 text-sm text-muted-foreground">
                 {active.notes.map((n, i) => <li key={i}>{n}</li>)}

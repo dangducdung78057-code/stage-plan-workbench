@@ -60,13 +60,13 @@ export default function AuthPage() {
           <span className="kbd-route">auth</span>
         </div>
         <form onSubmit={submit} className="panel-body space-y-3">
-          <div className="flex gap-1 p-0.5 bg-white/5 rounded-lg text-xs">
-            <button type="button" onClick={() => setMode("signin")}
-              className={`flex-1 py-1.5 rounded-md transition-colors ${mode === "signin" ? "bg-white/15 text-foreground shadow-sm" : "text-muted-foreground"}`}>
+          <div className="seg-tabs w-full" role="tablist" aria-label="登录注册切换">
+            <button type="button" role="tab" aria-selected={mode === "signin"} onClick={() => setMode("signin")}
+              className="seg-tab flex-1 py-1.5 text-center">
               登录
             </button>
-            <button type="button" onClick={() => setMode("signup")}
-              className={`flex-1 py-1.5 rounded-md transition-colors ${mode === "signup" ? "bg-white/15 text-foreground shadow-sm" : "text-muted-foreground"}`}>
+            <button type="button" role="tab" aria-selected={mode === "signup"} onClick={() => setMode("signup")}
+              className="seg-tab flex-1 py-1.5 text-center">
               注册
             </button>
           </div>

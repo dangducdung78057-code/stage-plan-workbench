@@ -628,7 +628,7 @@ export default function ProjectDetail() {
                 </div>
 
                 {confirmPreview && (
-                  <div className="rounded border border-border bg-muted/30 p-2 space-y-1">
+                  <div className="rounded-xl border border-border bg-muted/30 p-2 space-y-1">
                     <div className="text-xs font-medium text-muted-foreground">解密后待确认数据</div>
                     <dl className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
                       {[
@@ -1016,7 +1016,7 @@ function ValidationHistoryPanel({ input }: { input: StageInputData | null }) {
           return (
             <div
               key={`${entry.checkedAt}-${i}`}
-              className={`rounded-md border p-3 ${isLatest ? "border-primary/40 bg-primary/5" : "border-border"}`}
+              className={`rounded-xl border p-3 ${isLatest ? "border-primary/40 bg-primary/5" : "border-border"}`}
             >
               <div className="flex flex-wrap items-center gap-2 mb-1">
                 <span className="font-mono text-xs text-muted-foreground">

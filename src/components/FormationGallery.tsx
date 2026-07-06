@@ -70,14 +70,12 @@ export function FormationGallery({
           ，也可以浏览其他队形族模板。
         </p>
         <div className="flex items-center gap-2">
-          <span className="rounded-full liquid-glass px-3 py-1 text-xs text-muted-foreground">
-            内置模板即时可用
-          </span>
+          <span className="chip">内置模板即时可用</span>
           <button
             type="button"
             onClick={generateAiImage}
             disabled={ai.phase === "loading"}
-            className="rounded-full bg-primary px-4 py-1.5 text-xs font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
+            className="interactive rounded-full bg-primary px-4 py-1.5 text-xs font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50"
           >
             {ai.phase === "loading" ? "AI 绘制中（约 1 分钟）…" : "AI 生成专属图"}
           </button>
@@ -91,7 +89,7 @@ export function FormationGallery({
       ) : null}
 
       {ai.phase === "done" ? (
-        <figure className="liquid-glass overflow-hidden rounded-[1.25rem] ring-1 ring-primary/40">
+        <figure className="panel overflow-hidden ring-1 ring-primary/40">
           <img
             src={ai.url || "/placeholder.svg"}
             alt="AI 按项目参数生成的专属队形插画"
@@ -131,11 +129,7 @@ export function FormationGallery({
             role="tab"
             aria-selected={f.key === active.key}
             onClick={() => setActiveKey(f.key)}
-            className={`rounded-full px-3 py-1.5 text-xs transition-colors liquid-glass ${
-              f.key === active.key
-                ? "bg-white/15 font-medium"
-                : "text-muted-foreground hover:text-foreground"
-            } ${f.key === matched.key ? "ring-1 ring-primary/40" : ""}`}
+            className={`seg-tab border border-white/10 bg-white/5 ${f.key === matched.key ? "ring-1 ring-primary/40" : ""}`}
           >
             {f.title.replace("队形模板", "").replace("走位模板", "")}
             {f.key === matched.key ? " ·匹配" : ""}
@@ -143,7 +137,7 @@ export function FormationGallery({
         ))}
       </div>
 
-      <figure className="liquid-glass overflow-hidden rounded-[1.25rem]">
+      <figure className="panel overflow-hidden">
         <img
           src={active.image || "/placeholder.svg"}
           alt={`${active.title}：${active.caption}`}
@@ -158,7 +152,7 @@ export function FormationGallery({
 
       <div className="grid gap-2 sm:grid-cols-3">
         {active.phases.map((p, i) => (
-          <div key={p} className="liquid-glass rounded-xl p-3 text-xs">
+          <div key={p} className="panel p-3 text-xs">
             <span className="mr-2 inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/10 font-medium">
               {i + 1}
             </span>

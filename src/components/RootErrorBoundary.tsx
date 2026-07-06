@@ -28,7 +28,7 @@ export class RootErrorBoundary extends Component<{ children: ReactNode }, State>
     if (!this.state.error) return this.props.children;
     return (
       <div className="min-h-dvh bg-background text-foreground grid place-items-center p-6">
-        <div className="w-full max-w-md border rounded-md bg-surface p-5 space-y-3">
+        <div className="panel w-full max-w-md p-5 space-y-3">
           <div className="text-sm font-semibold">应用出错</div>
           <div className="text-xs text-muted-foreground font-mono break-all">
             {this.state.error.message || String(this.state.error)}
@@ -36,13 +36,13 @@ export class RootErrorBoundary extends Component<{ children: ReactNode }, State>
           <div className="flex gap-2 pt-1">
             <button
               onClick={this.reload}
-              className="flex-1 h-9 rounded border text-sm hover:bg-surface-muted"
+              className="interactive flex-1 h-9 rounded-md border text-sm hover:bg-white/10"
             >
               刷新
             </button>
             <button
               onClick={this.hardReset}
-              className="flex-1 h-9 rounded bg-primary text-primary-foreground text-sm"
+              className="interactive flex-1 h-9 rounded-md bg-primary text-primary-foreground text-sm hover:opacity-90"
             >
               清除本地会话并重试
             </button>

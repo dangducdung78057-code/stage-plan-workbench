@@ -109,7 +109,7 @@ export default function Workspace() {
           <button
             ref={guideTriggerRef}
             type="button"
-            className="panel w-full text-left flex items-center justify-between gap-3 p-3 hover:border-primary/40 hover:bg-accent/40 transition-colors group"
+            className="panel panel-interactive w-full text-left flex items-center justify-between gap-3 p-3 hover:border-primary/40 group"
             aria-label="打开 StageOS 项目总览幻灯片导读"
           >
             <div className="flex items-center gap-3 min-w-0">
@@ -189,7 +189,7 @@ export default function Workspace() {
                         {String(i + 1).padStart(2, "0")}
                       </div>
                       <div
-                        className={`flex-1 min-w-0 rounded-xl border px-3 py-2 transition-all ${
+                        className={`flex-1 min-w-0 rounded-xl border px-3 py-2 transition-colors duration-200 ${
                           isActive
                             ? "border-primary/60 bg-primary/5 shadow-sm"
                             : emphasised
@@ -224,7 +224,7 @@ export default function Workspace() {
                   onClick={() => moveSlide(-1)}
                   disabled={activeSlide === 0}
                   aria-label="上一分镜"
-                  className="p-1.5 hover:bg-accent disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="interactive p-1.5 hover:bg-white/10 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   <ChevronUp className="h-3.5 w-3.5" />
                 </button>
@@ -233,7 +233,7 @@ export default function Workspace() {
                   onClick={() => moveSlide(1)}
                   disabled={activeSlide === SLIDE_OUTLINE.length - 1}
                   aria-label="下一分镜"
-                  className="p-1.5 hover:bg-accent border-l border-border disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="interactive p-1.5 hover:bg-white/10 border-l border-border disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   <ChevronDown className="h-3.5 w-3.5" />
                 </button>
