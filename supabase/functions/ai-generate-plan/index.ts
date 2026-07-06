@@ -150,7 +150,6 @@ async function callAiGateway(prompt: string, apiKey: string): Promise<{ ok: true
           { role: "system", content: "你是 StageOS 服装总表排产专家，精通学校演出服装采购：学段画像、1688/淘宝/京东价格档、尺码策略、倒排计划与 Plan B 兜底。严格遵循用户提供的领域知识库与结构要求，只返回 JSON。" },
           { role: "user", content: prompt },
         ],
-        response_format: { type: "json_object" },
       }),
     });
     if (res.status === 429) return { ok: false, code: "AI_RATE_LIMIT", message: "AI 网关限流，请稍后重试。" };
@@ -164,8 +163,15 @@ async function callAiGateway(prompt: string, apiKey: string): Promise<{ ok: true
     if (!content || typeof content !== "string") {
       return { ok: false, code: "AI_EMPTY_RESPONSE", message: "AI 返回为空。" };
     }
+    // 容错解析：剥离 markdown 代码围栏，并截取首个 { 到末尾 } 之间的内容
+    let raw = content.trim();
+    const fence = raw.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+    if (fence) raw = fence[1].trim();
+    const first = raw.indexOf("{");
+    const last = raw.lastIndexOf("}");
+    if (first >= 0 && last > first) raw = raw.slice(first, last + 1);
     let parsed: unknown;
-    try { parsed = JSON.parse(content); } catch {
+    try { parsed = JSON.parse(raw); } catch {
       return { ok: false, code: "AI_INVALID_JSON", message: "AI 返回非合法 JSON。" };
     }
     return { ok: true, data: parsed };
