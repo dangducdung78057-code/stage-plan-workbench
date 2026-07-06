@@ -528,10 +528,43 @@ function describePdfSyncError(err: any): string {
   return raw ? `${raw}${code ? ` [${code}]` : ""}` : "未知错误";
 }
 
+function pdfSyncStatusLabel(status: string): string {
+  switch (status) {
+    case "PASS": return "成功";
+    case "WARN": return "成功（警告）";
+    case "FAIL": return "失败";
+    case "SKIP": return "跳过";
+    default: return status || "—";
+  }
+}
+
+function pdfSyncStatusTone(status: string): "success" | "warning" | "destructive" | "muted" {
+  switch (status) {
+    case "PASS": return "success";
+    case "WARN": return "warning";
+    case "FAIL": return "destructive";
+    case "SKIP": return "muted";
+    default: return "muted";
+  }
+}
+
 function PdfCapabilitySyncPanel({ pdfExportOn }: { pdfExportOn: boolean }) {
   const [state, setState] = useState<"idle" | "running" | "ok" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
-  const [lastRunAt, setLastRunAt] = useState<string | null>(null);
+  const [dbRow, setDbRow] = useState<{ status: string; enabled: boolean; updated_at: string; notes: string | null } | null>(null);
+
+  async function fetchLatest() {
+    const { data, error } = await supabase
+      .from("system_capabilities")
+      .select("status,enabled,updated_at,notes")
+      .eq("module", "pdf_export")
+      .single();
+    if (!error && data) setDbRow(data as any);
+  }
+
+  useEffect(() => {
+    fetchLatest();
+  }, []);
 
   async function run() {
     setState("running");
@@ -549,8 +582,8 @@ function PdfCapabilitySyncPanel({ pdfExportOn }: { pdfExportOn: boolean }) {
         p_notes: capNotes,
       });
       if (rpcErr) throw rpcErr;
+      await fetchLatest();
       setState("ok");
-      setLastRunAt(new Date().toISOString());
       toast.success(`PDF capability 已同步（${capStatus}）`);
     } catch (e: any) {
       const msg = describePdfSyncError(e);
@@ -559,6 +592,10 @@ function PdfCapabilitySyncPanel({ pdfExportOn }: { pdfExportOn: boolean }) {
       toast.error(`PDF capability 同步失败：${msg}`);
     }
   }
+
+  const timeStr = dbRow?.updated_at
+    ? new Date(dbRow.updated_at).toLocaleString("zh-CN")
+    : "—";
 
   return (
     <div className="panel">
@@ -570,12 +607,25 @@ function PdfCapabilitySyncPanel({ pdfExportOn }: { pdfExportOn: boolean }) {
         <p className="text-xs text-muted-foreground">
           手动调用 <span className="font-mono">sync_pdf_capability</span> RPC，按当前 <span className="font-mono">pdfExport</span> flag 状态回写 <span className="font-mono">system_capabilities.pdf_export</span> 行；用于验证权限授予与 Release Gate 链路，不触发真实 PDF 渲染。
         </p>
+        <div className="border rounded px-2.5 py-1.5 bg-surface flex items-center justify-between gap-2">
+          <span className="text-xs text-muted-foreground">最近一次同步</span>
+          <span className="flex items-center gap-2 flex-wrap justify-end">
+            {dbRow ? (
+              <ToneBadge tone={pdfSyncStatusTone(dbRow.status)}>
+                {pdfSyncStatusLabel(dbRow.status)}
+              </ToneBadge>
+            ) : (
+              <span className="text-xs text-muted-foreground">加载中…</span>
+            )}
+            <span className="text-muted-foreground font-mono text-xs">{timeStr}</span>
+          </span>
+        </div>
         <div className="flex flex-wrap items-center gap-2">
           <Button size="sm" onClick={run} disabled={state === "running"}>
             {state === "running" ? "同步中…" : "同步 PDF capability"}
           </Button>
           {state === "error" && (
-            <Button size="sm" variant="outline" onClick={run} disabled={(state as string) === "running"}>
+            <Button size="sm" variant="outline" onClick={run} disabled={false}>
               重试
             </Button>
           )}
@@ -583,11 +633,6 @@ function PdfCapabilitySyncPanel({ pdfExportOn }: { pdfExportOn: boolean }) {
             <span className="inline-flex items-center gap-1 text-xs text-success">
               <CheckCircle2 className="h-3.5 w-3.5" />
               同步成功
-              {lastRunAt && (
-                <span className="text-muted-foreground font-mono">
-                  · {new Date(lastRunAt).toLocaleTimeString()}
-                </span>
-              )}
             </span>
           )}
         </div>
