@@ -9,6 +9,7 @@ import {
   type FormationScheme, type FormationSlot,
 } from "@/lib/formation";
 import { FormationPreviewSheet } from "@/components/FormationPreviewSheet";
+import { FormationGallery } from "@/components/FormationGallery";
 import type { StageInputData } from "@/lib/stageos";
 
 const GROUP_COLORS: Record<FormationSlot["group"], { fill: string; label: string }> = {
@@ -87,7 +88,7 @@ export function FormationWorkspace({
   const schemes = useMemo(() => (input ? generateFormations(input) : []), [input]);
   const [activeKey, setActiveKey] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const [view, setView] = useState<"top" | "front">("top");
+  const [view, setView] = useState<"top" | "front" | "gallery">("top");
   const active = schemes.find((s) => s.key === activeKey) ?? schemes[0];
   const confirmed = input?.confirmedFormation;
 
@@ -154,7 +155,7 @@ export function FormationWorkspace({
       </div>
 
       {active ? (
-        <div className={view === "front" ? "space-y-4" : "grid gap-4 lg:grid-cols-[1.4fr_1fr]"}>
+        <div className={view === "top" ? "grid gap-4 lg:grid-cols-[1.4fr_1fr]" : "space-y-4"}>
           <div className="liquid-glass rounded-[1.25rem] p-4">
             <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
               <div>
@@ -184,11 +185,22 @@ export function FormationWorkspace({
                   >
                     2D 形象预览图
                   </button>
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={view === "gallery"}
+                    onClick={() => setView("gallery")}
+                    className={`rounded-full px-3 py-1 transition-colors ${view === "gallery" ? "bg-white/15 font-medium" : "text-muted-foreground hover:text-foreground"}`}
+                  >
+                    插画模板
+                  </button>
                 </div>
               </div>
             </div>
             {view === "top" ? (
               <StageCanvas scheme={active} />
+            ) : view === "gallery" && input ? (
+              <FormationGallery input={input} />
             ) : input ? (
               <FormationPreviewSheet scheme={active} input={input} />
             ) : null}
