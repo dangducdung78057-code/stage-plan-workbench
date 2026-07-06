@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { renderMarkdown } from "@/lib/exportRender";
 import { ProcurementCandidatesToggle, ProcurementDisclaimer } from "@/components/ProcurementCandidatesRow";
+import { FormationWorkspace } from "@/components/FormationWorkspace";
 import type { MatchContext } from "@/lib/procurementMatch";
 import { useProcurementSettings } from "@/lib/procurementSettings";
 import { dispatchWebhook } from "@/lib/webhook";
@@ -448,6 +449,7 @@ export default function ProjectDetail() {
         <div className="overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0">
           <TabsList className="w-max">
             <TabsTrigger value="plan" className="whitespace-nowrap">服装总表工作区</TabsTrigger>
+            <TabsTrigger value="formation" className="whitespace-nowrap">队形走位 <span className="kbd-route ml-1">/formation</span></TabsTrigger>
             <TabsTrigger value="confirm" className="whitespace-nowrap">确认 <span className="kbd-route ml-1">/confirm</span></TabsTrigger>
             <TabsTrigger value="export" className="whitespace-nowrap">导出 <span className="kbd-route ml-1">/export</span></TabsTrigger>
             <TabsTrigger value="render" className="whitespace-nowrap">渲染上下文 <span className="kbd-route ml-1">/render-context</span></TabsTrigger>
@@ -491,6 +493,11 @@ export default function ProjectDetail() {
               </MobileCardList>
             </div>
           )}
+        </TabsContent>
+
+        <TabsContent value="formation" className="space-y-4 mt-4">
+          <h2 className="sr-only">队形与舞台走位</h2>
+          <FormationWorkspace projectId={project.id} input={input} onSaved={load} />
         </TabsContent>
 
         <TabsContent value="confirm" className="space-y-4 mt-4">
