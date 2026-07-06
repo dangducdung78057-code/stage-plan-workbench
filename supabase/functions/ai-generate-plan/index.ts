@@ -135,7 +135,7 @@ const PLAN_SCHEMA_HINT = `
 
 async function callAiGateway(prompt: string, apiKey: string): Promise<{ ok: true; data: unknown } | { ok: false; code: string; message: string }> {
   const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), 25000);
+  const timer = setTimeout(() => ctrl.abort(), 50000);
   try {
     const res = await fetch("https://ai-gateway.vercel.sh/v1/chat/completions", {
       method: "POST",
