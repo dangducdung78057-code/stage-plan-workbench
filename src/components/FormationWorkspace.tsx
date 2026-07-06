@@ -200,7 +200,7 @@ export function FormationWorkspace({
             {view === "top" ? (
               <StageCanvas scheme={active} />
             ) : view === "gallery" && input ? (
-              <FormationGallery input={input} />
+              <FormationGallery projectId={projectId} input={input} />
             ) : input ? (
               <FormationPreviewSheet scheme={active} input={input} />
             ) : null}
