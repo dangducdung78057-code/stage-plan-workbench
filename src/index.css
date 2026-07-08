@@ -4,87 +4,88 @@
 
 @layer base {
   :root {
-    /* StageOS operations palette — quiet slate + steel blue accent */
-    --background: 210 20% 98%;
-    --foreground: 215 28% 12%;
+    /* StageOS liquid-glass palette — near-black stage + glass chrome */
+    --background: 220 15% 3%;
+    --foreground: 0 0% 96%;
 
-    --surface: 0 0% 100%;
-    --surface-muted: 214 24% 96%;
+    --surface: 220 12% 6%;
+    --surface-muted: 220 10% 9%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 215 28% 12%;
+    --card: 220 12% 6%;
+    --card-foreground: 0 0% 96%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 215 28% 12%;
+    --popover: 220 14% 7%;
+    --popover-foreground: 0 0% 96%;
 
-    --primary: 215 65% 32%;
-    --primary-foreground: 210 40% 98%;
+    --primary: 0 0% 98%;
+    --primary-foreground: 220 15% 6%;
 
-    --secondary: 214 24% 93%;
-    --secondary-foreground: 215 30% 20%;
+    --secondary: 220 10% 13%;
+    --secondary-foreground: 0 0% 92%;
 
-    --muted: 214 20% 94%;
-    --muted-foreground: 215 14% 42%;
+    --muted: 220 10% 12%;
+    --muted-foreground: 220 8% 62%;
 
-    --accent: 199 85% 42%;
-    --accent-foreground: 210 40% 98%;
+    --accent: 199 90% 60%;
+    --accent-foreground: 220 15% 6%;
 
-    --destructive: 0 72% 45%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 78% 58%;
+    --destructive-foreground: 0 0% 98%;
 
-    --warning: 32 92% 46%;
-    --warning-foreground: 40 100% 97%;
+    --warning: 36 95% 58%;
+    --warning-foreground: 220 15% 6%;
 
-    --success: 152 58% 34%;
-    --success-foreground: 152 60% 96%;
+    --success: 152 60% 52%;
+    --success-foreground: 220 15% 6%;
 
-    --info: 215 65% 42%;
-    --info-foreground: 210 40% 98%;
+    --info: 199 90% 60%;
+    --info-foreground: 220 15% 6%;
 
-    --border: 214 20% 88%;
-    --input: 214 20% 88%;
-    --ring: 215 65% 32%;
+    --border: 0 0% 100% / 0.12;
+    --input: 0 0% 100% / 0.14;
+    --ring: 0 0% 80%;
 
-    --radius: 0.375rem;
+    --radius: 0.75rem;
 
-    --sidebar-background: 215 30% 14%;
-    --sidebar-foreground: 214 25% 82%;
-    --sidebar-primary: 199 85% 52%;
-    --sidebar-primary-foreground: 215 30% 14%;
-    --sidebar-accent: 215 25% 20%;
-    --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-border: 215 25% 22%;
-    --sidebar-ring: 199 85% 52%;
+    --sidebar-background: 220 16% 4%;
+    --sidebar-foreground: 220 10% 74%;
+    --sidebar-primary: 0 0% 98%;
+    --sidebar-primary-foreground: 220 15% 6%;
+    --sidebar-accent: 220 10% 12%;
+    --sidebar-accent-foreground: 0 0% 96%;
+    --sidebar-border: 0 0% 100% / 0.1;
+    --sidebar-ring: 0 0% 80%;
   }
 
+  /* 全站统一深色液态玻璃主题，.dark 与 :root 保持一致 */
   .dark {
-    --background: 215 30% 8%;
-    --foreground: 210 30% 94%;
-    --surface: 215 28% 11%;
-    --surface-muted: 215 25% 14%;
-    --card: 215 28% 11%;
-    --card-foreground: 210 30% 94%;
-    --popover: 215 28% 11%;
-    --popover-foreground: 210 30% 94%;
-    --primary: 199 85% 52%;
-    --primary-foreground: 215 30% 10%;
-    --secondary: 215 25% 18%;
-    --secondary-foreground: 210 30% 94%;
-    --muted: 215 25% 16%;
-    --muted-foreground: 214 15% 60%;
-    --accent: 199 85% 52%;
-    --accent-foreground: 215 30% 10%;
-    --destructive: 0 65% 48%;
-    --destructive-foreground: 210 40% 98%;
-    --warning: 32 92% 52%;
-    --warning-foreground: 215 30% 10%;
-    --success: 152 55% 45%;
-    --success-foreground: 215 30% 10%;
-    --info: 199 85% 52%;
-    --info-foreground: 215 30% 10%;
-    --border: 215 25% 20%;
-    --input: 215 25% 20%;
-    --ring: 199 85% 52%;
+    --background: 220 15% 3%;
+    --foreground: 0 0% 96%;
+    --surface: 220 12% 6%;
+    --surface-muted: 220 10% 9%;
+    --card: 220 12% 6%;
+    --card-foreground: 0 0% 96%;
+    --popover: 220 14% 7%;
+    --popover-foreground: 0 0% 96%;
+    --primary: 0 0% 98%;
+    --primary-foreground: 220 15% 6%;
+    --secondary: 220 10% 13%;
+    --secondary-foreground: 0 0% 92%;
+    --muted: 220 10% 12%;
+    --muted-foreground: 220 8% 62%;
+    --accent: 199 90% 60%;
+    --accent-foreground: 220 15% 6%;
+    --destructive: 0 78% 58%;
+    --destructive-foreground: 0 0% 98%;
+    --warning: 36 95% 58%;
+    --warning-foreground: 220 15% 6%;
+    --success: 152 60% 52%;
+    --success-foreground: 220 15% 6%;
+    --info: 199 90% 60%;
+    --info-foreground: 220 15% 6%;
+    --border: 0 0% 100% / 0.12;
+    --input: 0 0% 100% / 0.14;
+    --ring: 0 0% 80%;
   }
 }
 
@@ -93,19 +94,94 @@
   html, body, #root { height: 100%; }
   body {
     @apply bg-background text-foreground antialiased;
-    font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC",
+    font-family: "Barlow", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC",
       system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    /* 微弱冷光晕，让玻璃面板有可折射的层次 */
+    background-image:
+      radial-gradient(1200px 600px at 80% -10%, rgba(90, 160, 255, 0.07), transparent 60%),
+      radial-gradient(900px 500px at 10% 110%, rgba(120, 90, 255, 0.05), transparent 60%);
+    background-attachment: fixed;
   }
   .font-mono, code, kbd, samp {
     font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   }
 }
 
+/* ── Liquid glass design system ─────────────────────────────── */
+.liquid-glass {
+  background: rgba(255, 255, 255, 0.01);
+  background-blend-mode: luminosity;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  border: none;
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.1);
+  position: relative;
+  overflow: hidden;
+}
+.liquid-glass::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1.4px;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.45) 0%,
+    rgba(255, 255, 255, 0.15) 20%,
+    rgba(255, 255, 255, 0) 40%,
+    rgba(255, 255, 255, 0) 60%,
+    rgba(255, 255, 255, 0.15) 80%,
+    rgba(255, 255, 255, 0.45) 100%
+  );
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+.liquid-glass-strong {
+  background: rgba(255, 255, 255, 0.01);
+  background-blend-mode: luminosity;
+  backdrop-filter: blur(50px);
+  -webkit-backdrop-filter: blur(50px);
+  border: none;
+  box-shadow: 4px 4px 4px rgba(0, 0, 0, 0.05), inset 0 1px 1px rgba(255, 255, 255, 0.15);
+  position: relative;
+  overflow: hidden;
+}
+.liquid-glass-strong::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1.4px;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.5) 0%,
+    rgba(255, 255, 255, 0.2) 20%,
+    rgba(255, 255, 255, 0) 40%,
+    rgba(255, 255, 255, 0) 60%,
+    rgba(255, 255, 255, 0.2) 80%,
+    rgba(255, 255, 255, 0.5) 100%
+  );
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+/* 玻璃面板：内页卡片用，玻璃描边 + 轻微暗底提升可读性 */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.08);
+  position: relative;
+}
+
 @layer components {
   .ops-table { @apply w-full text-sm; }
   .ops-table thead th {
-    @apply text-left font-medium text-muted-foreground px-3 py-2 border-b bg-surface-muted;
+    @apply text-left font-medium text-muted-foreground px-3 py-2 border-b bg-white/[0.04];
     font-size: 12px;
   }
   .ops-table tbody td { @apply px-3 py-2 border-b align-middle; }
@@ -116,12 +192,42 @@
   }
 
   .panel {
-    @apply bg-card border rounded-md;
+    @apply rounded-xl border border-white/10;
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.07);
   }
   .panel-header {
     @apply flex items-center justify-between px-4 py-2.5 border-b;
   }
   .panel-body { @apply p-4; }
+
+  /* ── 全站统一交互规范 ───────────────────────────── */
+  /* 可交互元素统一动效：颜色过渡 200ms，禁用 transition-all */
+  .interactive {
+    @apply transition-colors duration-200;
+  }
+  /* 可点击整卡：panel 悬停增亮 */
+  .panel-interactive {
+    @apply transition-colors duration-200 hover:bg-white/[0.06] cursor-pointer;
+  }
+
+  /* 分段 pill 切换（Workspace 视图切换风格，全站统一） */
+  .seg-tabs {
+    @apply inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 p-1 text-xs;
+  }
+  .seg-tab {
+    @apply rounded-full px-3 py-1 transition-colors duration-200 text-muted-foreground hover:text-foreground;
+  }
+  .seg-tab[aria-selected="true"], .seg-tab[data-active="true"] {
+    @apply bg-white/15 font-medium text-foreground;
+  }
+
+  /* 标签 chip：全圆角小标签 */
+  .chip {
+    @apply inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-2.5 py-0.5 text-xs text-muted-foreground;
+  }
 
   /* Checkpoint banner — shown once at build-time */
   .checkpoint-banner::before {

@@ -1,6 +1,6 @@
-// StageOS AI plan generation via Lovable AI Gateway.
+// StageOS AI plan generation via Vercel AI Gateway.
 // Runs the same precheck (auth -> permission -> confirmation -> validation),
-// then calls Lovable AI to produce a structured plan payload matching the mock shape.
+// then calls the AI gateway to produce a structured plan payload matching the mock shape.
 // Any AI failure is returned to the client so it can fall back to mock generation.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -50,6 +50,65 @@ function validateStageInput(data: StageInputData): string[] {
   return issues;
 }
 
+// 领域知识库：来自 StageOS 核心引擎分析报告（学段画像/价格基准/Plan B 规则/合唱队形规律）。
+const DOMAIN_KNOWLEDGE = `
+【学段画像矩阵】按学段严格套用以下约束：
+| 维度 | 小学低段(1-3) | 小学高段(4-6) | 初中 | 高中 |
+| 人均预算(元) | 40-100 | 60-150 | 100-250 | 200-600 |
+| 色彩饱和度 | 高(亮红/亮黄) | 中 | 中 | 中低(避免过艳) |
+| 款式复杂度 | 简单 | 中等 | 中偏高 | 高(可定制) |
+| 男女款区分 | 低(可同款) | 中 | 高 | 高 |
+| 现货:定制比例 | 7:3 | 5:5 | 3:7 | 2:8 |
+| 最小采购提前期 | 7天 | 14天 | 21天 | 30天 |
+| 尺码策略 | 统一大一码 | 标准码+演出前7天复测 | 标准码+身高分布统计 | 专业量体+定制 |
+| 面料偏好 | 纯棉/涤棉/针织/摇粒绒 | 纯棉/涤棉 | 混纺 | 羊毛混纺/高支棉/西服面料/丝绒 |
+小学低段避免黑色/深灰；高中避免过度卡通元素。
+
+【价格基准表】单价估算以 1688 批发档为基准（淘宝≈1.33倍，京东≈1.20倍）：
+上装：T恤定制25 / POLO定制印字45 / 卫衣定制55 / 衬衫60
+下装：五分裤50 / 百褶裙55 / 长裤55 / 西裤70
+鞋：舞蹈鞋45 / 跑步鞋60 / 板鞋70 / 皮鞋80
+配饰：中筒袜3 / 国旗贴2 / 头花4 / 手摇旗5 / 徽章5 / 加油棒6 / 彩带8 / 发光棒8 / 护腕15
+unitEstimate 应贴近上述基准（可按主题/定制程度上下浮动 30% 以内）。
+
+【预算校验】若 StageInput 含人均预算：totalEstimate 与 (人均预算×总人数) 的偏差应控制在 ±10% 内；若超出，必须在 risks 中给出 medium 以上风险说明。
+
+【Plan B 规则】planB 至少覆盖三类兜底：
+1. 物流延迟 → 同款现货替代（约为基准价 0.7 倍，淘宝现货）；
+2. 颜色偏差 → 同款备选色（优先深色系，价格不变）；
+3. 数量不足 → 关键单品单件补购（约为基准价 1.33 倍，淘宝零售）。
+
+【节目类型规律】合唱/朗诵类：队形以整体方阵为主（2-3 个队形），服装强调整体统一与色块层次，风格优先 西方古典/融合/国风；舞蹈类：男女款区分更高，需考虑动作幅度（弹性面料、舞蹈鞋）。
+
+【倒排计划锚点】reverseSchedule 必须尊重该学段最小采购提前期：定制类下单节点不得晚于演出前的最小提前期；并包含 尺码复测(约 D-7)、到货验收、彩排试穿、演出日检查 节点。
+
+【服装款式库·合唱】按 学段×主题 匹配（来自 31 个真实演出视频归纳）：
+- 小学低段×童趣：女=圆领T恤/小飞袖纱质上衣+背带短裤/蓬蓬纱裙(棉质/薄纱,A字)；男=深色西装外套+白衬衫+领结+深色长裤
+- 小学低段×古诗/国风：女=中式立领上衣(浅蓝底白镶边/盘扣)+浅色长裤或连衣裙(棉麻/轻纱)；男=深色中式立领或深灰西装
+- 小学中段×古诗：女=橄榄绿丝绒连衣裙(荷叶领,收腰A字)；男=白衬衫+深色马甲+领结+黑长裤
+- 小学中段×民谣：女=蓝白碎花连衣裙(江南风)；男=白衬衫+深色长裤
+- 初中×仪式/主旋律：女=统一白色礼服裙(H型直身,简洁无装饰)；男=白衬衫或深色西装+深色长裤
+- 高中×古诗：女=渐变长裙+盘扣(中式立领,收腰大摆,垂坠缎面)；男=同色系渐变中式立领衬衫或灰西装
+- 高中×民谣：女=收腰上衣+撞色分层百褶长裙(可双色声部分组)；男=灰西装+深色长裤
+- 高中×民族：女=撞色长款演出服+民族纹样+银饰头饰(如玫粉+藏蓝)；男=同色系民族上衣
+- 高中×国际：女=学院风西装外套+衬衫+蝴蝶结+百褶短裙；男=西装或立领套装
+描述 description 时应体现领型/面料/廓形，向上述款式靠拢。
+
+【色彩规律】女款主色按 学段×主题：小学低段童趣=明黄/浅粉、古诗=浅粉/天蓝；小学中段古诗=橄榄绿、民谣=天蓝+白；初中仪式=纯白；高中古诗=粉蓝渐变、民谣=粉+蓝绿、民族=玫粉+藏蓝。男款一律冷色/深色（藏青/深灰/黑）。指挥服装独立成色形成视觉焦点。高中及以上合唱建议双色分组实现声部可视化。
+
+【硬性禁忌】违反以下任一条即为不合格方案：
+1. 未成年学生禁止露背/露肩/深V/高叉/超短裙/透视面料，一律保守领型；
+2. 学前与小学低段禁止纯黑/深灰/暗紫主色（体型小会被舞台吃掉），改用高明度亮色；
+3. 服装颜色与舞台背景同色系禁止（表演者会"消失"），确保至少 2 级明度差；
+4. 古诗/国风主题禁用荧光色与高饱和撞色，用低饱和传统色（水墨灰/青绿/藕粉/月白）；
+5. 童趣主题禁止暗黑配色；仪式主题禁止荧光彩虹色，用红金或白+深色系；
+6. 低龄(小学低段及以下)禁用厚重呢绒/皮草/多层厚重礼服，用棉质/薄纱透气面料；
+7. 传统戏曲主题禁配 LED/发光棒等现代电子道具，配水袖/折扇/团扇；
+8. 面料与季节匹配：夏季忌厚重丝绒，冬季忌轻薄薄纱（按演出日期判断季节）。
+
+【道具建议】按主题在 accessories 中体现：古诗=折扇/油纸伞/书简/团扇；民谣=花束/绸带；童趣=发光道具/气球/彩色纸板；仪式=国旗/花束/横幅；现代=发光手环/LED道具；民族=银饰/长绸/手鼓；国际=国旗/和平鸽。注意与上面硬性禁忌不冲突（如古诗合唱不配电子发光道具）。
+`;
+
 const PLAN_SCHEMA_HINT = `
 返回 JSON 对象，结构如下（数字为整数元）：
 {
@@ -74,11 +133,11 @@ const PLAN_SCHEMA_HINT = `
 5. 所有文本用简体中文；不要出现任何解释性话术，只返回 JSON。
 `;
 
-async function callLovableAi(prompt: string, apiKey: string): Promise<{ ok: true; data: unknown } | { ok: false; code: string; message: string }> {
+async function callAiGateway(prompt: string, apiKey: string): Promise<{ ok: true; data: unknown } | { ok: false; code: string; message: string }> {
   const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), 25000);
+  const timer = setTimeout(() => ctrl.abort(), 50000);
   try {
-    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const res = await fetch("https://ai-gateway.vercel.sh/v1/chat/completions", {
       method: "POST",
       signal: ctrl.signal,
       headers: {
@@ -86,12 +145,11 @@ async function callLovableAi(prompt: string, apiKey: string): Promise<{ ok: true
         "Authorization": `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model: "openai/gpt-4o-mini",
         messages: [
-          { role: "system", content: "你是 StageOS 服装总表排产助手，只返回 JSON。" },
+          { role: "system", content: "你是 StageOS 服装总表排产专家，精通学校演出服装采购：学段画像、1688/淘宝/京东价格档、尺码策略、倒排计划与 Plan B 兜底。严格遵循用户提供的领域知识库与结构要求，只返回 JSON。" },
           { role: "user", content: prompt },
         ],
-        response_format: { type: "json_object" },
       }),
     });
     if (res.status === 429) return { ok: false, code: "AI_RATE_LIMIT", message: "AI 网关限流，请稍后重试。" };
@@ -105,8 +163,15 @@ async function callLovableAi(prompt: string, apiKey: string): Promise<{ ok: true
     if (!content || typeof content !== "string") {
       return { ok: false, code: "AI_EMPTY_RESPONSE", message: "AI 返回为空。" };
     }
+    // 容错解析：剥离 markdown 代码围栏，并截取首个 { 到末尾 } 之间的内容
+    let raw = content.trim();
+    const fence = raw.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+    if (fence) raw = fence[1].trim();
+    const first = raw.indexOf("{");
+    const last = raw.lastIndexOf("}");
+    if (first >= 0 && last > first) raw = raw.slice(first, last + 1);
     let parsed: unknown;
-    try { parsed = JSON.parse(content); } catch {
+    try { parsed = JSON.parse(raw); } catch {
       return { ok: false, code: "AI_INVALID_JSON", message: "AI 返回非合法 JSON。" };
     }
     return { ok: true, data: parsed };
@@ -185,12 +250,18 @@ Deno.serve(async (req) => {
     const issues = validateStageInput(input);
     if (issues.length > 0) return reject("VALIDATION_REQUIRED", "请先解决数据校验提示，再生成排产。", 422, { issues });
 
-    const apiKey = Deno.env.get("LOVABLE_API_KEY");
+    // 优先读函数密钥；未配置时回退到 RLS 全拒绝的 app_secrets 表（仅 service role 可读）
+    let apiKey = Deno.env.get("AI_GATEWAY_API_KEY") ?? Deno.env.get("LOVABLE_API_KEY") ?? "";
+    if (!apiKey) {
+      const { data: secret } = await svc
+        .from("app_secrets").select("value").eq("name", "AI_GATEWAY_API_KEY").maybeSingle();
+      apiKey = secret?.value ?? "";
+    }
     if (!apiKey) return reject("AI_NOT_CONFIGURED", "AI 网关未配置。", 503);
 
-    const prompt = `请为以下学校演出项目生成服装总表方案。\n项目标题: ${project.title}\n演出日期: ${project.performance_date ?? "未定"}\nStageInput: ${JSON.stringify(input)}\n\n${PLAN_SCHEMA_HINT}`;
+    const prompt = `请为以下学校演出项目生成服装总表方案。\n项目标题: ${project.title}\n演出日期: ${project.performance_date ?? "未定"}\nStageInput: ${JSON.stringify(input)}\n\n${DOMAIN_KNOWLEDGE}\n${PLAN_SCHEMA_HINT}`;
 
-    const ai = await callLovableAi(prompt, apiKey);
+    const ai = await callAiGateway(prompt, apiKey);
     if (!ai.ok) return json({ ok: false, code: ai.code, message: ai.message, aiFailed: true }, 502);
     const shape = validatePlanShape(ai.data);
     if (!shape.ok) return json({ ok: false, code: "AI_SHAPE_INVALID", message: `AI 输出结构不合规，缺少: ${shape.missing.join(", ")}`, missing: shape.missing, aiFailed: true }, 502);

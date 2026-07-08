@@ -132,7 +132,9 @@ describe("verifySitemapRobots — CLI 输出格式", () => {
     mkdirSync(join(dir, "public"));
     writeFileSync(join(dir, "public/robots.txt"), robots);
     writeFileSync(join(dir, "public/sitemap.xml"), sitemap);
-    return spawnSync("bunx", ["tsx", SCRIPT_PATH], {
+    // 直接使用本仓库安装的 tsx 可执行文件，兼容 bun / npm 环境
+    const tsxBin = join(process.cwd(), "node_modules", ".bin", "tsx");
+    return spawnSync(tsxBin, [SCRIPT_PATH], {
       cwd: dir,
       encoding: "utf8",
     });

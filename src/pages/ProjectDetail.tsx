@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { renderMarkdown } from "@/lib/exportRender";
 import { ProcurementCandidatesToggle, ProcurementDisclaimer } from "@/components/ProcurementCandidatesRow";
+import { FormationWorkspace } from "@/components/FormationWorkspace";
 import type { MatchContext } from "@/lib/procurementMatch";
 import { useProcurementSettings } from "@/lib/procurementSettings";
 import { dispatchWebhook } from "@/lib/webhook";
@@ -151,6 +152,22 @@ export default function ProjectDetail() {
         }
       } catch (netErr: any) {
         pre = { ok: false, code: "INTERNAL", message: netErr?.message ?? "network error" };
+      }
+
+      // Edge Function 不可达（未部署/网络失败）时，用客户端等价校验回退，保证主流程不被阻断。
+      // 顺序与后端一致：auth -> confirmation -> validation。
+      if (!pre?.ok && (pre?.code ?? "INTERNAL") === "INTERNAL") {
+        const { data: userData } = await supabase.auth.getUser();
+        if (!userData.user) {
+          pre = { ok: false, code: "UNAUTHORIZED", message: "not signed in" };
+        } else if (!hasPrivacyConfirmation) {
+          pre = { ok: false, code: "CONFIRMATION_REQUIRED", message: "confirmation required" };
+        } else {
+          const { errors } = validateStageInputDetailed(input);
+          pre = errors.length > 0
+            ? { ok: false, code: "VALIDATION_REQUIRED", message: "validation required", issues: errors }
+            : { ok: true };
+        }
       }
 
       if (!pre?.ok) {
@@ -432,6 +449,7 @@ export default function ProjectDetail() {
         <div className="overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0">
           <TabsList className="w-max">
             <TabsTrigger value="plan" className="whitespace-nowrap">服装总表工作区</TabsTrigger>
+            <TabsTrigger value="formation" className="whitespace-nowrap">队形走位 <span className="kbd-route ml-1">/formation</span></TabsTrigger>
             <TabsTrigger value="confirm" className="whitespace-nowrap">确认 <span className="kbd-route ml-1">/confirm</span></TabsTrigger>
             <TabsTrigger value="export" className="whitespace-nowrap">导出 <span className="kbd-route ml-1">/export</span></TabsTrigger>
             <TabsTrigger value="render" className="whitespace-nowrap">渲染上下文 <span className="kbd-route ml-1">/render-context</span></TabsTrigger>
@@ -475,6 +493,11 @@ export default function ProjectDetail() {
               </MobileCardList>
             </div>
           )}
+        </TabsContent>
+
+        <TabsContent value="formation" className="space-y-4 mt-4">
+          <h2 className="sr-only">队形与舞台走位</h2>
+          <FormationWorkspace projectId={project.id} input={input} onSaved={load} />
         </TabsContent>
 
         <TabsContent value="confirm" className="space-y-4 mt-4">
@@ -605,7 +628,7 @@ export default function ProjectDetail() {
                 </div>
 
                 {confirmPreview && (
-                  <div className="rounded border border-border bg-muted/30 p-2 space-y-1">
+                  <div className="rounded-xl border border-border bg-muted/30 p-2 space-y-1">
                     <div className="text-xs font-medium text-muted-foreground">解密后待确认数据</div>
                     <dl className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
                       {[
@@ -904,7 +927,7 @@ function PlanTable({ title, rows, ctx, procurementOn }: { title: string; rows: a
           </tbody>
         </table>
       </div>
-      <MobileCardList empty="暂无条目">
+      <MobileCardList empty="暂��条目">
         {list.map((r, i) => (
           <MobileCard
             key={i}
@@ -993,7 +1016,7 @@ function ValidationHistoryPanel({ input }: { input: StageInputData | null }) {
           return (
             <div
               key={`${entry.checkedAt}-${i}`}
-              className={`rounded-md border p-3 ${isLatest ? "border-primary/40 bg-primary/5" : "border-border"}`}
+              className={`rounded-xl border p-3 ${isLatest ? "border-primary/40 bg-primary/5" : "border-border"}`}
             >
               <div className="flex flex-wrap items-center gap-2 mb-1">
                 <span className="font-mono text-xs text-muted-foreground">

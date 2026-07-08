@@ -19,7 +19,7 @@ export default function AuthPage() {
 
   if (loading) return <FullPageLoader />;
   if (user) {
-    const from = (loc.state as any)?.from?.pathname ?? "/";
+    const from = (loc.state as any)?.from?.pathname ?? "/workspace";
     return <Navigate to={from} replace />;
   }
 
@@ -27,17 +27,25 @@ export default function AuthPage() {
     e.preventDefault();
     if (!email || !password) { toast.error("请填写邮箱和密码"); return; }
     setBusy(true);
-    const { error } = mode === "signin"
+    const res = mode === "signin"
       ? await signIn(email, password)
       : await signUp(email, password);
     setBusy(false);
-    if (error) { toast.error(error); return; }
+    if (res.error) { toast.error(res.error); return; }
+    if (mode === "signup" && (res as { needsEmailConfirm?: boolean }).needsEmailConfirm) {
+      toast.info("确认邮件已发送，请前往邮箱点击链接完成注册后再登录。");
+      setMode("signin");
+      return;
+    }
     toast.success(mode === "signin" ? "已登录" : "注册成功，已自动登录");
   }
 
   return (
-    <div className="min-h-dvh bg-background grid place-items-center p-4">
-      <main className="w-full max-w-sm panel">
+    <div className="min-h-dvh bg-background grid place-items-center p-4 relative overflow-hidden">
+      {/* 玻璃折射用环境光斑 */}
+      <div aria-hidden className="pointer-events-none absolute -top-32 right-[-10%] h-96 w-96 rounded-full bg-accent/10 blur-3xl" />
+      <div aria-hidden className="pointer-events-none absolute -bottom-32 left-[-10%] h-96 w-96 rounded-full bg-white/5 blur-3xl" />
+      <main className="w-full max-w-sm panel relative">
         <h1 className="sr-only">登录 StageOS 演出服装排产工作台</h1>
         <div className="panel-header">
           <div className="flex items-center gap-2">
@@ -52,13 +60,13 @@ export default function AuthPage() {
           <span className="kbd-route">auth</span>
         </div>
         <form onSubmit={submit} className="panel-body space-y-3">
-          <div className="flex gap-1 p-0.5 bg-surface-muted rounded text-xs">
-            <button type="button" onClick={() => setMode("signin")}
-              className={`flex-1 py-1.5 rounded ${mode === "signin" ? "bg-background shadow-sm" : "text-muted-foreground"}`}>
+          <div className="seg-tabs w-full" role="tablist" aria-label="登录注册切换">
+            <button type="button" role="tab" aria-selected={mode === "signin"} onClick={() => setMode("signin")}
+              className="seg-tab flex-1 py-1.5 text-center">
               登录
             </button>
-            <button type="button" onClick={() => setMode("signup")}
-              className={`flex-1 py-1.5 rounded ${mode === "signup" ? "bg-background shadow-sm" : "text-muted-foreground"}`}>
+            <button type="button" role="tab" aria-selected={mode === "signup"} onClick={() => setMode("signup")}
+              className="seg-tab flex-1 py-1.5 text-center">
               注册
             </button>
           </div>

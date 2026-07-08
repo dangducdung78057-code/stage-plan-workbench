@@ -344,7 +344,7 @@ export default function Exports() {
       const msg = String(e?.message ?? "");
       const [code, detail] = msg.split(":");
       if (code === "PNG_INCOMPLETE_PAYLOAD") {
-        toast.error("PNG 导出失败：导出数据不完整，请先重新生成导出记录。", {
+        toast.error("PNG 导出失败：导出数据不完整，请先重新生成导出记录���", {
           description: `缺失字段：${detail?.trim() || "未知"}`,
         });
       } else {
@@ -352,7 +352,7 @@ export default function Exports() {
           PRINTABLE_HTML_INVALID: "printable HTML 校验未通过（内容为空或字段缺失）",
           PNG_FONTS_NOT_READY: "字体未就绪（document.fonts.ready 失败）",
           PNG_NODE_SIZE_INVALID: "节点尺寸异常（宽/高为 0，可能被样式隐藏）",
-          PNG_EMPTY_CONTENT: "内容为空（渲染后文本长度不足）",
+          PNG_EMPTY_CONTENT: "内容���空（渲染后文本长度不足）",
           PNG_RASTERIZE_FAILED: "html-to-image 光栅化失败",
           PNG_BLOB_TOO_SMALL: "生成的 PNG 体积过小（疑似空白图）",
           PNG_BLANK_PIXELS: "像素为纯白（未检测到可见内容）",
@@ -547,7 +547,7 @@ export default function Exports() {
                 暂无 Storage 副本。下载 MD / PDF 时会自动同步。
               </div>
             ) : (
-              <ul className="divide-y border rounded bg-surface text-sm">
+              <ul className="divide-y border rounded-xl bg-surface text-sm overflow-hidden">
                 {files.map((f) => (
                   <li key={f.path} className="px-3 py-2 flex flex-col sm:flex-row sm:items-center gap-2">
                     <div className="min-w-0 flex-1">

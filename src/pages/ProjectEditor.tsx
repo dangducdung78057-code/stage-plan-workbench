@@ -255,7 +255,7 @@ export default function ProjectEditor() {
               </tbody>
             </table>
             {(unmatched.errors.length > 0 || unmatched.warnings.length > 0) && (
-              <div className="rounded border border-destructive/40 bg-destructive/5 p-2">
+              <div className="rounded-xl border border-destructive/40 bg-destructive/5 p-2">
                 <div className="font-medium text-destructive mb-1">未匹配到任何字段的信息(需扩充关键词)</div>
                 <ul className="list-disc list-inside space-y-0.5">
                   {unmatched.errors.map((m) => <li key={`ue-${m}`} className="text-destructive">错误:{m}</li>)}
@@ -442,7 +442,7 @@ function Field({
   const hasErr = (hint?.errors.length ?? 0) > 0;
   const hasWarn = (hint?.warnings.length ?? 0) > 0;
   return (
-    <div className="space-y-1.5 scroll-mt-24 rounded-sm" id={field ? `field-${field}` : undefined} data-field={field}>
+    <div className="space-y-1.5 scroll-mt-24 rounded-md" id={field ? `field-${field}` : undefined} data-field={field}>
       <Label className={`text-xs ${hasErr ? "text-destructive" : hasWarn ? "text-warning" : "text-muted-foreground"}`}>
         {label}{required && <span className="text-destructive ml-0.5">*</span>}
       </Label>

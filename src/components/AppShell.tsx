@@ -10,7 +10,7 @@ import { toast } from "sonner";
 
 
 const nav = [
-  { to: "/", label: "工作台", icon: LayoutDashboard, route: "/workspace" },
+  { to: "/workspace", label: "工作台", icon: LayoutDashboard, route: "/workspace" },
   { to: "/projects", label: "项目", icon: FolderKanban, route: "/projects" },
   { to: "/modules", label: "模块注册表", icon: Layers, route: "/modules" },
   { to: "/exports", label: "导出记录", icon: Download, route: "/exports" },
@@ -19,7 +19,7 @@ const nav = [
 
 function SidebarInner({ onNavigate }: { onNavigate?: () => void }) {
   return (
-    <div className="h-full flex flex-col bg-sidebar text-sidebar-foreground">
+    <div className="h-full flex flex-col bg-sidebar/80 text-sidebar-foreground backdrop-blur-xl">
       <div className="px-4 py-4 border-b border-sidebar-border">
         <div className="flex items-center gap-2">
           <div className="h-7 w-7 rounded bg-sidebar-primary/90 grid place-items-center text-sidebar-primary-foreground font-bold">
@@ -72,7 +72,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <SidebarInner />
       </aside>
       <main className="flex-1 min-w-0 flex flex-col">
-        <header className="h-11 border-b bg-surface px-3 md:px-5 flex items-center gap-2 md:gap-3 text-[13px]">
+        <header className="h-11 border-b border-border/60 bg-surface/60 backdrop-blur-xl px-3 md:px-5 flex items-center gap-2 md:gap-3 text-[13px]">
           <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon" className="md:hidden h-8 w-8 shrink-0" aria-label="打开导航菜单">

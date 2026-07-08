@@ -7,7 +7,7 @@ type AuthCtx = {
   session: Session | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error?: string }>;
-  signUp: (email: string, password: string) => Promise<{ error?: string }>;
+  signUp: (email: string, password: string) => Promise<{ error?: string; needsEmailConfirm?: boolean }>;
   signOut: () => Promise<void>;
 };
 
@@ -40,11 +40,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error: error?.message };
   };
   const signUp: AuthCtx["signUp"] = async (email, password) => {
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email, password,
-      options: { emailRedirectTo: `${window.location.origin}/` },
+      options: { emailRedirectTo: `${window.location.origin}/auth` },
     });
-    return { error: error?.message };
+    // 项目开启邮箱确认时不会返回 session，需要用户先查收确认邮件
+    return { error: error?.message, needsEmailConfirm: !error && !data.session };
   };
   const signOut = async () => { await supabase.auth.signOut(); };
 

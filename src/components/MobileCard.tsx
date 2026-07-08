@@ -33,7 +33,7 @@ export function MobileCard({
   footer?: React.ReactNode;
 }) {
   return (
-    <li className={cn("rounded-md border bg-card p-3 min-w-0", className)}>
+    <li className={cn("panel p-3 min-w-0", className)}>
       {(title || right) && (
         <div className="flex items-start justify-between gap-3 mb-2 min-w-0">
           {title && <div className="text-sm font-medium break-words min-w-0 flex-1">{title}</div>}

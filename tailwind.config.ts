@@ -42,6 +42,8 @@ export default {
       },
       fontFamily: {
         mono: ['"JetBrains Mono"', "ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
+        heading: ['"Instrument Serif"', '"Noto Serif SC"', "serif"],
+        body: ['"Barlow"', '"PingFang SC"', '"Microsoft YaHei"', "sans-serif"],
       },
       keyframes: {
         "accordion-down": { from: { height: "0" }, to: { height: "var(--radix-accordion-content-height)" } },
