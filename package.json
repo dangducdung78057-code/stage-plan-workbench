@@ -15,7 +15,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:regression": "vitest run --reporter=verbose src/test/regression.test.ts",
-    "pretest:regression": "tsgo --noEmit"
+    "pretest:regression": "tsc --noEmit"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
