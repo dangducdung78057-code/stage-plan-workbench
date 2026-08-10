@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "build:dev": "vite build --mode development",
+    "typecheck": "tsc -b",
     "prebuild": "bunx tsx scripts/verify-sitemap-robots.ts",
     "prebuild:dev": "bunx tsx scripts/verify-sitemap-robots.ts",
     "verify:sitemap": "bunx tsx scripts/verify-sitemap-robots.ts",
@@ -15,7 +16,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:regression": "vitest run --reporter=verbose src/test/regression.test.ts",
-    "pretest:regression": "tsgo --noEmit"
+    "pretest:regression": "tsc -b"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
